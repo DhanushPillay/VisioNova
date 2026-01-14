@@ -45,32 +45,8 @@
             },
         }
     </script>
-    <style>
-        .glass-panel {
-            background: rgba(13, 27, 42, 0.6);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .scanning-radar {
-            background: radial-gradient(circle, rgba(58, 141, 255, 0.2) 0%, rgba(13, 27, 42, 0) 70%);
-        }
-
-        /* Custom scrollbar for webkit */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #0F121A;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #20204b;
-            border-radius: 4px;
-        }
-    </style>
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
 </head>
 
 <body
@@ -310,26 +286,9 @@
                                     </div>
                                 </div>
                                 <!-- Scanning Line -->
-                                <div class="absolute top-0 bottom-0 w-[2px] bg-accent-green/80 shadow-[0_0_10px_#00D991] left-[30%] animate-[ping_3s_linear_infinite_reverse]"
-                                    style="animation-direction: alternate; animation-name: scan; animation-duration: 2s;">
+                                <div class="absolute top-0 bottom-0 w-[2px] bg-accent-green/80 shadow-[0_0_10px_#00D991] scan-line"
+                                    style="left: 30%; animation-direction: alternate; animation-duration: 2s;">
                                 </div>
-                                <style>
-                                    @keyframes scan {
-                                        0% {
-                                            left: 10%;
-                                            opacity: 0.5;
-                                        }
-
-                                        50% {
-                                            opacity: 1;
-                                        }
-
-                                        100% {
-                                            left: 90%;
-                                            opacity: 0.5;
-                                        }
-                                    }
-                                </style>
                                 <div class="absolute bottom-2 right-2 font-mono text-[10px] text-accent-green">
                                     SCANNING_FRAMES_0492:0991</div>
                             </div>
