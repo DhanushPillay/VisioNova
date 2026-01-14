@@ -6,9 +6,6 @@
 
 **The world's most advanced multi-modal AI credibility engine for enterprise security and media integrity.**
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-3.0-green.svg)]()
-
 </div>
 
 ---
