@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>VisioNova Audio Analysis</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap"
+    rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+    rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#3A8DFF", // Electric Blue
+            "secondary": "#0D1B2A", // Navy
+            "background-light": "#f5f7f8",
+            "background-dark": "#0F121A", // Charcoal
+            "accent-green": "#00D991", // Emerald
+            "accent-red": "#FF4A4A", // Red
+            "accent-amber": "#FFB74A", // Amber
+            "surface-dark": "#161B26", // Slightly lighter for cards
+          },
+          fontFamily: {
+            "display": ["Inter", "sans-serif"]
+          },
+          borderRadius: { "DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "2xl": "1.5rem", "full": "9999px" },
+          boxShadow: {
+            'glow': '0 0 20px -5px rgba(58, 141, 255, 0.15)',
+            'glow-red': '0 0 20px -5px rgba(255, 74, 74, 0.15)',
+          }
+        },
+      },
+    }
+  </script>
+  <style>
+    /* Custom scrollbar for dark theme */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #0D1B2A;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #20324b;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3A8DFF;
+    }
+
+    @keyframes scan {
+      0% {
+        transform: translateY(0);
+        opacity: 0.5;
+      }
+
+      50% {
+        opacity: 0.2;
+      }
+
+      100% {
+        transform: translateY(100%);
+        opacity: 0.5;
+      }
+    }
+
+    .animate-scan {
+      animation: scan 3s linear infinite;
+    }
+  </style>
+</head>
+
+<body
+  class="bg-background-dark text-white font-display overflow-hidden h-screen flex flex-col antialiased selection:bg-primary selection:text-white">
+  <!-- Top Navigation -->
+  <header class="h-16 flex items-center justify-between px-6 bg-secondary border-b border-[#20324b] shrink-0 z-20">
+    <!-- Logo -->
+    <div class="flex items-center gap-3">
+      <div class="size-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+        <span class="material-symbols-outlined text-2xl">graphic_eq</span>
+      </div>
+      <span class="text-xl font-bold tracking-tight">VisioNova</span>
+    </div>
+    <!-- Nav Links -->
+    <nav class="hidden md:flex items-center gap-8">
+      <a class="text-sm font-medium text-gray-400 hover:text-white transition-colors" href="homepage.html">Home</a>
+      <a class="text-sm font-medium text-white transition-colors relative after:content-[''] after:absolute after:bottom-[-22px] after:left-0 after:w-full after:h-[2px] after:bg-primary"
+        href="AnalysisDashboard.html">Analyze</a>
+      <a class="text-sm font-medium text-gray-400 hover:text-white transition-colors" href="FactCheckPage.html">Fact
+        Check</a>
+      <a class="text-sm font-medium text-gray-400 hover:text-white transition-colors" href="ReportPage.html">Reports</a>
+      <a class="text-sm font-medium text-gray-400 hover:text-white transition-colors" href="#">API</a>
+      <a class="text-sm font-medium text-gray-400 hover:text-white transition-colors" href="#">Help</a>
+    </nav>
+    <!-- Right Actions -->
+    <div class="flex items-center gap-4">
+      <button
+        class="flex items-center justify-center size-9 rounded-lg hover:bg-[#20324b] text-gray-400 hover:text-white transition-colors">
+        <span class="material-symbols-outlined">notifications</span>
+      </button>
+      <div class="size-9 rounded-full bg-cover bg-center border border-[#20324b]" data-alt="User profile avatar"
+        style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAh3XxnB9fwhEjGmcVF1WDNGCKS4W2Zgb4SBYCOHkpGFvdTFWLOdQGR8WE9PBojoiY00NkxvZo0Y3oZXVAQTRTuxR9SQzyzyc2HXwW29BZr8wd6jLBVlqpknPKKNGRqirS_GzT8bmOuqW8ds8mK3ANJZSbazw50XkEVZDDfe5vYv2Alhx8fBiubxYaQavo4m5yNaVG0DGPNIrItt1TVj7r_i9PUFax3BPxSdj525dIgIFvEQ1n8g_Rc_jicMQsL9_fZ-1J8oQe_SI7j');">
+      </div>
+    </div>
+  </header>
+  <div class="flex flex-1 overflow-hidden">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-secondary border-r border-[#20324b] flex flex-col shrink-0 overflow-y-auto hidden lg:flex">
+      <div class="p-4 space-y-6">
+        <!-- Project Info -->
+        <div>
+          <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Current Project</h2>
+          <div class="bg-surface-dark p-3 rounded-xl border border-[#20324b]">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="material-symbols-outlined text-primary">folder_open</span>
+              <span class="text-sm font-medium truncate">Case_#8842_Audio</span>
+            </div>
+            <div class="h-1.5 w-full bg-[#20324b] rounded-full overflow-hidden">
+              <div class="h-full bg-primary w-3/4 rounded-full"></div>
+            </div>
+            <div class="flex justify-between mt-1.5 text-xs text-gray-400">
+              <span>Analysis</span>
+              <span>75%</span>
+            </div>
+          </div>
+        </div>
+        <!-- Menu -->
+        <div class="space-y-1">
+          <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Tools</h2>
+          <button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary font-medium">
+            <span class="material-symbols-outlined filled">graphic_eq</span>
+            <span class="text-sm">Audio Forensics</span>
+          </button>
+          <button
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#20324b] text-gray-400 hover:text-white transition-colors">
+            <span class="material-symbols-outlined">image_search</span>
+            <span class="text-sm">Image Verification</span>
+          </button>
+          <button
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#20324b] text-gray-400 hover:text-white transition-colors">
+            <span class="material-symbols-outlined">videocam</span>
+            <span class="text-sm">Deepfake Video</span>
+          </button>
+        </div>
+        <!-- Quick Actions -->
+        <div class="space-y-1">
+          <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Actions</h2>
+          <button
+            class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#20324b] text-gray-400 hover:text-white transition-colors">
+            <span class="material-symbols-outlined">upload_file</span>
+            <span class="text-sm">Import File</span>
+          </button>
+          <button
+            class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#20324b] text-gray-400 hover:text-white transition-colors">
+            <span class="material-symbols-outlined">download</span>
+            <span class="text-sm">Export Report</span>
+          </button>
+        </div>
+      </div>
+      <div class="mt-auto p-4 border-t border-[#20324b]">
+        <button
+          class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-[#20324b] hover:bg-[#20324b] text-gray-400 hover:text-white transition-colors text-sm">
+          <span class="material-symbols-outlined text-[18px]">history</span>
+          Recent History
+        </button>
+      </div>
+    </aside>
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto p-6 md:p-8 lg:p-10 relative bg-background-dark">
+      <!-- Breadcrumbs -->
+      <div class="flex items-center gap-2 text-sm mb-6">
+        <a class="text-gray-500 hover:text-primary transition-colors" href="#">Analyze</a>
+        <span class="text-gray-600">/</span>
+        <a class="text-gray-500 hover:text-primary transition-colors" href="#">Audio</a>
+        <span class="text-gray-600">/</span>
+        <span class="text-white font-medium">Results</span>
+      </div>
+      <!-- Page Header -->
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+        <div>
+          <h1 class="text-3xl md:text-4xl font-black text-white mb-2 tracking-tight">evidence_audio_042.mp3</h1>
+          <div class="flex items-center gap-4 text-gray-400 text-sm">
+            <span class="flex items-center gap-1"><span
+                class="material-symbols-outlined text-[16px]">calendar_today</span> Oct 24, 2023</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">schedule</span>
+              14:02 PM</span>
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">timer</span>
+              03:45</span>
+            <span
+              class="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-800 border border-gray-700 uppercase tracking-wide">MP3
+              / 320kbps</span>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <button
+            class="h-10 px-4 rounded-lg bg-[#20324b] text-white text-sm font-medium hover:bg-[#2a4060] transition-colors border border-[#2f496d]">Compare</button>
+          <button
+            class="h-10 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-blue-600 transition-colors shadow-glow flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">verified_user</span>
+            Generate Report
+          </button>
+        </div>
+      </div>
+      <!-- Dashboard Grid -->
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 mb-8">
+        <!-- Verdict Scorecard (Left Column) -->
+        <div class="xl:col-span-4 flex flex-col gap-6">
+          <div
+            class="bg-surface-dark border border-accent-red/30 rounded-2xl p-6 relative overflow-hidden shadow-glow-red">
+            <div class="absolute top-0 right-0 p-4 opacity-10">
+              <span class="material-symbols-outlined text-9xl text-accent-red">warning</span>
+            </div>
+            <div class="relative z-10">
+              <h3 class="text-gray-400 text-sm font-semibold uppercase tracking-wider mb-1">Unified Credibility Score
+              </h3>
+              <div class="flex items-baseline gap-2 mb-6">
+                <span class="text-5xl font-black text-white">11<span class="text-2xl text-gray-500">%</span></span>
+                <span class="text-accent-red font-bold text-lg">Authenticity</span>
+              </div>
+              <div class="mb-6">
+                <div class="flex justify-between text-sm mb-2">
+                  <span class="text-white font-medium">Verdict: <span class="text-accent-red">HIGHLY
+                      SUSPICIOUS</span></span>
+                  <span class="text-accent-red font-bold">89% FAKE</span>
+                </div>
+                <div class="h-3 w-full bg-gray-800 rounded-full overflow-hidden">
+                  <div
+                    class="h-full bg-gradient-to-r from-accent-red to-orange-500 w-[89%] rounded-full shadow-[0_0_10px_rgba(255,74,74,0.5)]">
+                  </div>
+                </div>
+                <p class="mt-2 text-xs text-gray-400">AI-generated artifacts detected with high confidence.</p>
+              </div>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between p-3 rounded-lg bg-[#0F121A] border border-gray-800">
+                  <div class="flex items-center gap-3">
+                    <div class="size-8 rounded-full bg-accent-red/10 flex items-center justify-center text-accent-red">
+                      <span class="material-symbols-outlined text-lg">graphic_eq</span>
+                    </div>
+                    <div>
+                      <p class="text-sm text-white font-medium">Suspected Model</p>
+                      <p class="text-xs text-gray-400">VALL-E / Generic TTS</p>
+                    </div>
+                  </div>
+                  <span class="text-xs px-2 py-1 rounded bg-accent-red/20 text-accent-red font-bold">92% Match</span>
+                </div>
+                <div class="flex items-center justify-between p-3 rounded-lg bg-[#0F121A] border border-gray-800">
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="size-8 rounded-full bg-accent-amber/10 flex items-center justify-center text-accent-amber">
+                      <span class="material-symbols-outlined text-lg">content_copy</span>
+                    </div>
+                    <div>
+                      <p class="text-sm text-white font-medium">Clone Source</p>
+                      <p class="text-xs text-gray-400">Match found in DB #4492</p>
+                    </div>
+                  </div>
+                  <span class="text-xs px-2 py-1 rounded bg-accent-amber/20 text-accent-amber font-bold">Review</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Small Quick Stats -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-surface-dark border border-[#20324b] rounded-xl p-4">
+              <p class="text-xs text-gray-400 uppercase mb-1">Duration Analyzed</p>
+              <p class="text-xl font-bold text-white">03:45.02</p>
+            </div>
+            <div class="bg-surface-dark border border-[#20324b] rounded-xl p-4">
+              <p class="text-xs text-gray-400 uppercase mb-1">Sample Rate</p>
+              <p class="text-xl font-bold text-white">44.1 kHz</p>
+            </div>
+          </div>
+        </div>
+        <!-- Visualizer & Detailed Metrics (Right Column) -->
+        <div class="xl:col-span-8 flex flex-col gap-6">
+          <!-- Audio Visualizer -->
+          <div class="bg-surface-dark border border-[#20324b] rounded-2xl p-1 flex flex-col h-[360px]">
+            <div class="flex items-center justify-between px-5 py-3 border-b border-[#20324b]">
+              <h3 class="text-sm font-semibold text-white">Spectral Analysis</h3>
+              <div class="flex gap-2">
+                <button class="px-3 py-1 text-xs font-medium rounded-md bg-[#20324b] text-white">Spectrogram</button>
+                <button
+                  class="px-3 py-1 text-xs font-medium rounded-md text-gray-400 hover:text-white">Waveform</button>
+              </div>
+            </div>
+            <!-- Visualizer Area -->
+            <div class="flex-1 relative bg-[#0a0f16] m-1 rounded-xl overflow-hidden group">
+              <!-- Background Image acting as spectrogram -->
+              <div class="absolute inset-0 bg-cover bg-center opacity-80"
+                data-alt="Detailed audio spectrogram showing frequency intensity heat map"
+                style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDLVV8WOTRRDz3dja2PUA4mXuwVLqj33i7j5pqraMDRjuz11tX6rzG38uMLsaVyKwbJG8jxW67CrUEzxN4yfbFzpuHQLriLE6RndTeOrXtxpgHNoWcbIYa9SSu8ySUHp6RkRNefWuLsmRTdGTg1aDOr8h2OIjKtx1Mgf9oHJ8nsqo-HpRryK5pRhrRs6QJkkQpLm64dOGsivUb53qmHy1qWS53d-stIXsubfhQSrTs5X77FFr4vPOKprk6VyYzZc0RjCRcgh9BV_ddX');">
+              </div>
+              <!-- Gradient Overlay for Depth -->
+              <div class="absolute inset-0 bg-gradient-to-t from-[#0a0f16] via-transparent to-transparent"></div>
+              <!-- Playhead Line -->
+              <div
+                class="absolute top-0 bottom-0 left-1/3 w-[1px] bg-accent-red z-10 shadow-[0_0_10px_rgba(255,74,74,0.8)]">
+                <div class="absolute -top-1 -left-1.5 size-3 bg-accent-red rounded-full"></div>
+                <div class="absolute top-2 left-2 text-[10px] font-mono text-accent-red bg-black/50 px-1 rounded">
+                  01:15.20</div>
+              </div>
+              <!-- Highlights -->
+              <div class="absolute top-1/4 left-1/4 w-32 h-16 border border-accent-amber/50 bg-accent-amber/10 rounded">
+              </div>
+              <!-- Play Controls Overlay -->
+              <div
+                class="absolute bottom-0 left-0 right-0 p-4 flex items-center gap-4 bg-gradient-to-t from-[#0a0f16] to-transparent">
+                <button
+                  class="size-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform">
+                  <span class="material-symbols-outlined text-2xl">play_arrow</span>
+                </button>
+                <div class="flex-1 h-1 bg-[#20324b] rounded-full overflow-hidden relative cursor-pointer">
+                  <div class="absolute top-0 left-0 bottom-0 w-1/3 bg-primary shadow-[0_0_8px_rgba(58,141,255,0.8)]">
+                  </div>
+                </div>
+                <span class="text-xs font-mono text-gray-400">01:15 / 03:45</span>
+                <span class="material-symbols-outlined text-gray-400 cursor-pointer hover:text-white">volume_up</span>
+                <span class="material-symbols-outlined text-gray-400 cursor-pointer hover:text-white">settings</span>
+              </div>
+            </div>
+          </div>
+          <!-- Metrics Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Card 1 -->
+            <div
+              class="bg-surface-dark border border-[#20324b] rounded-2xl p-5 hover:border-primary/50 transition-colors">
+              <div class="flex items-center justify-between mb-4">
+                <h4 class="text-sm font-medium text-gray-300">Pitch Stability</h4>
+                <span class="material-symbols-outlined text-accent-amber text-xl">broken_image</span>
+              </div>
+              <div class="text-2xl font-bold text-white mb-1">Unstable</div>
+              <p class="text-xs text-gray-500 mb-4">High jitter detected in vocal ranges.</p>
+              <!-- Fake Sparkline -->
+              <div class="h-10 w-full flex items-end gap-[2px]">
+                <div class="w-1 bg-gray-700 h-2 rounded-t"></div>
+                <div class="w-1 bg-gray-700 h-4 rounded-t"></div>
+                <div class="w-1 bg-accent-amber h-8 rounded-t"></div>
+                <div class="w-1 bg-gray-700 h-3 rounded-t"></div>
+                <div class="w-1 bg-gray-700 h-5 rounded-t"></div>
+                <div class="w-1 bg-accent-amber h-9 rounded-t"></div>
+                <div class="w-1 bg-accent-amber h-6 rounded-t"></div>
+                <div class="w-1 bg-gray-700 h-4 rounded-t"></div>
+                <div class="w-1 bg-gray-700 h-2 rounded-t"></div>
+                <div class="w-1 bg-gray-700 h-3 rounded-t"></div>
+              </div>
+            </div>
+            <!-- Card 2 -->
+            <div
+              class="bg-surface-dark border border-[#20324b] rounded-2xl p-5 hover:border-primary/50 transition-colors">
+              <div class="flex items-center justify-between mb-4">
+                <h4 class="text-sm font-medium text-gray-300">Background Noise</h4>
+                <span class="material-symbols-outlined text-accent-red text-xl">graphic_eq</span>
+              </div>
+              <div class="text-2xl font-bold text-white mb-1">-60dB</div>
+              <p class="text-xs text-gray-500 mb-4">Artificial silence detected (Digital zero).</p>
+              <div class="h-10 flex items-center">
+                <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <div class="h-full bg-accent-red w-[10%] rounded-full shadow-[0_0_5px_#FF4A4A]"></div>
+                </div>
+              </div>
+            </div>
+            <!-- Card 3 -->
+            <div
+              class="bg-surface-dark border border-[#20324b] rounded-2xl p-5 hover:border-primary/50 transition-colors">
+              <div class="flex items-center justify-between mb-4">
+                <h4 class="text-sm font-medium text-gray-300">Formant Analysis</h4>
+                <span class="material-symbols-outlined text-primary text-xl">timeline</span>
+              </div>
+              <div class="text-2xl font-bold text-white mb-1">Synthetic</div>
+              <p class="text-xs text-gray-500 mb-4">Non-human transitions observed.</p>
+              <!-- Mini scatter plot viz -->
+              <div class="h-10 relative border-l border-b border-gray-700">
+                <div class="absolute bottom-1 left-2 size-1.5 bg-primary rounded-full"></div>
+                <div class="absolute bottom-3 left-4 size-1.5 bg-primary rounded-full"></div>
+                <div class="absolute bottom-6 left-6 size-1.5 bg-primary rounded-full"></div>
+                <div class="absolute bottom-2 left-8 size-1.5 bg-primary rounded-full"></div>
+                <div class="absolute bottom-8 left-10 size-1.5 bg-accent-red rounded-full shadow-[0_0_4px_#FF4A4A]">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Deep Analysis Section -->
+      <div class="mb-8">
+        <h3 class="text-lg font-bold text-white mb-4">Deep Analysis Modules</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Graph 1 -->
+          <div class="bg-surface-dark border border-[#20324b] rounded-2xl p-6">
+            <div class="flex justify-between items-center mb-6">
+              <h4 class="font-semibold text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">ssid_chart</span>
+                Spectral Centroid Consistency
+              </h4>
+              <button class="text-xs text-primary hover:text-white">Export Data</button>
+            </div>
+            <div class="h-48 w-full bg-[#0F121A] rounded-lg border border-[#20324b] relative overflow-hidden p-4">
+              <!-- Axis lines -->
+              <div class="absolute left-8 top-4 bottom-8 w-[1px] bg-gray-800"></div>
+              <div class="absolute left-8 right-4 bottom-8 h-[1px] bg-gray-800"></div>
+              <!-- The Chart Line (CSS Art) -->
+              <svg class="absolute inset-0 w-full h-full text-primary" preserveaspectratio="none">
+                <path class="opacity-80 drop-shadow-[0_0_3px_#3A8DFF]"
+                  d="M 40 100 Q 100 80 150 120 T 250 80 T 350 140 T 500 60" fill="none" stroke="currentColor"
+                  stroke-width="2"></path>
+                <path class="opacity-60" d="M 40 110 Q 100 90 150 130 T 250 90 T 350 150 T 500 70" fill="none"
+                  stroke="#FF4A4A" stroke-dasharray="4 4" stroke-width="2"></path>
+              </svg>
+              <!-- Legend -->
+              <div class="absolute top-4 right-4 flex flex-col gap-2 text-[10px] text-gray-500">
+                <div class="flex items-center gap-2"><span
+                    class="size-2 rounded-full bg-primary shadow-[0_0_4px_#3A8DFF]"></span> Observed</div>
+                <div class="flex items-center gap-2"><span class="size-2 rounded-full bg-accent-red"></span> Expected
+                  Natural</div>
+              </div>
+            </div>
+          </div>
+          <!-- List Module -->
+          <div class="bg-surface-dark border border-[#20324b] rounded-2xl p-6">
+            <div class="flex justify-between items-center mb-6">
+              <h4 class="font-semibold text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-accent-red">fingerprint</span>
+                AI Signature Artifacts
+              </h4>
+              <span
+                class="px-2 py-1 bg-accent-red/10 text-accent-red text-xs rounded font-bold border border-accent-red/20">3
+                Critical Issues</span>
+            </div>
+            <div class="space-y-3">
+              <div class="flex items-start gap-4 p-3 rounded-lg bg-[#0F121A] border-l-4 border-accent-red">
+                <div class="mt-0.5">
+                  <span class="material-symbols-outlined text-accent-red text-sm">error</span>
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-white">Phase Discontinuity at 2.4kHz</p>
+                  <p class="text-xs text-gray-400 mt-1">Typical of vocoder-based synthesis engines (Vocoder Artifacts).
+                  </p>
+                </div>
+                <span class="ml-auto text-xs font-mono text-gray-500">00:42.1</span>
+              </div>
+              <div class="flex items-start gap-4 p-3 rounded-lg bg-[#0F121A] border-l-4 border-accent-amber">
+                <div class="mt-0.5">
+                  <span class="material-symbols-outlined text-accent-amber text-sm">warning</span>
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-white">Super-human Breath Spacing</p>
+                  <p class="text-xs text-gray-400 mt-1">Inhale duration too short for phrase length.</p>
+                </div>
+                <span class="ml-auto text-xs font-mono text-gray-500">01:15.8</span>
+              </div>
+              <div class="flex items-start gap-4 p-3 rounded-lg bg-[#0F121A] border-l-4 border-gray-700">
+                <div class="mt-0.5">
+                  <span class="material-symbols-outlined text-gray-400 text-sm">info</span>
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-gray-300">Metadata Stripped</p>
+                  <p class="text-xs text-gray-500 mt-1">Original encoding software tags missing.</p>
+                </div>
+                <span class="ml-auto text-xs font-mono text-gray-500">Global</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+
+</html>

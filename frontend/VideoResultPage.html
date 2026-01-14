@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>VisioNova - Video Analysis Result</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#2972fa",
+                        "visio-charcoal": "#0F121A",
+                        "visio-navy": "#0D1B2A",
+                        "visio-card": "#17202e",
+                        "visio-accent-blue": "#3A8DFF",
+                        "visio-accent-green": "#00D991",
+                        "visio-accent-amber": "#FFB74A",
+                        "visio-accent-red": "#FF4A4A",
+                        "background-light": "#f5f6f8",
+                        "background-dark": "#0F121A",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                        sans: ["Inter", "sans-serif"],
+                    },
+                    boxShadow: {
+                        'neon-red': '0 0 20px -5px rgba(255, 74, 74, 0.3)',
+                        'neon-blue': '0 0 20px -5px rgba(58, 141, 255, 0.3)',
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for dark theme */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0D1B2A;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #2a3b55;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3A8DFF;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark font-display text-white min-h-screen flex flex-col overflow-hidden">
+    <!-- Top Navigation -->
+    <header class="h-16 flex items-center justify-between border-b border-[#212f4a] bg-visio-navy px-6 shrink-0 z-20">
+        <div class="flex items-center gap-12">
+            <!-- Logo -->
+            <div class="flex items-center gap-3 text-white cursor-pointer">
+                <div class="size-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+                    <span class="material-symbols-outlined text-[24px]">visibility</span>
+                </div>
+                <h2 class="text-white text-xl font-bold tracking-tight">VisioNova</h2>
+            </div>
+            <!-- Nav Links -->
+            <nav class="hidden lg:flex items-center gap-8">
+                <a class="text-gray-400 hover:text-primary transition-colors text-sm font-medium"
+                    href="homepage.html">Home</a>
+                <a class="text-white text-sm font-medium border-b-2 border-primary py-[22px]"
+                    href="AnalysisDashboard.html">Analyze</a>
+                <a class="text-gray-400 hover:text-primary transition-colors text-sm font-medium"
+                    href="FactCheckPage.html">Fact Check</a>
+                <a class="text-gray-400 hover:text-primary transition-colors text-sm font-medium"
+                    href="ReportPage.html">Reports</a>
+                <a class="text-gray-400 hover:text-primary transition-colors text-sm font-medium" href="#">API</a>
+                <a class="text-gray-400 hover:text-primary transition-colors text-sm font-medium" href="#">Help</a>
+            </nav>
+        </div>
+        <!-- Right Actions -->
+        <div class="flex items-center gap-5">
+            <div class="hidden md:flex relative group w-64">
+                <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    <span class="material-symbols-outlined text-[20px]">search</span>
+                </div>
+                <input
+                    class="w-full bg-[#1e293b] border-none rounded-lg py-2 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary placeholder-gray-500"
+                    placeholder="Search case ID..." type="text" />
+            </div>
+            <div class="flex items-center gap-3 border-l border-[#212f4a] pl-5">
+                <button
+                    class="relative p-2 text-gray-400 hover:text-white rounded-lg hover:bg-[#212f4a] transition-colors">
+                    <span class="material-symbols-outlined text-[24px]">notifications</span>
+                    <span
+                        class="absolute top-2 right-2 size-2 bg-visio-accent-red rounded-full border-2 border-visio-navy"></span>
+                </button>
+                <button class="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-[#212f4a] transition-colors">
+                    <span class="material-symbols-outlined text-[24px]">settings</span>
+                </button>
+                <div class="size-9 rounded-full bg-cover bg-center ring-2 ring-[#212f4a] ml-2"
+                    data-alt="User profile avatar showing a professional looking person"
+                    style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAOTV5Gg-smcNaJXSYNlRnOWogTJPbpGtCinq4sv06HmTKTlg932cZeqt0Ybtiibf1P_x8JS8_Biscv3O4PK6ij0YxsNO_ez_fnR7AoJv_8xArtVUR_SOqXg5Eyj5zmqjCWaZpfI7eb7vBPM5Gzj9aSo6_h6aLP0kF-2YYyCjMjo62SuCCZDqDll_Lxq5AMCeyWpob22jnSolIH2h1Wi8pC8uVyNABz3hpmh1KxEGpNIl6W7srVheecyBzFWFvNllTV8iI4mFd-O77d');">
+                </div>
+            </div>
+        </div>
+    </header>
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-visio-navy border-r border-[#212f4a] flex flex-col hidden md:flex shrink-0">
+            <div class="p-4 flex flex-col gap-6">
+                <!-- User Context -->
+                <div class="p-4 rounded-xl bg-[#17202e] border border-[#212f4a]">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div
+                            class="size-8 rounded-full bg-gradient-to-br from-primary to-visio-accent-blue flex items-center justify-center text-xs font-bold text-white">
+                            JS</div>
+                        <div>
+                            <h4 class="text-sm font-semibold text-white">John Smith</h4>
+                            <p class="text-xs text-gray-500">Forensic Analyst</p>
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-400 flex justify-between">
+                        <span>Credits</span>
+                        <span class="text-visio-accent-green font-medium">4,203 left</span>
+                    </div>
+                </div>
+                <!-- Primary Actions -->
+                <div class="space-y-1">
+                    <a href="AnalysisDashboard.html"
+                        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary hover:bg-blue-600 text-white shadow-lg shadow-blue-900/20 transition-all">
+                        <span class="material-symbols-outlined text-[20px]">add_circle</span>
+                        <span class="text-sm font-medium">New Analysis</span>
+                    </a>
+                </div>
+                <!-- Menu -->
+                <div class="space-y-1">
+                    <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-2">Workspace</p>
+                    <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#212f4a] text-white" href="#">
+                        <span class="material-symbols-outlined text-[20px] text-visio-accent-blue">history</span>
+                        <span class="text-sm font-medium">History</span>
+                    </a>
+                    <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e293b] transition-colors"
+                        href="#">
+                        <span class="material-symbols-outlined text-[20px]">folder_open</span>
+                        <span class="text-sm font-medium">Cases</span>
+                    </a>
+                    <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e293b] transition-colors"
+                        href="#">
+                        <span class="material-symbols-outlined text-[20px]">picture_as_pdf</span>
+                        <span class="text-sm font-medium">Export PDF</span>
+                    </a>
+                    <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e293b] transition-colors"
+                        href="#">
+                        <span class="material-symbols-outlined text-[20px]">share</span>
+                        <span class="text-sm font-medium">Share Result</span>
+                    </a>
+                </div>
+                <!-- Recent Files -->
+                <div class="flex-1 mt-4">
+                    <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Recent Uploads</p>
+                    <div class="space-y-2 px-3">
+                        <div class="flex items-center gap-3 group cursor-pointer">
+                            <div class="size-8 rounded bg-gray-800 bg-cover bg-center"
+                                data-alt="Thumbnail of a recent video analysis"
+                                style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAgfPylDsu4Imi5OvZVB_PTj-sArZJZvg9PwVpS-xirFhKTGXVua-kxP5N2lCzBfgebojgm4XLOX0S9gEp71VWIVCqS7s_3NbysGIfyGxQo0eX3XU9idJ3Nd2UM2Wd2QoYEjn4C4V4XBcgoeEIqAmTTkJzgbE_LoqLu5XOfydB3xxTiGLU1Vqn9bF3s8d3-HEPpXHnsKMTX7RRVx0jrBFQFnCYTMuSJPJ7a7vCgX6cPSTZEAswIClz3uhCeDNg6wr0HKieFcVvsmJAW')">
+                            </div>
+                            <div class="overflow-hidden">
+                                <p class="text-xs text-gray-300 truncate group-hover:text-primary">interview_clip_04.mp4
+                                </p>
+                                <p class="text-[10px] text-gray-600">2 mins ago</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 group cursor-pointer">
+                            <div class="size-8 rounded bg-gray-800 bg-cover bg-center"
+                                data-alt="Thumbnail of a recent video analysis"
+                                style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCYZefEL-b9VCMgdg1lhAdgBtmZp7g4JQdUxVa5XB2kVU7hGqvcKyx3QPlOWVA5olMCt1V4L5XvbbZr-75HWcpCZUJB8wIKwkDfXqvnL4bPo7fX-DHln25fLodKy0gso-IK-v6_yp5_U6j8PCeu6y89_VNpaf5cBDpkY6NfseltR0U1wN0bGzPGknG7uX9cWvPk8xajMaXYcpkvZm7ZjDS-nB3UJ4sFWI1ymttWExuW8aHATf_PCsmPxP08KZ4Zl03KUzLAGPKpy7KF')">
+                            </div>
+                            <div class="overflow-hidden">
+                                <p class="text-xs text-gray-300 truncate group-hover:text-primary">
+                                    politician_speech_v2.mov</p>
+                                <p class="text-[10px] text-gray-600">1 hour ago</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col bg-visio-charcoal overflow-y-auto relative">
+            <div class="px-8 py-6 w-full max-w-[1600px] mx-auto flex flex-col gap-6">
+                <!-- Page Header -->
+                <div class="flex justify-between items-end">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span
+                                class="px-2 py-0.5 rounded text-[10px] font-bold bg-visio-accent-red/20 text-visio-accent-red border border-visio-accent-red/30 uppercase tracking-wide">High
+                                Risk Detected</span>
+                            <span class="text-gray-500 text-xs">ID: #VN-8842-XJ</span>
+                        </div>
+                        <h1 class="text-2xl font-bold text-white">Video Credibility Analysis</h1>
+                    </div>
+                    <div class="flex gap-3">
+                        <button
+                            class="flex items-center gap-2 px-4 py-2 bg-[#212f4a] hover:bg-[#2c3e5e] text-white text-sm font-medium rounded-lg transition-colors">
+                            <span class="material-symbols-outlined text-[18px]">download</span>
+                            Raw Data
+                        </button>
+                        <button
+                            class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-blue-900/40">
+                            <span class="material-symbols-outlined text-[18px]">summarize</span>
+                            Generate Report
+                        </button>
+                    </div>
+                </div>
+                <!-- Top Section: Player & Score -->
+                <div class="grid grid-cols-12 gap-6 h-[480px]">
+                    <!-- Video Player Column -->
+                    <div class="col-span-12 lg:col-span-8 flex flex-col h-full">
+                        <div class="relative flex-1 bg-black rounded-t-xl overflow-hidden group">
+                            <!-- Video Placeholder -->
+                            <div class="absolute inset-0 bg-cover bg-center opacity-60"
+                                data-alt="Video frame of a person speaking at a podium"
+                                style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAQDuxpWFdOkVVEugXBywQZ_2DsIaD7p2r9XjZRfUqsQ4A56gXCSo4sESEVQAg1aTvPFuLysl69sbDV6Oxp9Pw66Un6B-eicyroqSVtfq6eHtfW-1siwDKpjMw4TR1LUj6_gdM4fncDYC2aS5l0Pyb90JxqTfvL1Xx8SA-UhVQEyNfoSplHxp_wY5GnHBq_Bnir6BvLZ77iETzk1cFNPhNkaYwdZCNv8LbFihTVa5x8qloQnSYg344eeUtbA58_d1By8v6Ge-oq1f3u');">
+                            </div>
+                            <!-- Fake Analysis Overlay (simulated) -->
+                            <div
+                                class="absolute top-[20%] left-[45%] w-[120px] h-[120px] border-2 border-visio-accent-red rounded-full opacity-80 animate-pulse">
+                            </div>
+                            <div
+                                class="absolute top-[22%] left-[48%] bg-visio-accent-red text-white text-[10px] font-bold px-2 py-0.5 rounded">
+                                MOUTH MAP</div>
+                            <!-- Play Button -->
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <button
+                                    class="size-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center text-white hover:scale-105 transition-transform group-hover:bg-primary/80">
+                                    <span class="material-symbols-outlined text-[32px] ml-1">play_arrow</span>
+                                </button>
+                            </div>
+                            <!-- Top Controls -->
+                            <div class="absolute top-4 right-4 flex gap-2">
+                                <button
+                                    class="bg-black/50 hover:bg-black/70 text-white p-1.5 rounded text-xs backdrop-blur-md">1080p</button>
+                                <button class="bg-black/50 hover:bg-black/70 text-white p-1.5 rounded backdrop-blur-md">
+                                    <span class="material-symbols-outlined text-[16px]">fullscreen</span>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Advanced Timeline -->
+                        <div
+                            class="bg-visio-card border border-[#212f4a] border-t-0 rounded-b-xl p-4 flex flex-col gap-2">
+                            <div class="flex items-center justify-between text-xs text-gray-400 font-mono mb-1">
+                                <span>00:14.05</span>
+                                <span>03:42.00</span>
+                            </div>
+                            <!-- Timeline Track -->
+                            <div
+                                class="relative h-12 bg-[#0f121a] rounded w-full flex items-center px-1 overflow-hidden cursor-pointer group/timeline">
+                                <!-- Progress -->
+                                <div
+                                    class="absolute left-0 top-0 bottom-0 bg-primary/20 w-[35%] border-r-2 border-primary z-10">
+                                </div>
+                                <!-- Grid Lines -->
+                                <div class="absolute inset-0 w-full h-full opacity-20"
+                                    style="background-image: linear-gradient(90deg, #2f446a 1px, transparent 1px); background-size: 20px 100%;">
+                                </div>
+                                <!-- Markers -->
+                                <div class="absolute left-[15%] top-1/2 -translate-y-1/2 h-8 w-[2px] bg-visio-accent-red shadow-[0_0_8px_rgba(255,74,74,0.8)] z-20 tooltip-trigger"
+                                    title="Lip Sync Mismatch"></div>
+                                <div
+                                    class="absolute left-[34%] top-1/2 -translate-y-1/2 h-8 w-[2px] bg-visio-accent-red shadow-[0_0_8px_rgba(255,74,74,0.8)] z-20">
+                                </div>
+                                <div
+                                    class="absolute left-[62%] top-1/2 -translate-y-1/2 h-6 w-[2px] bg-visio-accent-amber opacity-70 z-20">
+                                </div>
+                                <!-- Hover effect playhead -->
+                                <div
+                                    class="hidden group-hover/timeline:block absolute top-0 bottom-0 w-[1px] bg-white opacity-50 pointer-events-none left-[50%]">
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center mt-1">
+                                <div class="flex gap-4 text-xs text-gray-400">
+                                    <div class="flex items-center gap-1">
+                                        <div class="size-2 rounded-full bg-visio-accent-red"></div>Critical
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <div class="size-2 rounded-full bg-visio-accent-amber"></div>Warning
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <button class="text-gray-400 hover:text-white"><span
+                                            class="material-symbols-outlined text-[20px]">skip_previous</span></button>
+                                    <button class="text-white"><span
+                                            class="material-symbols-outlined text-[24px]">pause</span></button>
+                                    <button class="text-gray-400 hover:text-white"><span
+                                            class="material-symbols-outlined text-[20px]">skip_next</span></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Credibility Scorecard Column -->
+                    <div class="col-span-12 lg:col-span-4 flex flex-col h-full gap-4">
+                        <div
+                            class="bg-visio-card border border-[#212f4a] rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden flex-1">
+                            <!-- Background glow -->
+                            <div
+                                class="absolute top-0 right-0 w-full h-full bg-gradient-to-bl from-visio-accent-red/5 to-transparent pointer-events-none">
+                            </div>
+                            <h3 class="text-gray-400 text-sm font-medium uppercase tracking-widest mb-6">Unified
+                                Credibility Score</h3>
+                            <div class="relative size-48 mb-6">
+                                <!-- Circular Progress SVG -->
+                                <svg class="size-full rotate-[-90deg]" viewbox="0 0 100 100">
+                                    <circle class="text-[#212f4a]" cx="50" cy="50" fill="transparent" r="42"
+                                        stroke="currentColor" stroke-width="8"></circle>
+                                    <circle class="text-visio-accent-red drop-shadow-[0_0_10px_rgba(255,74,74,0.5)]"
+                                        cx="50" cy="50" fill="transparent" r="42" stroke="currentColor"
+                                        stroke-dasharray="264" stroke-dashoffset="26" stroke-linecap="round"
+                                        stroke-width="8"></circle>
+                                </svg>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                    <span class="text-5xl font-bold text-white tracking-tighter">92%</span>
+                                    <span class="text-xs text-visio-accent-red font-bold uppercase mt-1">Fake
+                                        Probability</span>
+                                </div>
+                            </div>
+                            <div class="w-full bg-[#0f121a] rounded-lg p-3 border border-[#212f4a]">
+                                <p class="text-sm text-gray-300">
+                                    <span class="text-visio-accent-red font-bold">Manipulated Content:</span> Deepfake
+                                    algorithms detected in facial region (frames 142-450).
+                                </p>
+                            </div>
+                        </div>
+                        <!-- Quick Stats -->
+                        <div
+                            class="bg-visio-card border border-[#212f4a] rounded-xl p-4 flex flex-col justify-between flex-1">
+                            <h4 class="text-xs text-gray-400 font-bold uppercase mb-2">Metadata Analysis</h4>
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center text-sm border-b border-[#212f4a] pb-2">
+                                    <span class="text-gray-400">Source</span>
+                                    <span class="text-white">YouTube (Verified)</span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm border-b border-[#212f4a] pb-2">
+                                    <span class="text-gray-400">Resolution</span>
+                                    <span class="text-white">1920x1080 (Upscaled)</span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm">
+                                    <span class="text-gray-400">Audio Codec</span>
+                                    <span class="text-white">AAC-LC (Re-encoded)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Metrics Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <!-- Card 1 -->
+                    <div
+                        class="bg-visio-card border border-[#212f4a] rounded-xl p-4 shadow-neon-red relative overflow-hidden group">
+                        <div class="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity">
+                            <span class="material-symbols-outlined text-[40px] text-visio-accent-red">face</span>
+                        </div>
+                        <p class="text-gray-400 text-xs font-medium uppercase mb-1">Deepfake Likelihood</p>
+                        <h3 class="text-2xl font-bold text-white mb-2">High <span
+                                class="text-lg text-visio-accent-red">94%</span></h3>
+                        <div class="w-full bg-[#0f121a] h-1.5 rounded-full overflow-hidden">
+                            <div class="bg-visio-accent-red h-full rounded-full" style="width: 94%"></div>
+                        </div>
+                        <p class="text-[10px] text-gray-400 mt-2">Face swapping artifacts detected.</p>
+                    </div>
+                    <!-- Card 2 -->
+                    <div
+                        class="bg-visio-card border border-[#212f4a] rounded-xl p-4 shadow-neon-red relative overflow-hidden group">
+                        <div class="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity">
+                            <span
+                                class="material-symbols-outlined text-[40px] text-visio-accent-red">record_voice_over</span>
+                        </div>
+                        <p class="text-gray-400 text-xs font-medium uppercase mb-1">Lip-sync Mismatch</p>
+                        <h3 class="text-2xl font-bold text-white mb-2">Severe <span
+                                class="text-lg text-visio-accent-red">85%</span></h3>
+                        <div class="w-full bg-[#0f121a] h-1.5 rounded-full overflow-hidden">
+                            <div class="bg-visio-accent-red h-full rounded-full" style="width: 85%"></div>
+                        </div>
+                        <p class="text-[10px] text-gray-400 mt-2">Audio precedes visual by 120ms.</p>
+                    </div>
+                    <!-- Card 3 -->
+                    <div class="bg-visio-card border border-[#212f4a] rounded-xl p-4 relative overflow-hidden group">
+                        <div class="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity">
+                            <span
+                                class="material-symbols-outlined text-[40px] text-visio-accent-blue">motion_mode</span>
+                        </div>
+                        <p class="text-gray-400 text-xs font-medium uppercase mb-1">Motion Consistency</p>
+                        <h3 class="text-2xl font-bold text-white mb-2">Normal <span
+                                class="text-lg text-visio-accent-blue">12%</span></h3>
+                        <div class="w-full bg-[#0f121a] h-1.5 rounded-full overflow-hidden">
+                            <div class="bg-visio-accent-blue h-full rounded-full" style="width: 12%"></div>
+                        </div>
+                        <p class="text-[10px] text-gray-400 mt-2">Natural head movement patterns.</p>
+                    </div>
+                    <!-- Card 4 -->
+                    <div class="bg-visio-card border border-[#212f4a] rounded-xl p-4 relative overflow-hidden group">
+                        <div class="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity">
+                            <span
+                                class="material-symbols-outlined text-[40px] text-visio-accent-amber">graphic_eq</span>
+                        </div>
+                        <p class="text-gray-400 text-xs font-medium uppercase mb-1">Audio Synthesis</p>
+                        <h3 class="text-2xl font-bold text-white mb-2">Medium <span
+                                class="text-lg text-visio-accent-amber">45%</span></h3>
+                        <div class="w-full bg-[#0f121a] h-1.5 rounded-full overflow-hidden">
+                            <div class="bg-visio-accent-amber h-full rounded-full" style="width: 45%"></div>
+                        </div>
+                        <p class="text-[10px] text-gray-400 mt-2">Spectral noise in higher frequencies.</p>
+                    </div>
+                </div>
+                <!-- Tabbed Forensic Detail Section -->
+                <div
+                    class="flex-1 min-h-[400px] flex flex-col bg-visio-card border border-[#212f4a] rounded-xl overflow-hidden">
+                    <!-- Tabs -->
+                    <div class="flex items-center border-b border-[#212f4a] bg-[#121824]">
+                        <button
+                            class="px-6 py-4 text-sm font-medium text-white border-b-2 border-primary bg-[#1e293b]/50">Frame
+                            Forensics</button>
+                        <button
+                            class="px-6 py-4 text-sm font-medium text-gray-400 hover:text-white hover:bg-[#1e293b]/30 transition-colors">Landmark
+                            Instability</button>
+                        <button
+                            class="px-6 py-4 text-sm font-medium text-gray-400 hover:text-white hover:bg-[#1e293b]/30 transition-colors">Spectral
+                            Analysis</button>
+                    </div>
+                    <!-- Content -->
+                    <div class="p-6 flex flex-col gap-6">
+                        <!-- Heatmap Strip -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="text-sm font-bold text-white">Pixel-Level Manipulation Heatmap</h4>
+                                <div class="flex gap-2 text-[10px] uppercase text-gray-400 font-bold">
+                                    <span class="flex items-center gap-1"><span
+                                            class="block size-2 bg-visio-accent-blue rounded-full"></span>
+                                        Original</span>
+                                    <span class="flex items-center gap-1"><span
+                                            class="block size-2 bg-visio-accent-red rounded-full"></span> Forged</span>
+                                </div>
+                            </div>
+                            <!-- Fake Heatmap Visualization -->
+                            <div
+                                class="h-24 w-full rounded-lg bg-[#0f121a] border border-[#212f4a] relative overflow-hidden flex">
+                                <!-- We create a visual representation of frames with varying "heat" -->
+                                <div
+                                    class="flex-1 h-full bg-gradient-to-r from-blue-900/20 via-blue-900/20 to-transparent">
+                                </div>
+                                <div
+                                    class="flex-[2] h-full bg-gradient-to-r from-red-900/80 via-red-600/60 to-red-900/80 border-l border-r border-red-500/30 relative group">
+                                    <div
+                                        class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                        <span class="bg-black/80 text-white text-[10px] px-2 py-1 rounded">High
+                                            Confidence Region</span>
+                                    </div>
+                                </div>
+                                <div
+                                    class="flex-1 h-full bg-gradient-to-r from-transparent via-blue-900/20 to-blue-900/20">
+                                </div>
+                            </div>
+                            <div class="flex justify-between text-xs text-gray-500 mt-1 font-mono">
+                                <span>Frame 0</span>
+                                <span>Frame 300</span>
+                                <span>Frame 600</span>
+                                <span>Frame 900</span>
+                            </div>
+                        </div>
+                        <!-- Timeline Events List -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
+                            <div>
+                                <h4 class="text-sm font-bold text-white mb-3">Detected Anomalies</h4>
+                                <div class="space-y-2">
+                                    <!-- Anomaly Item -->
+                                    <div
+                                        class="flex items-center gap-3 p-3 rounded-lg bg-[#0f121a] border border-[#212f4a] hover:border-primary/50 transition-colors cursor-pointer group">
+                                        <div class="text-visio-accent-red bg-visio-accent-red/10 p-2 rounded-lg">
+                                            <span class="material-symbols-outlined text-[20px]">warning</span>
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="flex justify-between">
+                                                <p class="text-sm font-medium text-white group-hover:text-primary">
+                                                    Inconsistent Blinking Pattern</p>
+                                                <span class="text-xs text-gray-400 font-mono">00:14.05</span>
+                                            </div>
+                                            <p class="text-xs text-gray-500">Eye aspect ratio variance exceeds natural
+                                                threshold.</p>
+                                        </div>
+                                        <div class="text-xs font-bold text-visio-accent-red">98%</div>
+                                    </div>
+                                    <!-- Anomaly Item -->
+                                    <div
+                                        class="flex items-center gap-3 p-3 rounded-lg bg-[#0f121a] border border-[#212f4a] hover:border-primary/50 transition-colors cursor-pointer group">
+                                        <div class="text-visio-accent-red bg-visio-accent-red/10 p-2 rounded-lg">
+                                            <span class="material-symbols-outlined text-[20px]">graphic_eq</span>
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="flex justify-between">
+                                                <p class="text-sm font-medium text-white group-hover:text-primary">Audio
+                                                    Spectral Gap</p>
+                                                <span class="text-xs text-gray-400 font-mono">00:22.18</span>
+                                            </div>
+                                            <p class="text-xs text-gray-500">High frequency cut-off typical of
+                                                text-to-speech engines.</p>
+                                        </div>
+                                        <div class="text-xs font-bold text-visio-accent-red">92%</div>
+                                    </div>
+                                    <!-- Anomaly Item -->
+                                    <div
+                                        class="flex items-center gap-3 p-3 rounded-lg bg-[#0f121a] border border-[#212f4a] hover:border-primary/50 transition-colors cursor-pointer group">
+                                        <div class="text-visio-accent-amber bg-visio-accent-amber/10 p-2 rounded-lg">
+                                            <span
+                                                class="material-symbols-outlined text-[20px]">face_retouching_off</span>
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="flex justify-between">
+                                                <p class="text-sm font-medium text-white group-hover:text-primary">
+                                                    Facial Boundary Artifacts</p>
+                                                <span class="text-xs text-gray-400 font-mono">01:05.40</span>
+                                            </div>
+                                            <p class="text-xs text-gray-500">Blending irregularities on jawline.</p>
+                                        </div>
+                                        <div class="text-xs font-bold text-visio-accent-amber">76%</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Mini Graph -->
+                            <div class="flex flex-col h-full">
+                                <h4 class="text-sm font-bold text-white mb-3">Compression Error Rate</h4>
+                                <div
+                                    class="flex-1 bg-[#0f121a] rounded-lg border border-[#212f4a] p-4 relative flex items-end justify-between gap-1 overflow-hidden">
+                                    <!-- Fake bar chart using divs -->
+                                    <div
+                                        class="w-full h-[30%] bg-visio-accent-blue/30 hover:bg-visio-accent-blue/50 rounded-t-sm transition-all">
+                                    </div>
+                                    <div
+                                        class="w-full h-[45%] bg-visio-accent-blue/30 hover:bg-visio-accent-blue/50 rounded-t-sm transition-all">
+                                    </div>
+                                    <div
+                                        class="w-full h-[35%] bg-visio-accent-blue/30 hover:bg-visio-accent-blue/50 rounded-t-sm transition-all">
+                                    </div>
+                                    <div
+                                        class="w-full h-[90%] bg-visio-accent-red hover:bg-red-500 rounded-t-sm transition-all shadow-[0_0_10px_rgba(255,74,74,0.4)]">
+                                    </div>
+                                    <div
+                                        class="w-full h-[85%] bg-visio-accent-red hover:bg-red-500 rounded-t-sm transition-all shadow-[0_0_10px_rgba(255,74,74,0.4)]">
+                                    </div>
+                                    <div
+                                        class="w-full h-[40%] bg-visio-accent-blue/30 hover:bg-visio-accent-blue/50 rounded-t-sm transition-all">
+                                    </div>
+                                    <div
+                                        class="w-full h-[25%] bg-visio-accent-blue/30 hover:bg-visio-accent-blue/50 rounded-t-sm transition-all">
+                                    </div>
+                                    <div
+                                        class="w-full h-[30%] bg-visio-accent-blue/30 hover:bg-visio-accent-blue/50 rounded-t-sm transition-all">
+                                    </div>
+                                    <!-- Background grid lines -->
+                                    <div
+                                        class="absolute inset-0 w-full h-full pointer-events-none flex flex-col justify-between p-4 opacity-10">
+                                        <div class="w-full h-px bg-white"></div>
+                                        <div class="w-full h-px bg-white"></div>
+                                        <div class="w-full h-px bg-white"></div>
+                                        <div class="w-full h-px bg-white"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>
