@@ -63,29 +63,6 @@ VisioNova/
 └── README.md
 ```
 
-## 🚀 Getting Started
-
-### Prerequisites
-- Modern web browser (Chrome, Firefox, Edge, Safari)
-- No server required - runs entirely client-side
-
-### Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/shubhanginidixit/VisioNova.git
-   ```
-
-2. Navigate to the project:
-   ```bash
-   cd VisioNova
-   ```
-
-3. Open the homepage in your browser:
-   ```bash
-   # Open frontend/html/homepage.html in your browser
-   ```
-
 ## 🎨 Tech Stack
 
 - **HTML5** - Structure and semantics
@@ -93,6 +70,7 @@ VisioNova/
 - **JavaScript** - Interactive functionality
 - **Google Material Symbols** - Icon library
 - **Inter Font** - Typography
+
 
 ## 🌙 Design Features
 
@@ -116,20 +94,14 @@ VisioNova uses a **Unified Credibility Score** (0-100) that combines:
 | 50-79 | ⚠️ Review Recommended |
 | 0-49 | ❌ High Risk / Manipulated |
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions:
+Dhanush Pillay
+Shubhangini Dixit
 
 ---
 
 <div align="center">
-
-**Built with ❤️ for Media Integrity**
-
-[Report Bug](https://github.com/shubhanginidixit/VisioNova/issues) · [Request Feature](https://github.com/shubhanginidixit/VisioNova/issues)
 
 </div>
