@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VisioNova - Analysis Result</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#388bff",
+                        "primary-dark": "#20324b", // Matches component examples
+                        "background-light": "#f5f7f8",
+                        "background-dark": "#0f1723", // Matches charcoal theme
+                        "accent-emerald": "#00D991",
+                        "accent-amber": "#FFB74A",
+                        "accent-red": "#FF4A4A",
+                        "navy": "#0D1B2A",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for dark mode */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f1723;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #20324b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #388bff;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-x-hidden min-h-screen flex flex-col">
+<!-- Top Navbar -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-white/10 bg-[#0f1723] px-6 py-3 z-20 sticky top-0">
+<div class="flex items-center gap-4 text-white">
+<div class="size-8 flex items-center justify-center rounded-lg bg-primary/20 text-primary">
+<span class="material-symbols-outlined text-2xl">verified_user</span>
+</div>
+<h2 class="text-white text-xl font-bold leading-tight tracking-[-0.015em]">VisioNova</h2>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-white/70 hover:text-white text-sm font-medium transition-colors flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[20px]">home</span>
+                    Home
+                </a>
+<a class="text-white text-sm font-medium flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[20px] text-primary">analytics</span>
+                    Analyze
+                </a>
+<a class="text-white/70 hover:text-white text-sm font-medium transition-colors flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[20px]">fact_check</span>
+                    Fact Check
+                </a>
+<a class="text-white/70 hover:text-white text-sm font-medium transition-colors flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[20px]">description</span>
+                    Reports
+                </a>
+<a class="text-white/70 hover:text-white text-sm font-medium transition-colors flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[20px]">api</span>
+                    API
+                </a>
+<a class="text-white/70 hover:text-white text-sm font-medium transition-colors flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+                    Help
+                </a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-white/5 transition-colors text-white relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-accent-red rounded-full"></span>
+</button>
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-white/10" data-alt="User profile avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDsGDRtDkc9uz7F-BxyUJhz-DkpX3FhP7Dkowvyj83Lf_i7nCFG4n0TaGIhg3kbSVbx16fcOwYFebfQ6Uymcf4OAAM4fCqgXcBy2OHZX1YZkiPHxn7eH3D3xDvumZ0mPAZQ6zbsdslTMxvIRavKPs-Z19UvnwJExmlCbTDMmjb1JvD_mg8_2Ns61RvF5iVI1IeklkumzgzGw0CilrkHO1o3sLhYmR5w4yS9QEXbbXlafxDMjSxE5ktX288yaafVSgKgH5C9rC4TLxCl");'></div>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- Sidebar -->
+<aside class="hidden lg:flex w-64 flex-col justify-between bg-navy border-r border-white/5 p-4 overflow-y-auto">
+<div class="flex flex-col gap-6">
+<!-- User Context -->
+<div class="flex gap-3 items-center p-2 rounded-xl bg-white/5 border border-white/5">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10" data-alt="Team workspace icon" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAuKMOR4CPp7YaJuRMWixG7zx3qH3cQSU5YWlNUuaFFuQuQbXRqVbUgaRna-q7SfHRthW2UOB71Y0thZt3_XEMBlJ3saLC6IbAGNi2v32iTPD1fWBeKGf2QTLVri1lS3c305TH_BllTLphAyQ99lQNIoGwJKYxd_Dpz2IEzn_WkjBjbtV9C-7l2KTQepv7XsM8fSzLsPFqJmzKhduT50Q4rte6F0SR-vT4CWqopzpS_jPy2Y91Ck5IjrhBJNMZWj1bFtHPSXy_1bBJi");'></div>
+<div class="flex flex-col">
+<h1 class="text-white text-sm font-medium leading-normal">Research Team</h1>
+<p class="text-white/50 text-xs font-normal leading-normal">Professional Plan</p>
+</div>
+</div>
+<!-- Quick Actions -->
+<div class="flex flex-col gap-2">
+<h3 class="text-white/40 text-xs font-bold uppercase tracking-wider px-3 mb-1">Tools</h3>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-primary hover:bg-primary/90 transition-colors group">
+<span class="material-symbols-outlined text-white">add_circle</span>
+<p class="text-white text-sm font-medium">New Analysis</p>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group text-white/70 hover:text-white">
+<span class="material-symbols-outlined">upload_file</span>
+<p class="text-sm font-medium">Bulk Upload</p>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group text-white/70 hover:text-white">
+<span class="material-symbols-outlined">history</span>
+<p class="text-sm font-medium">History</p>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group text-white/70 hover:text-white">
+<span class="material-symbols-outlined">folder_shared</span>
+<p class="text-sm font-medium">Projects</p>
+</button>
+</div>
+<!-- Settings -->
+<div class="flex flex-col gap-2 mt-4">
+<h3 class="text-white/40 text-xs font-bold uppercase tracking-wider px-3 mb-1">System</h3>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group text-white/70 hover:text-white">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-sm font-medium">Settings</p>
+</button>
+</div>
+</div>
+<!-- Storage Status -->
+<div class="p-4 rounded-xl bg-gradient-to-br from-white/5 to-white/0 border border-white/5 mt-auto">
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-medium text-white/70">Credits Used</span>
+<span class="text-xs font-bold text-white">850/1000</span>
+</div>
+<div class="w-full bg-white/10 rounded-full h-1.5">
+<div class="bg-primary h-1.5 rounded-full" style="width: 85%"></div>
+</div>
+<button class="mt-3 w-full text-center text-xs text-primary hover:text-white transition-colors">Upgrade Plan</button>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto p-4 md:p-8 lg:px-12">
+<div class="max-w-7xl mx-auto flex flex-col gap-6">
+<!-- Page Heading -->
+<div class="flex flex-wrap justify-between items-end gap-4 border-b border-white/10 pb-6">
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-2 text-white/50 text-sm mb-1">
+<span>Analyze</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span>Text Analysis</span>
+</div>
+<h1 class="text-white text-3xl md:text-4xl font-black leading-tight tracking-tight">Quantum Computing Article</h1>
+<p class="text-[#8da8ce] text-sm font-normal flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+                            Analyzed on Oct 24, 2023 • 14:32 PM
+                        </p>
+</div>
+<div class="flex gap-3">
+<button class="flex h-10 px-4 cursor-pointer items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-bold transition-all">
+<span class="material-symbols-outlined text-[20px] mr-2">share</span>
+                            Share
+                        </button>
+<button class="flex h-10 px-4 cursor-pointer items-center justify-center rounded-xl bg-primary hover:bg-blue-600 text-white text-sm font-bold shadow-lg shadow-primary/20 transition-all">
+<span class="material-symbols-outlined text-[20px] mr-2">download</span>
+                            Export Report
+                        </button>
+</div>
+</div>
+<!-- Scorecard Section -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- Unified Score -->
+<div class="bg-primary-dark/50 border border-white/5 rounded-2xl p-6 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-8xl text-white">shield</span>
+</div>
+<div class="flex flex-col h-full justify-between relative z-10">
+<div>
+<h3 class="text-white/70 text-sm font-medium mb-1">Unified Credibility Score</h3>
+<div class="flex items-baseline gap-2">
+<span class="text-5xl font-black text-white tracking-tight">94%</span>
+<span class="px-2 py-0.5 rounded-full bg-accent-emerald/20 text-accent-emerald text-xs font-bold border border-accent-emerald/20">Verified</span>
+</div>
+</div>
+<div class="mt-4">
+<div class="w-full bg-black/40 rounded-full h-2 mb-2">
+<div class="bg-accent-emerald h-2 rounded-full shadow-[0_0_10px_rgba(0,217,145,0.5)]" style="width: 94%"></div>
+</div>
+<p class="text-white/50 text-xs">Based on 12 distinct metrics</p>
+</div>
+</div>
+</div>
+<!-- Probability Card -->
+<div class="bg-primary-dark/50 border border-white/5 rounded-2xl p-6 flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<h3 class="text-white/70 text-sm font-medium">Human vs. AI Probability</h3>
+<span class="material-symbols-outlined text-white/30">psychology</span>
+</div>
+<div class="flex gap-4 items-end mt-4">
+<div class="flex flex-col gap-1 w-1/2">
+<span class="text-xs text-white/50">Human</span>
+<div class="h-16 w-full bg-black/40 rounded-lg relative overflow-hidden flex items-end">
+<div class="w-full bg-primary h-[94%] opacity-90"></div>
+<span class="absolute bottom-1 w-full text-center text-xs font-bold text-white drop-shadow-md">94%</span>
+</div>
+</div>
+<div class="flex flex-col gap-1 w-1/2">
+<span class="text-xs text-white/50">AI-Gen</span>
+<div class="h-16 w-full bg-black/40 rounded-lg relative overflow-hidden flex items-end">
+<div class="w-full bg-accent-red h-[6%] opacity-80"></div>
+<span class="absolute bottom-1 w-full text-center text-xs font-bold text-white/60">6%</span>
+</div>
+</div>
+</div>
+<p class="text-xs text-accent-emerald mt-2 font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+                             Consistent human writing patterns
+                         </p>
+</div>
+<!-- Source Card -->
+<div class="bg-primary-dark/50 border border-white/5 rounded-2xl p-6 flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<h3 class="text-white/70 text-sm font-medium">Source Reliability</h3>
+<span class="material-symbols-outlined text-white/30">domain_verification</span>
+</div>
+<div class="mt-2">
+<span class="text-2xl font-bold text-white block">High Authority</span>
+<span class="text-sm text-white/60 block mt-1">Found on 4 trusted academic domains</span>
+</div>
+<div class="flex gap-2 mt-4">
+<span class="px-2 py-1 bg-white/5 rounded text-xs text-white/70 border border-white/5">mit.edu</span>
+<span class="px-2 py-1 bg-white/5 rounded text-xs text-white/70 border border-white/5">nature.com</span>
+<span class="px-2 py-1 bg-white/5 rounded text-xs text-white/70 border border-white/5">+2 more</span>
+</div>
+</div>
+</div>
+<!-- Middle Section: Text & Graphs -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[500px]">
+<!-- Text Viewer (Paper Style) -->
+<div class="lg:col-span-7 flex flex-col bg-[#e2e8f0] rounded-2xl overflow-hidden shadow-xl">
+<div class="bg-white px-6 py-3 border-b border-slate-200 flex justify-between items-center">
+<div class="flex gap-2 items-center">
+<span class="material-symbols-outlined text-slate-400">article</span>
+<span class="text-slate-700 font-bold text-sm">Analyzed Content</span>
+</div>
+<div class="flex gap-2">
+<span class="flex items-center gap-1 text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">
+<span class="size-2 rounded-full bg-yellow-400"></span> Perplexity
+                                </span>
+<span class="flex items-center gap-1 text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">
+<span class="size-2 rounded-full bg-red-400"></span> Burstiness
+                                </span>
+</div>
+</div>
+<div class="p-8 font-serif text-lg leading-relaxed text-slate-800 h-full overflow-y-auto max-h-[600px]">
+<p class="mb-4">
+                                The rapid advancement of quantum computing poses significant opportunities and challenges for the tech industry. <span class="bg-yellow-200/60 px-0.5 rounded cursor-help relative group" title="Low perplexity score detected">Unlike classical computers, which use bits to process information as zeros or ones, quantum computers use quantum bits, or qubits.</span>
+</p>
+<p class="mb-4">
+<span class="bg-red-200/60 px-0.5 rounded cursor-help" title="High burstiness anomaly">This allows them to exist in multiple states simultaneously, a phenomenon known as superposition.</span> In 2019, Google claimed to have achieved "quantum supremacy," performing a calculation in 200 seconds that would take a supercomputer 10,000 years.
+                            </p>
+<p class="mb-4">
+                                However, critics argue that practical applications remain decades away. The error rates in current quantum processors are still too high for reliable large-scale computation. Despite this, investment in the sector has tripled since 2020.
+                            </p>
+<p class="mb-4">
+<span class="bg-yellow-200/60 px-0.5 rounded">Major tech giants like IBM and Microsoft are racing to build the first fault-tolerant quantum computer.</span> The implications for cryptography are particularly concerning, as quantum machines could potentially crack current encryption standards.
+                            </p>
+</div>
+</div>
+<!-- Metrics & Graphs Column -->
+<div class="lg:col-span-5 flex flex-col gap-4">
+<!-- Perplexity Chart -->
+<div class="bg-primary-dark/40 border border-white/5 rounded-2xl p-5 flex-1 flex flex-col">
+<div class="flex justify-between items-center mb-4">
+<div>
+<h4 class="text-white font-bold text-sm">Perplexity Analysis</h4>
+<p class="text-white/40 text-xs">Text unpredictability flow</p>
+</div>
+<span class="text-accent-emerald font-mono text-sm font-bold">Avg: 45.2</span>
+</div>
+<!-- Mock Chart -->
+<div class="relative flex-1 min-h-[140px] w-full mt-2">
+<div class="absolute inset-0 flex items-end justify-between px-2">
+<!-- Grid lines -->
+<div class="absolute inset-0 flex flex-col justify-between pointer-events-none">
+<div class="w-full h-px bg-white/5"></div>
+<div class="w-full h-px bg-white/5"></div>
+<div class="w-full h-px bg-white/5"></div>
+</div>
+<!-- Chart Line (SVG) -->
+<svg class="w-full h-full overflow-visible" preserveaspectratio="none">
+<path d="M0,80 C20,70 40,90 60,60 C80,30 100,50 120,40 C140,30 160,80 180,90 C200,100 220,50 240,60 C260,70 280,20 300,30 C320,40 340,10 360,20" fill="none" stroke="#3A8DFF" stroke-width="2" vector-effect="non-scaling-stroke"></path>
+<path d="M0,80 C20,70 40,90 60,60 C80,30 100,50 120,40 C140,30 160,80 180,90 C200,100 220,50 240,60 C260,70 280,20 300,30 C320,40 340,10 360,20 V 150 H 0 Z" fill="url(#gradient)" opacity="0.2" vector-effect="non-scaling-stroke"></path>
+<defs>
+<lineargradient id="gradient" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" style="stop-color:#3A8DFF;stop-opacity:1"></stop>
+<stop offset="100%" style="stop-color:#3A8DFF;stop-opacity:0"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+</div>
+</div>
+<!-- Burstiness Chart -->
+<div class="bg-primary-dark/40 border border-white/5 rounded-2xl p-5 flex-1 flex flex-col">
+<div class="flex justify-between items-center mb-4">
+<div>
+<h4 class="text-white font-bold text-sm">Burstiness Comparison</h4>
+<p class="text-white/40 text-xs">Sentence length variance</p>
+</div>
+<div class="flex gap-2">
+<div class="flex items-center gap-1"><span class="size-2 rounded-full bg-accent-emerald"></span><span class="text-[10px] text-white/60">Human</span></div>
+<div class="flex items-center gap-1"><span class="size-2 rounded-full bg-white/20"></span><span class="text-[10px] text-white/60">Doc</span></div>
+</div>
+</div>
+<div class="flex-1 flex items-end justify-between gap-2 min-h-[120px] px-2 pt-4">
+<!-- Bars -->
+<div class="w-full bg-white/5 rounded-t h-[40%] relative group"><div class="absolute bottom-0 w-full bg-accent-emerald/80 rounded-t h-[90%] w-[60%] left-[20%]"></div></div>
+<div class="w-full bg-white/5 rounded-t h-[70%] relative group"><div class="absolute bottom-0 w-full bg-accent-emerald/80 rounded-t h-[60%] w-[60%] left-[20%]"></div></div>
+<div class="w-full bg-white/5 rounded-t h-[30%] relative group"><div class="absolute bottom-0 w-full bg-accent-emerald/80 rounded-t h-[80%] w-[60%] left-[20%]"></div></div>
+<div class="w-full bg-white/5 rounded-t h-[90%] relative group"><div class="absolute bottom-0 w-full bg-accent-emerald/80 rounded-t h-[50%] w-[60%] left-[20%]"></div></div>
+<div class="w-full bg-white/5 rounded-t h-[50%] relative group"><div class="absolute bottom-0 w-full bg-accent-emerald/80 rounded-t h-[70%] w-[60%] left-[20%]"></div></div>
+<div class="w-full bg-white/5 rounded-t h-[60%] relative group"><div class="absolute bottom-0 w-full bg-accent-emerald/80 rounded-t h-[40%] w-[60%] left-[20%]"></div></div>
+</div>
+</div>
+<!-- Rhythm Uniformity -->
+<div class="bg-primary-dark/40 border border-white/5 rounded-2xl p-4 flex items-center justify-between">
+<div class="flex gap-3 items-center">
+<div class="p-2 rounded-lg bg-accent-amber/10 text-accent-amber">
+<span class="material-symbols-outlined">graphic_eq</span>
+</div>
+<div>
+<h4 class="text-white font-bold text-sm">Rhythm Uniformity</h4>
+<p class="text-white/40 text-xs">Natural variance detected</p>
+</div>
+</div>
+<span class="px-3 py-1 bg-white/5 rounded-full text-xs font-bold text-white border border-white/10">Normal</span>
+</div>
+</div>
+</div>
+<!-- Fact Checking Module -->
+<div class="flex flex-col gap-4 mb-8">
+<h3 class="text-white font-bold text-lg flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">fact_check</span>
+                        Fact-Checking &amp; Claim Verification
+                    </h3>
+<div class="bg-primary-dark/40 border border-white/5 rounded-2xl overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-white/5 bg-white/5">
+<th class="p-4 text-xs font-bold uppercase tracking-wider text-white/50 w-[40%]">Claim Extracted</th>
+<th class="p-4 text-xs font-bold uppercase tracking-wider text-white/50 w-[15%]">Verdict</th>
+<th class="p-4 text-xs font-bold uppercase tracking-wider text-white/50 w-[30%]">Reference Source</th>
+<th class="p-4 text-xs font-bold uppercase tracking-wider text-white/50 w-[15%] text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<!-- Row 1 -->
+<tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+<td class="p-4 text-white font-medium">
+                                            "Google claimed to have achieved quantum supremacy in 2019."
+                                        </td>
+<td class="p-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-accent-emerald/10 text-accent-emerald border border-accent-emerald/20">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                                                Verified
+                                            </span>
+</td>
+<td class="p-4">
+<a class="flex items-center gap-2 text-primary hover:text-white transition-colors group" href="#">
+<div class="size-5 rounded bg-white/10 flex items-center justify-center text-[10px] text-white">N</div>
+<span class="underline decoration-primary/30 group-hover:decoration-white">Nature Journal (2019)</span>
+<span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100">open_in_new</span>
+</a>
+</td>
+<td class="p-4 text-right">
+<button class="text-white/40 hover:text-white transition-colors"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+<td class="p-4 text-white font-medium">
+                                            "Quantum computers use qubits which can exist in multiple states simultaneously."
+                                        </td>
+<td class="p-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-accent-emerald/10 text-accent-emerald border border-accent-emerald/20">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                                                Verified
+                                            </span>
+</td>
+<td class="p-4">
+<a class="flex items-center gap-2 text-primary hover:text-white transition-colors group" href="#">
+<div class="size-5 rounded bg-white/10 flex items-center justify-center text-[10px] text-white">W</div>
+<span class="underline decoration-primary/30 group-hover:decoration-white">Wikipedia: Qubit</span>
+<span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100">open_in_new</span>
+</a>
+</td>
+<td class="p-4 text-right">
+<button class="text-white/40 hover:text-white transition-colors"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+<td class="p-4 text-white font-medium">
+                                            "Investment in the sector has tripled since 2020."
+                                        </td>
+<td class="p-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-accent-amber/10 text-accent-amber border border-accent-amber/20">
+<span class="material-symbols-outlined text-[14px]">warning</span>
+                                                Unverified
+                                            </span>
+</td>
+<td class="p-4 text-white/50 italic">
+                                            No direct citation found in database.
+                                        </td>
+<td class="p-4 text-right">
+<button class="text-white/40 hover:text-white transition-colors"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-white/5 transition-colors">
+<td class="p-4 text-white font-medium">
+                                            "Quantum machines will crack all encryption by 2024."
+                                        </td>
+<td class="p-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-accent-red/10 text-accent-red border border-accent-red/20">
+<span class="material-symbols-outlined text-[14px]">cancel</span>
+                                                False
+                                            </span>
+</td>
+<td class="p-4">
+<a class="flex items-center gap-2 text-primary hover:text-white transition-colors group" href="#">
+<div class="size-5 rounded bg-white/10 flex items-center justify-center text-[10px] text-white">M</div>
+<span class="underline decoration-primary/30 group-hover:decoration-white">MIT Tech Review: Timeline</span>
+<span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100">open_in_new</span>
+</a>
+</td>
+<td class="p-4 text-right">
+<button class="text-white/40 hover:text-white transition-colors"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

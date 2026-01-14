@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VisioNova Fact-Check Page</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#388bff",
+                        "background-light": "#f5f7f8",
+                        "background-dark": "#0F121A", /* Charcoal */
+                        "surface-dark": "#0D1B2A", /* Navy */
+                        "card-dark": "#162030", /* Lighter Navy/Charcoal mix */
+                        "success": "#00D991", /* Emerald */
+                        "warning": "#FFB74A", /* Amber */
+                        "danger": "#FF4A4A", /* Red */
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "2xl": "2rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for a cleaner look in dark mode */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0D1B2A; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2e476b; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #388bff; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-hidden h-screen flex flex-col">
+<!-- Top Navigation -->
+<header class="h-16 flex items-center justify-between px-6 border-b border-white/5 bg-surface-dark/95 backdrop-blur-md sticky top-0 z-50">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-2xl">verified_user</span>
+</div>
+<h2 class="text-white text-lg font-bold tracking-tight">VisioNova</h2>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-slate-400 hover:text-white text-sm font-medium transition-colors" href="#">Home</a>
+<a class="text-slate-400 hover:text-white text-sm font-medium transition-colors" href="#">Analyze</a>
+<a class="text-white text-sm font-medium relative after:content-[''] after:absolute after:w-full after:h-0.5 after:bg-primary after:-bottom-5 after:left-0" href="#">Fact Check</a>
+<a class="text-slate-400 hover:text-white text-sm font-medium transition-colors" href="#">Reports</a>
+<a class="text-slate-400 hover:text-white text-sm font-medium transition-colors" href="#">API</a>
+<a class="text-slate-400 hover:text-white text-sm font-medium transition-colors" href="#">Help</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="size-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors text-slate-300">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</button>
+<div class="h-8 w-px bg-white/10"></div>
+<div class="flex items-center gap-3 cursor-pointer group">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-9 ring-2 ring-transparent group-hover:ring-primary/50 transition-all" data-alt="User profile avatar showing a smiling professional" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCfsODaUwkv7bhVS0T_ufXjEL5SXLz1Aj5UjHGRSFK9D-u-GpDMeAqbTkvsHQMsKWu8engGqw5UH0vBviiFvHTZ2IWUnSa_YJTTMGtMugE70j7xHOzQGnEPZ_0ONGok78lw705E5uZfGdSLrkOFUgSA8nf7NJxbwo-wS9mdpHAzDsMj9V2Yc3cRwkUtELnNRX_VREMrFlilzFUCj1k3gTtYeLRqHsVStVYEfvmc1Oh5cVFTKLvAu21CW--uHt-BdOYgngGIDQ-wTW1u");'>
+</div>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- Sidebar -->
+<aside class="w-64 bg-surface-dark border-r border-white/5 flex-col justify-between hidden lg:flex">
+<div class="p-4 flex flex-col gap-2">
+<div class="mb-4 px-2">
+<p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Workspace</p>
+</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all group" href="#">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="font-medium text-sm">New Analysis</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all mt-1" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-medium text-sm">History</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined">folder_open</span>
+<span class="font-medium text-sm">Saved Reports</span>
+</a>
+<div class="my-2 border-t border-white/5"></div>
+<div class="px-2 mb-2 mt-2">
+<p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tools</p>
+</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined">link</span>
+<span class="font-medium text-sm">URL Inspector</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined">image_search</span>
+<span class="font-medium text-sm">Media Verify</span>
+</a>
+</div>
+<div class="p-4 border-t border-white/5">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-medium text-sm">Settings</span>
+</a>
+<div class="mt-4 p-4 rounded-xl bg-gradient-to-br from-primary/20 to-transparent border border-white/5">
+<h4 class="text-white text-sm font-semibold mb-1">Pro Plan</h4>
+<p class="text-xs text-slate-400 mb-3">500/1000 credits used</p>
+<div class="w-full bg-white/10 rounded-full h-1.5 mb-3">
+<div class="bg-primary h-1.5 rounded-full" style="width: 50%"></div>
+</div>
+<button class="text-xs text-primary font-bold hover:text-white transition-colors">Upgrade Limit</button>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto p-6 lg:p-10 relative">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-white/10 text-slate-400 uppercase tracking-wider border border-white/5">Report ID: VN-8821X</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success uppercase tracking-wider border border-success/20">Active Scan</span>
+</div>
+<h1 class="text-3xl font-black text-white tracking-tight">Fact Check Analysis</h1>
+<p class="text-slate-400 mt-1">Detailed breakdown of content credibility and source verification.</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white text-sm font-medium border border-white/10 transition-all">
+<span class="material-symbols-outlined text-[18px]">share</span>
+                        Share Report
+                    </button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white text-sm font-medium border border-white/10 transition-all">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                        Export PDF
+                    </button>
+</div>
+</div>
+<!-- Input Bar -->
+<div class="mb-10 w-full max-w-4xl mx-auto">
+<div class="relative group">
+<div class="absolute inset-0 bg-primary/20 rounded-2xl blur-lg transition-opacity opacity-50 group-hover:opacity-70"></div>
+<div class="relative flex items-center bg-card-dark border border-white/10 rounded-2xl shadow-xl overflow-hidden p-1.5">
+<div class="pl-4 pr-3 text-slate-400">
+<span class="material-symbols-outlined">link</span>
+</div>
+<input class="bg-transparent border-none text-white placeholder-slate-500 w-full focus:ring-0 text-base" placeholder="Paste URL, text, or drop media here..." type="text" value="https://globalnews.com/economy/2023/report-inflation-impact"/>
+<button class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-xl font-semibold text-sm transition-all shadow-lg shadow-primary/25 flex items-center gap-2 whitespace-nowrap">
+<span class="material-symbols-outlined text-[20px]">verified</span>
+                            Verify Credibility
+                        </button>
+</div>
+</div>
+</div>
+<!-- Dashboard Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-[1400px] mx-auto">
+<!-- Left Column: Score & Summary -->
+<div class="lg:col-span-4 space-y-6">
+<!-- Scorecard -->
+<div class="bg-card-dark rounded-2xl p-6 border border-white/5 shadow-xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-8xl text-white">shield</span>
+</div>
+<h3 class="text-white font-semibold text-lg mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">analytics</span>
+                            Trust Score
+                        </h3>
+<div class="flex flex-col items-center justify-center mb-6">
+<div class="relative size-40 flex items-center justify-center">
+<!-- SVG Gauge Background -->
+<svg class="transform -rotate-90 size-full" viewbox="0 0 100 100">
+<circle cx="50" cy="50" fill="none" r="40" stroke="#20324b" stroke-linecap="round" stroke-width="8"></circle>
+<circle class="animate-[dash_1s_ease-out]" cx="50" cy="50" fill="none" r="40" stroke="#00D991" stroke-dasharray="251.2" stroke-dashoffset="40" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute flex flex-col items-center">
+<span class="text-4xl font-black text-white">84</span>
+<span class="text-xs text-slate-400 font-medium">OUT OF 100</span>
+</div>
+</div>
+<div class="mt-4 px-3 py-1 rounded-full bg-success/10 border border-success/20 text-success text-sm font-bold tracking-wide">
+                                RELIABLE SOURCE
+                            </div>
+</div>
+<div class="grid grid-cols-2 gap-3 mt-6">
+<div class="bg-background-dark/50 p-3 rounded-xl border border-white/5">
+<p class="text-xs text-slate-400 mb-1">Bias Rating</p>
+<p class="text-white font-semibold text-sm">Center-Left</p>
+</div>
+<div class="bg-background-dark/50 p-3 rounded-xl border border-white/5">
+<p class="text-xs text-slate-400 mb-1">Domain Auth</p>
+<p class="text-white font-semibold text-sm">92/100</p>
+</div>
+</div>
+</div>
+<!-- Source Metadata -->
+<div class="bg-card-dark rounded-2xl p-6 border border-white/5 shadow-xl">
+<h3 class="text-white font-semibold text-sm uppercase tracking-wider mb-4 text-slate-400">Source Metadata</h3>
+<div class="space-y-4">
+<div class="flex justify-between items-start">
+<span class="text-slate-400 text-sm">Publisher</span>
+<div class="flex items-center gap-2">
+<img alt="Publisher Logo" class="rounded-full size-5" data-alt="Small logo icon for the publisher" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVcoQnnOBQzkUTKTydKGmoJtvPD4jvLvcY0PbCbnGUy6FZthHOXlxGqlGNGWdRTNyeEjmKcltKPYBA-zFriBIqwN12s_vZEJR1LjCC1p0p3uDwBc6sSoHHncGRTmOyrlVClL4k9HqIxGz14giTeNZxr6VxyKI3T4B30sn-UzSabpISV5dNkG_Ja61P2lywMuOeOUAe7NOu1LiaDJ1QWhL_NpLJjaphmuHVahFXJG376p-OnfJOz2DLZ3t05nKOQ5nhYz8_NORwSjsT"/>
+<span class="text-white text-sm font-medium">Global News Network</span>
+</div>
+</div>
+<div class="flex justify-between items-start">
+<span class="text-slate-400 text-sm">Author</span>
+<span class="text-white text-sm font-medium">Sarah Jenkins (Verified)</span>
+</div>
+<div class="flex justify-between items-start">
+<span class="text-slate-400 text-sm">Publish Date</span>
+<span class="text-white text-sm font-medium">Oct 24, 2023</span>
+</div>
+<div class="flex justify-between items-start">
+<span class="text-slate-400 text-sm">Sentiment</span>
+<span class="text-warning text-sm font-medium">Slightly Negative</span>
+</div>
+</div>
+</div>
+<!-- Quick Actions -->
+<div class="bg-primary rounded-2xl p-6 shadow-xl text-white relative overflow-hidden">
+<div class="absolute -right-4 -bottom-4 bg-white/20 size-24 rounded-full blur-2xl"></div>
+<h3 class="font-bold text-lg mb-2 relative z-10">Deep Analysis</h3>
+<p class="text-primary-100 text-sm mb-4 relative z-10">Run a deeper scan including cross-referencing archives from 2010.</p>
+<button class="bg-white text-primary px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-50 transition-colors relative z-10 w-full">Start Deep Scan</button>
+</div>
+</div>
+<!-- Right Column: Content & Analysis Stream -->
+<div class="lg:col-span-8 flex flex-col gap-6">
+<!-- Tabs -->
+<div class="flex gap-1 bg-card-dark/50 p-1 rounded-xl w-fit border border-white/5">
+<button class="px-4 py-2 bg-card-dark rounded-lg text-white text-sm font-medium shadow-sm">Claims &amp; Evidence</button>
+<button class="px-4 py-2 text-slate-400 hover:text-white text-sm font-medium transition-colors">Full Text View</button>
+<button class="px-4 py-2 text-slate-400 hover:text-white text-sm font-medium transition-colors">Media Analysis</button>
+</div>
+<!-- Article Preview & Claims List -->
+<div class="bg-card-dark rounded-2xl border border-white/5 shadow-xl overflow-hidden flex flex-col">
+<div class="p-6 border-b border-white/5 bg-gradient-to-r from-card-dark to-surface-dark">
+<h2 class="text-xl font-bold text-white mb-2 leading-tight">"Economic Impact of New Fiscal Policies on Q3 Growth"</h2>
+<p class="text-slate-400 text-sm line-clamp-2">This report analyzes the recent shifts in fiscal policy, claiming a significant 4% GDP growth in the third quarter directly attributed to tax adjustments.</p>
+</div>
+<div class="p-6 space-y-6">
+<!-- Verified Claim Item -->
+<div class="flex gap-4 group">
+<div class="flex flex-col items-center">
+<div class="size-8 rounded-full bg-success/20 flex items-center justify-center text-success border border-success/30 shrink-0">
+<span class="material-symbols-outlined text-sm font-bold">check</span>
+</div>
+<div class="w-0.5 h-full bg-white/5 group-last:hidden mt-2"></div>
+</div>
+<div class="flex-1 pb-4">
+<div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+<h4 class="text-white font-medium text-lg">GDP grew by 4% in Q3</h4>
+<span class="px-2.5 py-1 rounded-md bg-success/10 text-success text-xs font-bold border border-success/20 uppercase">Verified</span>
+</div>
+<p class="text-slate-400 text-sm mb-3">Claim appears in paragraph 2. Matches official government data releases.</p>
+<!-- Evidence Card -->
+<div class="bg-background-dark/80 rounded-xl p-4 border border-white/5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer">
+<div class="flex items-start gap-3">
+<div class="mt-1 text-primary">
+<span class="material-symbols-outlined text-[20px]">library_books</span>
+</div>
+<div>
+<p class="text-white text-sm font-medium mb-1">Source: Department of Commerce Report (Oct 2023)</p>
+<p class="text-slate-500 text-xs leading-relaxed">"Preliminary estimates indicate real gross domestic product (GDP) increased at an annual rate of 4.9 percent in the third quarter of 2023..."</p>
+<div class="flex items-center gap-4 mt-3">
+<span class="text-xs text-primary font-medium hover:underline flex items-center gap-1">
+                                                        Read Source <span class="material-symbols-outlined text-[12px]">open_in_new</span>
+</span>
+<span class="text-xs text-slate-500">Confidence: 98%</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Questionable Claim Item -->
+<div class="flex gap-4 group">
+<div class="flex flex-col items-center">
+<div class="size-8 rounded-full bg-warning/20 flex items-center justify-center text-warning border border-warning/30 shrink-0">
+<span class="material-symbols-outlined text-sm font-bold">priority_high</span>
+</div>
+<div class="w-0.5 h-full bg-white/5 group-last:hidden mt-2"></div>
+</div>
+<div class="flex-1 pb-4">
+<div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+<h4 class="text-white font-medium text-lg">This policy will double taxes for middle class</h4>
+<span class="px-2.5 py-1 rounded-md bg-warning/10 text-warning text-xs font-bold border border-warning/20 uppercase">Misleading</span>
+</div>
+<p class="text-slate-400 text-sm mb-3">Claim appears in paragraph 4. Lacks context on tax brackets and deductions.</p>
+<!-- Evidence Card -->
+<div class="bg-background-dark/80 rounded-xl p-4 border border-white/5 hover:border-warning/30 transition-all cursor-pointer">
+<div class="flex items-start gap-3">
+<div class="mt-1 text-warning">
+<span class="material-symbols-outlined text-[20px]">warning</span>
+</div>
+<div>
+<p class="text-white text-sm font-medium mb-1">Context Missing: Policy Analysis Institute</p>
+<p class="text-slate-500 text-xs leading-relaxed">"The effective tax rate increase is approximately 10% for specific brackets, not a doubling (100%) across the board..."</p>
+<div class="flex items-center gap-4 mt-3">
+<span class="text-xs text-primary font-medium hover:underline flex items-center gap-1">
+                                                        View Full Context <span class="material-symbols-outlined text-[12px]">open_in_new</span>
+</span>
+<span class="text-xs text-slate-500">Confidence: 85%</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Fake Claim Item -->
+<div class="flex gap-4 group">
+<div class="flex flex-col items-center">
+<div class="size-8 rounded-full bg-danger/20 flex items-center justify-center text-danger border border-danger/30 shrink-0">
+<span class="material-symbols-outlined text-sm font-bold">close</span>
+</div>
+<div class="w-0.5 h-full bg-white/5 group-last:hidden mt-2"></div>
+</div>
+<div class="flex-1 pb-4">
+<div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+<h4 class="text-white font-medium text-lg">Image depicts a protest from yesterday</h4>
+<span class="px-2.5 py-1 rounded-md bg-danger/10 text-danger text-xs font-bold border border-danger/20 uppercase">Fake (AI)</span>
+</div>
+<p class="text-slate-400 text-sm mb-3">Image analysis detected high probability of AI generation.</p>
+<!-- Evidence Card -->
+<div class="bg-background-dark/80 rounded-xl p-4 border border-white/5 hover:border-danger/30 transition-all cursor-pointer">
+<div class="flex items-start gap-3">
+<div class="mt-1 text-danger">
+<span class="material-symbols-outlined text-[20px]">broken_image</span>
+</div>
+<div class="w-full">
+<p class="text-white text-sm font-medium mb-2">VisioNova Image Forensics</p>
+<div class="flex gap-4 mb-2">
+<div class="w-24 h-16 rounded-lg bg-center bg-cover border border-white/10 relative overflow-hidden" data-alt="Blurred thumbnail of the fake image being analyzed" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDF-kSnClz8h1CiHwq0CwcWdOpni-fPsb8XAUvZBYLJ-qcwbRR7FbUl6qvS-jQEJUYwVo-FnWy_GS1IXJURuR3nq4ifrkCmTNYr4Wey88VOFOsgnihHg0Asl6K5ilV7fwk9h7FWUBvcJffTEdaEy33-RfJJklAydFH00JXYWw_A8WwlNcwA0zAnrLslrLUyiSKS9SzjZ8tMVOhIJ1_WfJ5hM1lRu5VprNTAEdu9vjBpCIXmziJBdWOwg6agZyT5JS6xjpwm7s8cZlwb");'>
+<div class="absolute inset-0 bg-danger/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-lg">auto_fix_high</span>
+</div>
+</div>
+<div class="flex-1">
+<p class="text-slate-500 text-xs leading-relaxed">Diffusion artifacts detected in background textures. Hands show structural inconsistencies typical of generative models.</p>
+</div>
+</div>
+<div class="flex items-center gap-4 mt-1">
+<span class="text-xs text-danger font-medium">99.9% Probability AI Generated</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-white/5 bg-card-dark text-center">
+<button class="text-sm text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-2 mx-auto">
+                                View 12 more claims
+                                <span class="material-symbols-outlined text-sm">expand_more</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
