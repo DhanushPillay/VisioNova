@@ -1,12 +1,20 @@
 /* VisioNova - Common Styles */
 
+/* ============================================
+   GLOBAL STYLES
+   ============================================ */
+
 body {
     font-family: 'Inter', sans-serif;
 }
 
-/* Custom scrollbar for dark theme */
+/* ============================================
+   CUSTOM SCROLLBAR (Dark Theme)
+   ============================================ */
+
 ::-webkit-scrollbar {
     width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -22,11 +30,33 @@ body {
     background: #3A8DFF;
 }
 
+/* Firefox scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #2A3450 #0F121A;
+}
+
+/* ============================================
+   GLASSMORPHISM EFFECTS
+   ============================================ */
+
 .glass-panel {
     background: rgba(13, 27, 42, 0.7);
     backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
+
+.glass-panel-light {
+    background: rgba(13, 27, 42, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ============================================
+   TAB STYLES
+   ============================================ */
 
 .active-tab {
     color: #3A8DFF;
@@ -43,6 +73,10 @@ body {
     background-color: rgba(255, 255, 255, 0.02);
 }
 
+/* ============================================
+   CARD EFFECTS
+   ============================================ */
+
 .feature-card {
     transition: all 0.3s ease;
 }
@@ -51,4 +85,34 @@ body {
     transform: translateY(-4px);
     box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
     border-color: rgba(58, 141, 255, 0.3);
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #20204b;
+    border-radius: 3px;
+}
+
+/* Fade in animation */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
 }

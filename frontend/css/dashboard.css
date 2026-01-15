@@ -1,0 +1,33 @@
+/* VisioNova - Analysis Dashboard Styles */
+
+.glass-panel {
+    background: rgba(13, 27, 42, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.scanning-radar {
+    background: radial-gradient(circle, rgba(58, 141, 255, 0.2) 0%, rgba(13, 27, 42, 0) 70%);
+}
+
+/* Scanning line animation */
+@keyframes scan {
+    0% {
+        left: 10%;
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        left: 90%;
+        opacity: 0.5;
+    }
+}
+
+.scan-line {
+    animation: scan 2s linear infinite alternate;
+}
