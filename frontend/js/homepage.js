@@ -267,12 +267,13 @@ function navigateToResult() {
         }
     }
 
-    // Navigate to result page
+    // Navigate to analysis dashboard for processing
     const activeTabElement = document.querySelector('.media-tab.active-tab');
     if (activeTabElement) {
         const resultPage = activeTabElement.getAttribute('data-result');
         if (resultPage) {
-            window.location.href = resultPage;
+            // Redirect to AnalysisDashboard with target
+            window.location.href = `AnalysisDashboard.html?analyzing=true&media=${activeTab}&next=${encodeURIComponent(resultPage)}`;
         }
     }
 }

@@ -5,7 +5,7 @@
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>VisioNova - Video Analysis Result</title>
+    <title>VisioNova - Video Analysis</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap"
         rel="stylesheet" />
@@ -48,169 +48,162 @@
 </head>
 
 <body
-    class="bg-background-light dark:bg-background-dark font-display text-white min-h-screen flex flex-col overflow-hidden">
+    class="relative flex h-screen w-full flex-col bg-background-dark dark text-white overflow-hidden selection:bg-primary selection:text-white">
+    <div class="fixed inset-0 z-0 pointer-events-none">
+        <div
+            class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay">
+        </div>
+        <div class="absolute inset-0 bg-hero-gradient opacity-40"></div>
+    </div>
     <!-- Top Navigation -->
-    <header class="h-16 flex items-center justify-between border-b border-[#212f4a] bg-visio-navy px-6 shrink-0 z-20">
-        <div class="flex items-center gap-12">
-            <!-- Logo -->
-            <div class="flex items-center gap-3 text-white cursor-pointer">
-                <div class="size-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
-                    <span class="material-symbols-outlined text-[24px]">visibility</span>
-                </div>
-                <h2 class="text-white text-xl font-bold tracking-tight">VisioNova</h2>
+    <header
+        class="z-50 flex items-center justify-between whitespace-nowrap border-b border-[#1E2338] bg-[#0D1B2A]/90 backdrop-blur-md px-6 py-3 sticky top-0">
+        <div class="flex items-center gap-4 text-white">
+            <div class="size-8 text-primary">
+                <span class="material-symbols-outlined !text-[32px]">hub</ span>
             </div>
-            <!-- Nav Links -->
-            <nav class="hidden lg:flex items-center gap-8">
-                <a class="text-gray-400 hover:text-primary transition-colors text-sm font-medium"
+            <h2 class="text-white text-xl font-bold leading-tight tracking-[-0.015em] hidden sm:block">VisioNova</h2>
+        </div>
+        <div class="flex flex-1 justify-center hidden md:flex">
+            <nav class="flex items-center gap-1 bg-[#1E2338]/50 p-1 rounded-full border border-white/5">
+                <a class="text-[#94A3B8] hover:text-white px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
                     href="homepage.html">Home</a>
-                <a class="text-white text-sm font-medium border-b-2 border-primary py-[22px]"
+                <a class="text-white bg-primary/20 px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
                     href="AnalysisDashboard.html">Analyze</a>
-                <a class="text-gray-400 hover:text-primary transition-colors text-sm font-medium"
+                <a class="text-[#94A3B8] hover:text-white px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
                     href="FactCheckPage.html">Fact Check</a>
-                <a class="text-gray-400 hover:text-primary transition-colors text-sm font-medium"
+                <a class="text-[#94A3B8] hover:text-white px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
                     href="ReportPage.html">Reports</a>
-                <a class="text-gray-400 hover:text-primary transition-colors text-sm font-medium" href="#">API</a>
-                <a class="text-gray-400 hover:text-primary transition-colors text-sm font-medium" href="#">Help</a>
+                <a class="text-[#94A3B8] hover:text-white px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
+                    href="#">API</a>
             </nav>
         </div>
-        <!-- Right Actions -->
-        <div class="flex items-center gap-5">
-            <div class="hidden md:flex relative group w-64">
-                <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    <span class="material-symbols-outlined text-[20px]">search</span>
+        <div class="flex items-center gap-3">
+            <button
+                class="relative flex size-10 items-center justify-center rounded-xl bg-[#1E2338] text-[#94A3B8] hover:text-white hover:bg-[#2A3450] transition-colors">
+                <span class="material-symbols-outlined !text-[20px]">notifications</span>
+                <span
+                    class="absolute top-2.5 right-2.5 size-2 rounded-full bg-accent-danger border border-[#1E2338]"></span>
+            </button>
+            <button
+                class="flex items-center gap-2 pl-1 pr-3 py-1 rounded-xl bg-[#1E2338] hover:bg-[#2A3450] transition-colors border border-white/5">
+                <div class="size-8 rounded-lg bg-gradient-to-tr from-primary to-purple-500 flex items-center justify-center text-white font-bold text-xs"
+                    data-alt="User avatar gradient">
+                    JD
                 </div>
-                <input
-                    class="w-full bg-[#1e293b] border-none rounded-lg py-2 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary placeholder-gray-500"
-                    placeholder="Search case ID..." type="text" />
-            </div>
-            <div class="flex items-center gap-3 border-l border-[#212f4a] pl-5">
-                <button
-                    class="relative p-2 text-gray-400 hover:text-white rounded-lg hover:bg-[#212f4a] transition-colors">
-                    <span class="material-symbols-outlined text-[24px]">notifications</span>
-                    <span
-                        class="absolute top-2 right-2 size-2 bg-visio-accent-red rounded-full border-2 border-visio-navy"></span>
-                </button>
-                <button class="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-[#212f4a] transition-colors">
-                    <span class="material-symbols-outlined text-[24px]">settings</span>
-                </button>
-                <div class="size-9 rounded-full bg-cover bg-center ring-2 ring-[#212f4a] ml-2"
-                    data-alt="User profile avatar showing a professional looking person"
-                    style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAOTV5Gg-smcNaJXSYNlRnOWogTJPbpGtCinq4sv06HmTKTlg932cZeqt0Ybtiibf1P_x8JS8_Biscv3O4PK6ij0YxsNO_ez_fnR7AoJv_8xArtVUR_SOqXg5Eyj5zmqjCWaZpfI7eb7vBPM5Gzj9aSo6_h6aLP0kF-2YYyCjMjo62SuCCZDqDll_Lxq5AMCeyWpob22jnSolIH2h1Wi8pC8uVyNABz3hpmh1KxEGpNIl6W7srVheecyBzFWFvNllTV8iI4mFd-O77d');">
+                <div class="hidden lg:flex flex-col items-start">
+                    <span class="text-xs font-semibold text-white">John Doe</span>
+                    <span class="text-[10px] text-accent-success">Pro Plan</span>
                 </div>
-            </div>
+            </button>
         </div>
     </header>
     <div class="flex flex-1 overflow-hidden">
-        <!-- Sidebar -->
-        <aside class="w-64 bg-visio-navy border-r border-[#212f4a] flex flex-col hidden md:flex shrink-0">
-            <div class="p-4 flex flex-col gap-6">
-                <!-- User Context -->
-                <div class="p-4 rounded-xl bg-[#17202e] border border-[#212f4a]">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div
-                            class="size-8 rounded-full bg-gradient-to-br from-primary to-visio-accent-blue flex items-center justify-center text-xs font-bold text-white">
-                            JS</div>
-                        <div>
-                            <h4 class="text-sm font-semibold text-white">John Smith</h4>
-                            <p class="text-xs text-gray-500">Forensic Analyst</p>
-                        </div>
-                    </div>
-                    <div class="text-xs text-gray-400 flex justify-between">
-                        <span>Credits</span>
-                        <span class="text-visio-accent-green font-medium">4,203 left</span>
-                    </div>
+        <!-- Sidebar Navigation -->
+        <aside
+            class="hidden md:flex w-20 flex-col items-center justify-between bg-[#0D1B2A] border-r border-[#1E2338] py-6 z-40 hover:w-64 transition-all duration-300 group/sidebar absolute md:relative h-full">
+            <div class="flex flex-col gap-6 w-full px-3">
+                <div class="w-full flex flex-col gap-1">
+                    <a href="homepage.html"
+                        class="flex items-center gap-4 px-3 py-3 rounded-xl bg-primary text-white w-full justify-start overflow-hidden whitespace-nowrap shadow-glow">
+                        <span class="material-symbols-outlined shrink-0">add_circle</span>
+                        <span
+                            class="text-sm font-semibold opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">New
+                            Scan</span>
+                    </a>
                 </div>
-                <!-- Primary Actions -->
-                <div class="space-y-1">
+                <div class="w-full h-px bg-[#1E2338]"></div>
+                <div class="flex flex-col gap-2 w-full">
                     <a href="AnalysisDashboard.html"
-                        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary hover:bg-blue-600 text-white shadow-lg shadow-blue-900/20 transition-all">
-                        <span class="material-symbols-outlined text-[20px]">add_circle</span>
-                        <span class="text-sm font-medium">New Analysis</span>
+                        class="flex items-center gap-4 px-3 py-3 rounded-xl text-[#94A3B8] hover:text-white hover:bg-[#1E2338] w-full justify-start overflow-hidden whitespace-nowrap transition-colors">
+                        <span class="material-symbols-outlined shrink-0">dashboard</span>
+                        <span
+                            class="text-sm font-medium opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">Dashboard</span>
+                    </a>
+                    <a href="ReportPage.html"
+                        class="flex items-center gap-4 px-3 py-3 rounded-xl text-[#94A3B8] hover:text-white hover:bg-[#1E2338] w-full justify-start overflow-hidden whitespace-nowrap transition-colors">
+                        <span class="material-symbols-outlined shrink-0">history</span>
+                        <span
+                            class="text-sm font-medium opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">Recent
+                            Scans</span>
+                    </a>
+                    <a href="ReportPage.html"
+                        class="flex items-center gap-4 px-3 py-3 rounded-xl text-[#94A3B8] hover:text-white hover:bg-[#1E2338] w-full justify-start overflow-hidden whitespace-nowrap transition-colors">
+                        <span class="material-symbols-outlined shrink-0">folder_open</span>
+                        <span
+                            class="text-sm font-medium opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">Projects</span>
+                    </a>
+                    <a href="FactCheckPage.html"
+                        class="flex items-center gap-4 px-3 py-3 rounded-xl text-[#94A3B8] hover:text-white hover:bg-[#1E2338] w-full justify-start overflow-hidden whitespace-nowrap transition-colors">
+                        <span class="material-symbols-outlined shrink-0">shield</span>
+                        <span
+                            class="text-sm font-medium opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">Threat
+                            Intel</span>
                     </a>
                 </div>
-                <!-- Menu -->
-                <div class="space-y-1">
-                    <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-2">Workspace</p>
-                    <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#212f4a] text-white"
-                        href="ReportPage.html">
-                        <span class="material-symbols-outlined text-[20px] text-visio-accent-blue">history</span>
-                        <span class="text-sm font-medium">History</span>
-                    </a>
-                    <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e293b] transition-colors"
-                        href="ReportPage.html">
-                        <span class="material-symbols-outlined text-[20px]">folder_open</span>
-                        <span class="text-sm font-medium">Cases</span>
-                    </a>
-                    <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e293b] transition-colors"
-                        href="ReportPage.html">
-                        <span class="material-symbols-outlined text-[20px]">picture_as_pdf</span>
-                        <span class="text-sm font-medium">Export PDF</span>
-                    </a>
-                    <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e293b] transition-colors"
-                        href="ReportPage.html">
-                        <span class="material-symbols-outlined text-[20px]">share</span>
-                        <span class="text-sm font-medium">Share Result</span>
-                    </a>
-                </div>
-                <!-- Recent Files -->
-                <div class="flex-1 mt-4">
-                    <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Recent Uploads</p>
-                    <div class="space-y-2 px-3">
-                        <div class="flex items-center gap-3 group cursor-pointer">
-                            <div class="size-8 rounded bg-gray-800 bg-cover bg-center"
-                                data-alt="Thumbnail of a recent video analysis"
-                                style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAgfPylDsu4Imi5OvZVB_PTj-sArZJZvg9PwVpS-xirFhKTGXVua-kxP5N2lCzBfgebojgm4XLOX0S9gEp71VWIVCqS7s_3NbysGIfyGxQo0eX3XU9idJ3Nd2UM2Wd2QoYEjn4C4V4XBcgoeEIqAmTTkJzgbE_LoqLu5XOfydB3xxTiGLU1Vqn9bF3s8d3-HEPpXHnsKMTX7RRVx0jrBFQFnCYTMuSJPJ7a7vCgX6cPSTZEAswIClz3uhCeDNg6wr0HKieFcVvsmJAW')">
-                            </div>
-                            <div class="overflow-hidden">
-                                <p class="text-xs text-gray-300 truncate group-hover:text-primary">interview_clip_04.mp4
-                                </p>
-                                <p class="text-[10px] text-gray-600">2 mins ago</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3 group cursor-pointer">
-                            <div class="size-8 rounded bg-gray-800 bg-cover bg-center"
-                                data-alt="Thumbnail of a recent video analysis"
-                                style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCYZefEL-b9VCMgdg1lhAdgBtmZp7g4JQdUxVa5XB2kVU7hGqvcKyx3QPlOWVA5olMCt1V4L5XvbbZr-75HWcpCZUJB8wIKwkDfXqvnL4bPo7fX-DHln25fLodKy0gso-IK-v6_yp5_U6j8PCeu6y89_VNpaf5cBDpkY6NfseltR0U1wN0bGzPGknG7uX9cWvPk8xajMaXYcpkvZm7ZjDS-nB3UJ4sFWI1ymttWExuW8aHATf_PCsmPxP08KZ4Zl03KUzLAGPKpy7KF')">
-                            </div>
-                            <div class="overflow-hidden">
-                                <p class="text-xs text-gray-300 truncate group-hover:text-primary">
-                                    politician_speech_v2.mov</p>
-                                <p class="text-[10px] text-gray-600">1 hour ago</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            </div>
+            <div class="flex flex-col gap-2 w-full px-3">
+                <button
+                    class="flex items-center gap-4 px-3 py-3 rounded-xl text-[#94A3B8] hover:text-white hover:bg-[#1E2338] w-full justify-start overflow-hidden whitespace-nowrap transition-colors">
+                    <span class="material-symbols-outlined shrink-0">settings</span>
+                    <span
+                        class="text-sm font-medium opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">Settings</span>
+                </button>
+                <button
+                    class="flex items-center gap-4 px-3 py-3 rounded-xl text-[#94A3B8] hover:text-white hover:bg-[#1E2338] w-full justify-start overflow-hidden whitespace-nowrap transition-colors">
+                    <span class="material-symbols-outlined shrink-0">help</span>
+                    <span
+                        class="text-sm font-medium opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">Support</span>
+                </button>
             </div>
         </aside>
         <!-- Main Content -->
-        <main class="flex-1 flex flex-col bg-visio-charcoal overflow-y-auto relative">
-            <div class="px-8 py-6 w-full max-w-[1600px] mx-auto flex flex-col gap-6">
+        <main class="flex-1 flex flex-col overflow-y-auto relative bg-background-dark bg-hero-gradient">
+            <!-- Background Decorative Elements -->
+            <div class="absolute inset-0 pointer-events-none overflow-hidden">
+                <div
+                    class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-primary/5 rounded-full blur-[100px]">
+                </div>
+                <div
+                    class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_80%)]">
+                </div>
+            </div>
+            <div class="px-8 py-6 w-full max-w-[1600px] mx-auto flex flex-col gap-6 relative z-10">
                 <!-- Page Header -->
-                <div class="flex justify-between items-end">
-                    <div>
-                        <div class="flex items-center gap-2 mb-1">
-                            <span
-                                class="px-2 py-0.5 rounded text-[10px] font-bold bg-visio-accent-red/20 text-visio-accent-red border border-visio-accent-red/30 uppercase tracking-wide">High
-                                Risk Detected</span>
-                            <span class="text-gray-500 text-xs">ID: #VN-8842-XJ</span>
-                        </div>
-                        <h1 id="pageTitle" class="text-2xl font-bold text-white">Video Credibility Analysis</h1>
+                <div class="flex flex-col gap-2 mb-6 border-b border-white/10 pb-6 relative z-10">
+                    <div class="flex items-center gap-2 text-white/50 text-sm mb-1">
+                        <span>Analyze</span>
+                        <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+                        <span>Video Analysis</span>
                     </div>
-                    <div class="flex gap-3">
-                        <button
-                            class="flex items-center gap-2 px-4 py-2 bg-[#212f4a] hover:bg-[#2c3e5e] text-white text-sm font-medium rounded-lg transition-colors">
-                            <span class="material-symbols-outlined text-[18px]">download</span>
-                            Raw Data
-                        </button>
-                        <button
-                            class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-blue-900/40">
-                            <span class="material-symbols-outlined text-[18px]">summarize</span>
-                            Generate Report
-                        </button>
+                    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                        <div class="flex flex-col gap-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span
+                                    class="px-2 py-0.5 rounded text-[10px] font-bold bg-visio-accent-red/20 text-visio-accent-red border border-visio-accent-red/30 uppercase tracking-wide">High
+                                    Risk Detected</span>
+                                <span class="text-gray-500 text-xs">ID: #VN-8842-XJ</span>
+                            </div>
+                            <h1 id="pageTitle"
+                                class="text-white text-3xl md:text-3xl font-black leading-tight tracking-tight">Video
+                                Analysis</h1>
+                        </div>
+                        <div class="flex gap-3">
+                            <button
+                                class="flex items-center gap-2 px-4 py-2 bg-[#212f4a] hover:bg-[#2c3e5e] text-white text-sm font-medium rounded-lg transition-colors">
+                                <span class="material-symbols-outlined text-[18px]">download</span>
+                                Raw Data
+                            </button>
+                            <button
+                                class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-blue-900/40">
+                                <span class="material-symbols-outlined text-[18px]">summarize</span>
+                                Generate Report
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <!-- Top Section: Player & Score -->
-                <div class="grid grid-cols-12 gap-6 h-[480px]">
+                <div class="grid grid-cols-12 gap-6 min-h-[480px]">
                     <!-- Video Player Column -->
                     <div class="col-span-12 lg:col-span-8 flex flex-col h-full">
                         <div class="relative flex-1 bg-black rounded-t-xl overflow-hidden group">
@@ -288,7 +281,7 @@
                     <!-- Credibility Scorecard Column -->
                     <div class="col-span-12 lg:col-span-4 flex flex-col h-full gap-4">
                         <div
-                            class="bg-visio-card border border-[#212f4a] rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden flex-1">
+                            class="bg-visio-card border border-[#212f4a] rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-lg relative flex-1">
                             <!-- Background glow -->
                             <div
                                 class="absolute top-0 right-0 w-full h-full bg-gradient-to-bl from-visio-accent-red/5 to-transparent pointer-events-none">
