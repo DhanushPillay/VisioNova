@@ -110,8 +110,34 @@ function displayResults(result) {
         return;
     }
 
+    // Update trust score display
     updateTrustScore(result.confidence, result.verdict);
 
+    // Update source count and input type
+    const sourceCountEl = document.getElementById('sourceCount');
+    const inputTypeEl = document.getElementById('inputType');
+    if (sourceCountEl) sourceCountEl.textContent = result.source_count;
+    if (inputTypeEl) inputTypeEl.textContent = formatInputType(result.input_type);
+
+    // Update explanation box
+    const explanationBox = document.getElementById('explanationBox');
+    if (explanationBox) {
+        explanationBox.innerHTML = `<p class="text-white text-sm">${result.explanation}</p>`;
+    }
+
+    // Update claim title and summary
+    const claimTitle = document.getElementById('claimTitle');
+    const claimSummary = document.getElementById('claimSummary');
+    if (claimTitle) claimTitle.textContent = `"${result.claim}"`;
+    if (claimSummary) claimSummary.textContent = `Analyzing claim from ${result.input_type} input. Found ${result.source_count} sources for verification.`;
+
+    // Update sources container
+    const sourcesContainer = document.getElementById('sourcesContainer');
+    if (sourcesContainer) {
+        sourcesContainer.innerHTML = buildSourcesListHTML(result);
+    }
+
+    // Also update the legacy results container if it exists
     if (resultsContainer) {
         resultsContainer.classList.remove('hidden');
         resultsContainer.innerHTML = buildResultsHTML(result);
@@ -119,15 +145,29 @@ function displayResults(result) {
 }
 
 /**
+ * Format input type for display
+ */
+function formatInputType(type) {
+    const types = {
+        'claim': 'Claim',
+        'question': 'Question',
+        'url': 'URL'
+    };
+    return types[type] || type.charAt(0).toUpperCase() + type.slice(1);
+}
+
+/**
  * Update the trust score display
  */
 function updateTrustScore(confidence, verdict) {
-    const scoreDisplay = document.querySelector('.text-4xl.font-black');
+    // Update score number
+    const scoreDisplay = document.getElementById('trustScore');
     if (scoreDisplay) {
         scoreDisplay.textContent = confidence;
     }
 
-    const circle = document.querySelector('circle[stroke="#00D991"], circle[stroke="#FF4A4A"], circle[stroke="#FFB74A"], circle[stroke="#94A3B8"]');
+    // Update the SVG circle
+    const circle = document.querySelector('circle[stroke-dasharray="251.2"]');
     if (circle) {
         const circumference = 251.2;
         const offset = circumference - (confidence / 100) * circumference;
@@ -137,17 +177,148 @@ function updateTrustScore(confidence, verdict) {
             'TRUE': '#00D991',
             'FALSE': '#FF4A4A',
             'PARTIALLY TRUE': '#FFB74A',
-            'MISLEADING': '#FF4A4A',
+            'MISLEADING': '#FFB74A',
             'UNVERIFIABLE': '#94A3B8'
         };
         circle.setAttribute('stroke', colors[verdict] || '#94A3B8');
     }
 
-    const verdictLabel = document.querySelector('.rounded-full.text-sm.font-bold');
+    // Update verdict label
+    const verdictLabel = document.getElementById('verdictLabel');
     if (verdictLabel) {
-        verdictLabel.textContent = verdict;
+        const verdictStyles = {
+            'TRUE': { text: 'VERIFIED TRUE', bg: 'bg-success/10', border: 'border-success/20', color: 'text-success' },
+            'FALSE': { text: 'FALSE CLAIM', bg: 'bg-danger/10', border: 'border-danger/20', color: 'text-danger' },
+            'PARTIALLY TRUE': { text: 'PARTIALLY TRUE', bg: 'bg-warning/10', border: 'border-warning/20', color: 'text-warning' },
+            'MISLEADING': { text: 'MISLEADING', bg: 'bg-warning/10', border: 'border-warning/20', color: 'text-warning' },
+            'UNVERIFIABLE': { text: 'UNVERIFIABLE', bg: 'bg-slate-500/10', border: 'border-slate-500/20', color: 'text-slate-400' }
+        };
+        const style = verdictStyles[verdict] || verdictStyles['UNVERIFIABLE'];
+        verdictLabel.textContent = style.text;
+        verdictLabel.className = `mt-4 px-3 py-1 rounded-full ${style.bg} border ${style.border} ${style.color} text-sm font-bold tracking-wide`;
     }
 }
+
+/**
+ * Build the sources list HTML for the main dashboard
+ */
+function buildSourcesListHTML(result) {
+    if (!result.sources || result.sources.length === 0) {
+        return `
+            <div class="flex flex-col items-center justify-center py-8 text-center">
+                <div class="size-12 rounded-full bg-slate-500/10 flex items-center justify-center mb-3">
+                    <span class="material-symbols-outlined text-2xl text-slate-400">search_off</span>
+                </div>
+                <h4 class="text-white font-medium mb-1">No Sources Found</h4>
+                <p class="text-slate-400 text-sm">We couldn't find any sources to verify this claim.</p>
+            </div>
+        `;
+    }
+
+    // Generate source cards in timeline format
+    const sourcesHTML = result.sources.map((source, index) => {
+        const isLast = index === result.sources.length - 1;
+        const trustConfig = getSourceTrustConfig(source.trust_level, source.is_factcheck);
+
+        return `
+            <div class="flex gap-4 group">
+                <div class="flex flex-col items-center">
+                    <div class="size-8 rounded-full ${trustConfig.bgClass} flex items-center justify-center ${trustConfig.textClass} border ${trustConfig.borderClass} shrink-0">
+                        <span class="material-symbols-outlined text-sm font-bold">${trustConfig.icon}</span>
+                    </div>
+                    ${!isLast ? '<div class="w-0.5 h-full bg-white/5 mt-2"></div>' : ''}
+                </div>
+                <div class="flex-1 pb-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <h4 class="text-white font-medium text-lg line-clamp-1">${escapeHTML(source.title)}</h4>
+                        <span class="px-2.5 py-1 rounded-md ${trustConfig.bgClass} ${trustConfig.textClass} text-xs font-bold border ${trustConfig.borderClass} uppercase">${trustConfig.label}</span>
+                    </div>
+                    <p class="text-slate-400 text-sm mb-3">${escapeHTML(source.snippet)}</p>
+                    <!-- Source Evidence Card -->
+                    <div class="bg-background-dark/80 rounded-xl p-4 border border-white/5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer">
+                        <div class="flex items-start gap-3">
+                            <div class="mt-1 ${trustConfig.textClass}">
+                                <span class="material-symbols-outlined text-[20px]">${source.is_factcheck ? 'verified' : 'language'}</span>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-white text-sm font-medium mb-1">${escapeHTML(source.domain)}</p>
+                                <div class="flex items-center gap-4 mt-2">
+                                    <a href="${escapeHTML(source.url)}" target="_blank" class="text-xs text-primary font-medium hover:underline flex items-center gap-1">
+                                        Visit Source <span class="material-symbols-outlined text-[12px]">open_in_new</span>
+                                    </a>
+                                    <span class="text-xs text-slate-500">Trust: ${source.trust_level}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    return sourcesHTML;
+}
+
+/**
+ * Get styling config based on source trust level
+ */
+function getSourceTrustConfig(trustLevel, isFactCheck) {
+    if (isFactCheck) {
+        return {
+            bgClass: 'bg-success/20',
+            textClass: 'text-success',
+            borderClass: 'border-success/30',
+            icon: 'verified',
+            label: 'Fact-Check'
+        };
+    }
+
+    switch (trustLevel) {
+        case 'high':
+            return {
+                bgClass: 'bg-success/20',
+                textClass: 'text-success',
+                borderClass: 'border-success/30',
+                icon: 'check',
+                label: 'High Trust'
+            };
+        case 'medium-high':
+            return {
+                bgClass: 'bg-primary/20',
+                textClass: 'text-primary',
+                borderClass: 'border-primary/30',
+                icon: 'thumb_up',
+                label: 'Trusted'
+            };
+        case 'medium':
+            return {
+                bgClass: 'bg-warning/20',
+                textClass: 'text-warning',
+                borderClass: 'border-warning/30',
+                icon: 'info',
+                label: 'Medium'
+            };
+        default:
+            return {
+                bgClass: 'bg-slate-500/20',
+                textClass: 'text-slate-400',
+                borderClass: 'border-slate-500/30',
+                icon: 'help',
+                label: 'Unknown'
+            };
+    }
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHTML(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
 
 /**
  * Build HTML for results display

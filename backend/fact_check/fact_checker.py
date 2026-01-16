@@ -1,11 +1,17 @@
 """
 Fact Checker - Main Pipeline
-Orchestrates the fact-checking process.
+Orchestrates the fact-checking process with AI-powered analysis.
 """
 from .input_classifier import InputClassifier
 from .content_extractor import ContentExtractor
 from .web_searcher import WebSearcher
 from .config import Verdict
+
+# Import AI analyzer from separate ai module
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from ai import AIAnalyzer
 
 
 class FactChecker:
@@ -19,6 +25,7 @@ class FactChecker:
         self.classifier = InputClassifier()
         self.extractor = ContentExtractor()
         self.searcher = WebSearcher()
+        self.ai_analyzer = AIAnalyzer()
     
     def check(self, user_input: str) -> dict:
         """
@@ -87,15 +94,24 @@ class FactChecker:
     
     def _analyze_sources(self, claim: str, sources: list) -> tuple:
         """
-        Analyze sources to determine verdict.
+        Analyze sources to determine verdict using AI.
         
         Returns:
             tuple of (verdict, confidence, explanation)
         """
-        # Count sources by trust level
-        high_trust = [s for s in sources if s['trust_level'] == 'high']
-        medium_trust = [s for s in sources if s['trust_level'] == 'medium-high']
-        factcheck_sites = [s for s in sources if s['is_factcheck_site']]
+        # Use AI analyzer for intelligent verdict determination
+        ai_result = self.ai_analyzer.analyze_claim(claim, sources)
+        
+        verdict = ai_result.get('verdict', Verdict.UNVERIFIABLE)
+        confidence = ai_result.get('confidence', 50)
+        explanation = ai_result.get('explanation', 'Analysis completed.')
+        
+        # Add key finding if available
+        key_finding = ai_result.get('key_finding', '')
+        if key_finding:
+            explanation = f"{explanation} Key finding: {key_finding}"
+        
+        return verdict, confidence, explanation
         
         # Check if we have fact-check sites with specific verdicts
         # (In a full implementation, we'd parse the snippets for verdict keywords)
