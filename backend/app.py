@@ -7,6 +7,7 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from fact_check import FactChecker
+from text_checker import AIContentDetector
 import re
 
 app = Flask(__name__)
@@ -20,8 +21,9 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
-# Initialize the fact checker
+# Initialize the fact checker and AI content detector
 fact_checker = FactChecker()
+ai_detector = AIContentDetector()
 
 # Input validation constants
 MAX_CLAIM_LENGTH = 1000
@@ -195,6 +197,70 @@ def submit_feedback():
             additional_sources=data.get('additional_sources', [])
         )
         
+        return jsonify(result)
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Internal server error: {str(e)}',
+            'error_code': 'INTERNAL_ERROR'
+        }), 500
+
+
+@app.route('/api/detect-ai', methods=['POST'])
+@limiter.limit("10 per minute")
+def detect_ai_content():
+    """
+    Detect if the given text is AI-generated or human-written.
+    
+    Request body:
+        {
+            "text": "The text to analyze"
+        }
+    
+    Response:
+        {
+            "success": true,
+            "prediction": "ai_generated|human",
+            "confidence": 0-100,
+            "scores": {
+                "human": 0-100,
+                "ai_generated": 0-100
+            }
+        }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'text' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Missing "text" field in request body',
+                'error_code': 'MISSING_TEXT'
+            }), 400
+        
+        text = data['text']
+        
+        # Validate input
+        validation = validate_input(text)
+        if not validation['valid']:
+            return jsonify({
+                'success': False,
+                'error': validation['error'],
+                'error_code': 'INVALID_INPUT'
+            }), 400
+        
+        # Run detection
+        result = ai_detector.predict(text.strip())
+        
+        if "error" in result:
+            return jsonify({
+                'success': False,
+                'error': result['error'],
+                'error_code': 'DETECTION_ERROR'
+            }), 400
+            
+        result['success'] = True
         return jsonify(result)
     
     except Exception as e:

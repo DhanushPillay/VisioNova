@@ -1,0 +1,2 @@
+backend/text_checker/model.safetensors filter=lfs diff=lfs merge=lfs -text
+backend/text_checker/*.safetensors filter=lfs diff=lfs merge=lfs -text
