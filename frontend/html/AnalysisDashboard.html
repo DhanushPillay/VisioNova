@@ -559,8 +559,73 @@
                                     clearInterval(progressInterval);
                                     throw fetchError; // Re-throw to be caught by outer catch
                                 }
+                            } else if (mediaType === 'text') {
+                                // Handle text analysis with backend API
+                                const textContent = inputData.data;
+
+                                // Step 1: Linguistic Pattern Analysis
+                                updateStepProgress(0, 'processing', 30);
+                                updateLoadingStatus(config.statusMessages[0] || 'Tokenizing text...');
+
+                                let progressValue = 30;
+                                const progressInterval = setInterval(() => {
+                                    if (progressValue < 75) {
+                                        progressValue += 5;
+                                        updateStepProgress(0, 'processing', progressValue);
+                                    }
+                                }, 400);
+
+                                try {
+                                    const controller = new AbortController();
+                                    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+                                    const response = await fetch(`${API_BASE_URL}/api/detect-ai`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ text: textContent }),
+                                        signal: controller.signal
+                                    });
+
+                                    clearTimeout(timeoutId);
+                                    clearInterval(progressInterval);
+
+                                    // Step 1: Complete
+                                    updateStepProgress(0, 'complete', 100);
+
+                                    // Step 2: Source Attribution
+                                    updateStepProgress(1, 'processing', 50);
+                                    updateLoadingStatus(config.statusMessages[1] || 'Checking sources...');
+
+                                    const result = await response.json();
+                                    console.log('[Dashboard] Text analysis result:', result);
+
+                                    await new Promise(r => setTimeout(r, 400));
+                                    updateStepProgress(1, 'complete', 100);
+
+                                    // Step 3: AI Writing Detection
+                                    updateStepProgress(2, 'processing', 50);
+                                    updateLoadingStatus(config.statusMessages[2] || 'Running AI detection...');
+
+                                    // Store result for TextResultPage to use
+                                    sessionStorage.setItem('visioNova_text_result', JSON.stringify(result));
+
+                                    await new Promise(r => setTimeout(r, 500));
+                                    updateStepProgress(2, 'complete', 100);
+                                    updateLoadingStatus('Analysis complete!');
+
+                                    return result;
+                                } catch (fetchError) {
+                                    clearInterval(progressInterval);
+                                    console.warn('[Dashboard] Text API error, will use client-side analysis:', fetchError);
+                                    // Continue to result page - it will use client-side fallback
+                                    for (let i = 0; i < config.steps.length; i++) {
+                                        updateStepProgress(i, 'complete', 100);
+                                    }
+                                    updateLoadingStatus('Preparing results...');
+                                    return null;
+                                }
                             } else {
-                                // For other media types, simulate progress
+                                // For other media types (image, video, audio), simulate progress
                                 for (let i = 0; i < config.steps.length; i++) {
                                     updateStepProgress(i, 'processing', 30);
                                     updateLoadingStatus(config.statusMessages[i] || 'Processing...');
@@ -569,7 +634,6 @@
                                     await new Promise(r => setTimeout(r, 400));
                                     updateStepProgress(i, 'complete', 100);
                                 }
-                                VisioNovaStorage.clearFile(mediaType);
                                 return null;
                             }
                         } catch (error) {

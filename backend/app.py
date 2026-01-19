@@ -2,13 +2,14 @@
 VisioNova Backend API Server
 Flask application providing fact-checking API endpoints.
 """
+import re
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from fact_check import FactChecker
-from text_checker import AIContentDetector
-import re
+from text_detector import AIContentDetector, TextExplainer
+
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend requests
@@ -24,6 +25,7 @@ limiter = Limiter(
 # Initialize the fact checker and AI content detector
 fact_checker = FactChecker()
 ai_detector = AIContentDetector()
+text_explainer = TextExplainer()
 
 # Input validation constants
 MAX_CLAIM_LENGTH = 1000
@@ -215,7 +217,8 @@ def detect_ai_content():
     
     Request body:
         {
-            "text": "The text to analyze"
+            "text": "The text to analyze",
+            "explain": true/false (optional, default false)
         }
     
     Response:
@@ -223,10 +226,11 @@ def detect_ai_content():
             "success": true,
             "prediction": "ai_generated|human",
             "confidence": 0-100,
-            "scores": {
-                "human": 0-100,
-                "ai_generated": 0-100
-            }
+            "scores": {...},
+            "metrics": {...},
+            "detected_patterns": {...},
+            "sentence_analysis": [...],
+            "explanation": {...}  // if explain=true
         }
     """
     try:
@@ -240,18 +244,25 @@ def detect_ai_content():
             }), 400
         
         text = data['text']
+        explain = data.get('explain', False)
         
-        # Validate input
-        validation = validate_input(text)
-        if not validation['valid']:
+        # Validate input (increase limit for text detection)
+        if not text or not text.strip():
             return jsonify({
                 'success': False,
-                'error': validation['error'],
+                'error': 'Input cannot be empty',
+                'error_code': 'INVALID_INPUT'
+            }), 400
+        
+        if len(text) > 10000:  # 10k char limit for text detection
+            return jsonify({
+                'success': False,
+                'error': 'Input too long (max 10,000 characters)',
                 'error_code': 'INVALID_INPUT'
             }), 400
         
         # Run detection
-        result = ai_detector.predict(text.strip())
+        result = ai_detector.predict(text.strip(), detailed=True)
         
         if "error" in result:
             return jsonify({
@@ -259,7 +270,12 @@ def detect_ai_content():
                 'error': result['error'],
                 'error_code': 'DETECTION_ERROR'
             }), 400
-            
+        
+        # Add Groq explanation if requested
+        if explain:
+            explanation = text_explainer.explain(result, text[:500])
+            result['explanation'] = explanation
+        
         result['success'] = True
         return jsonify(result)
     
