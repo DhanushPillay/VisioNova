@@ -13,9 +13,13 @@ class DocumentParser:
     Extract text from various document formats and chunk for analysis.
     
     Supported formats:
-    - PDF (.pdf) using PyMuPDF
-    - Word (.docx) using python-docx  
+    - PDF (.pdf) using PyMuPDF + AI enhancement
+    - Word (.docx) using python-docx + AI enhancement
     - Plain text (.txt)
+    
+    AI Enhancement:
+    - Uses Llama 4 Scout via Groq for text cleanup and structuring
+    - Fallback to raw extraction if AI fails
     """
     
     # Default chunk size (characters)
@@ -26,9 +30,21 @@ class DocumentParser:
     # Supported file extensions
     SUPPORTED_EXTENSIONS = {'.pdf', '.docx', '.txt', '.doc'}
     
-    def __init__(self, chunk_size: int = DEFAULT_CHUNK_SIZE):
-        """Initialize parser with configurable chunk size."""
+    def __init__(self, chunk_size: int = DEFAULT_CHUNK_SIZE, use_ai: bool = True):
+        """Initialize parser with configurable chunk size and AI option."""
         self.chunk_size = max(self.MIN_CHUNK_SIZE, min(chunk_size, self.MAX_CHUNK_SIZE))
+        self.use_ai = use_ai
+        self.ai_extractor = None
+        
+        # Initialize AI client if requested
+        if self.use_ai:
+            try:
+                from .ai_client import AIDocumentExtractor
+                self.ai_extractor = AIDocumentExtractor()
+                print("[DocumentParser] AI extraction enabled")
+            except Exception as e:
+                print(f"[DocumentParser] AI initialization failed, using fallback: {e}")
+                self.ai_extractor = None
     
     def parse_file(self, file_path: str) -> Dict:
         """
@@ -59,12 +75,16 @@ class DocumentParser:
             if not text or not text.strip():
                 return {"error": "No text content found in file"}
             
-            chunks = self.chunk_text(text)
+            # Apply AI enhancement if available
+            enhanced_text = self._enhance_with_ai(text, metadata) if self.ai_extractor else text
+            
+            chunks = self.chunk_text(enhanced_text)
             
             return {
-                "text": text,
+                "text": enhanced_text,
                 "chunks": chunks,
                 "metadata": metadata,
+                "ai_enhanced": self.ai_extractor is not None,
                 "error": None
             }
             
@@ -99,12 +119,16 @@ class DocumentParser:
             if not text or not text.strip():
                 return {"error": "No text content found in file"}
             
-            chunks = self.chunk_text(text)
+            # Apply AI enhancement if available
+            enhanced_text = self._enhance_with_ai(text, metadata) if self.ai_extractor else text
+            
+            chunks = self.chunk_text(enhanced_text)
             
             return {
-                "text": text,
+                "text": enhanced_text,
                 "chunks": chunks,
                 "metadata": metadata,
+                "ai_enhanced": self.ai_extractor is not None,
                 "error": None
             }
             
@@ -273,6 +297,40 @@ class DocumentParser:
     def get_supported_formats() -> List[str]:
         """Get list of supported file extensions."""
         return list(DocumentParser.SUPPORTED_EXTENSIONS)
+    
+    def _enhance_with_ai(self, text: str, metadata: Dict) -> str:
+        """
+        Enhance extracted text using AI for better structure and cleanup.
+        
+        Args:
+            text: Raw extracted text
+            metadata: Document metadata (format, pages, etc.)
+            
+        Returns:
+            AI-enhanced text, or original if AI fails
+        """
+        if not self.ai_extractor:
+            return text
+        
+        try:
+            # Only apply AI enhancement for documents that might benefit
+            # (longer documents with potential formatting issues)
+            if len(text) < 500:  # Skip AI for very short texts
+                return text
+            
+            print("[DocumentParser] Applying AI enhancement...")
+            format_type = metadata.get('format', 'unknown')
+            pages = metadata.get('pages', metadata.get('paragraphs', 0))
+            
+            context = f"Document format: {format_type.upper()}, Pages/Sections: {pages}"
+            enhanced = self.ai_extractor.extract_from_pages([text])
+            
+            print(f"[DocumentParser] AI enhancement complete (original: {len(text)} chars, enhanced: {len(enhanced)} chars)")
+            return enhanced if enhanced and len(enhanced) > 100 else text
+            
+        except Exception as e:
+            print(f"[DocumentParser] AI enhancement failed, using raw text: {e}")
+            return text
 
 
 if __name__ == "__main__":

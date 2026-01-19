@@ -129,7 +129,7 @@ function showNoTextState() {
  */
 async function analyzeText(text, preloadedResult = null) {
     // Detect if this is a document file (PDF/DOCX) - skip client-side metrics for binary data
-    const isDocument = text.startsWith('data:application/');
+    const isDocument = text.startsWith('data:application/') || (preloadedResult && !!preloadedResult.file_info);
 
     // Calculate local metrics (skip for documents - use backend metrics instead)
     let metrics, claims, sources;

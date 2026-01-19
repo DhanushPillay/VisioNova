@@ -110,41 +110,111 @@ const VisioNovaStorage = {
     },
 
     /**
-     * Store a File object for document uploads (PDF, DOCX)
-     * File objects can't be stored in sessionStorage, so we use a module-level variable
+     * Initialize IndexedDB for File storage
+     */
+    _initDB: function () {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('VisioNovaDB', 1);
+
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => resolve(request.result);
+
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('files')) {
+                    db.createObjectStore('files', { keyPath: 'id' });
+                }
+            };
+        });
+    },
+
+    /**
+     * Store a File object in IndexedDB for document uploads (PDF, DOCX)
      * @param {File} file - The File object to store
      * @param {string} fileName - Original filename
      */
-    documentFile: null,
+    saveDocumentFile: async function (file, fileName) {
+        try {
+            const db = await this._initDB();
+            const transaction = db.transaction(['files'], 'readwrite');
+            const store = transaction.objectStore('files');
 
-    saveDocumentFile: function (file, fileName) {
-        this.documentFile = {
-            file: file,
-            fileName: fileName || file.name,
-            mimeType: file.type,
-            timestamp: new Date().toISOString()
-        };
-        // Also store metadata in sessionStorage for cross-page reference
-        sessionStorage.setItem('visioNova_documentFile_meta', JSON.stringify({
-            fileName: this.documentFile.fileName,
-            mimeType: this.documentFile.mimeType,
-            size: file.size,
-            timestamp: this.documentFile.timestamp
-        }));
-        return true;
+            const fileData = {
+                id: 'currentDocument',
+                file: file,
+                fileName: fileName || file.name,
+                mimeType: file.type,
+                size: file.size,
+                timestamp: new Date().toISOString()
+            };
+
+            await new Promise((resolve, reject) => {
+                const request = store.put(fileData);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+
+            // Also store metadata in sessionStorage as backup
+            sessionStorage.setItem('visioNova_documentFile_meta', JSON.stringify({
+                fileName: fileData.fileName,
+                mimeType: fileData.mimeType,
+                size: file.size,
+                timestamp: fileData.timestamp
+            }));
+
+            console.log('[Storage] Document file saved to IndexedDB:', fileName);
+            db.close();
+            return true;
+        } catch (error) {
+            console.error('[Storage] Error saving document file:', error);
+            return false;
+        }
     },
 
-    getDocumentFile: function () {
-        return this.documentFile;
+    getDocumentFile: async function () {
+        try {
+            const db = await this._initDB();
+            const transaction = db.transaction(['files'], 'readonly');
+            const store = transaction.objectStore('files');
+
+            const fileData = await new Promise((resolve, reject) => {
+                const request = store.get('currentDocument');
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+
+            db.close();
+            console.log('[Storage] Document file retrieved from IndexedDB:', fileData ? fileData.fileName : 'none');
+            return fileData || null;
+        } catch (error) {
+            console.error('[Storage] Error getting document file:', error);
+            return null;
+        }
     },
 
-    hasDocumentFile: function () {
-        return this.documentFile !== null;
+    hasDocumentFile: async function () {
+        const fileData = await this.getDocumentFile();
+        return fileData !== null;
     },
 
-    clearDocumentFile: function () {
-        this.documentFile = null;
-        sessionStorage.removeItem('visioNova_documentFile_meta');
+    clearDocumentFile: async function () {
+        try {
+            const db = await this._initDB();
+            const transaction = db.transaction(['files'], 'readwrite');
+            const store = transaction.objectStore('files');
+
+            await new Promise((resolve, reject) => {
+                const request = store.delete('currentDocument');
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+
+            sessionStorage.removeItem('visioNova_documentFile_meta');
+            console.log('[Storage] Document file cleared from IndexedDB');
+            db.close();
+        } catch (error) {
+            console.error('[Storage] Error clearing document file:', error);
+        }
     }
 };
 

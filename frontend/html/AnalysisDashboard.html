@@ -585,10 +585,12 @@
                                         // PDF/DOCX - use file upload endpoint with actual File object
                                         updateLoadingStatus('Extracting text from document...');
 
-                                        const docFile = VisioNovaStorage.getDocumentFile();
+                                        const docFile = await VisioNovaStorage.getDocumentFile();
                                         if (!docFile || !docFile.file) {
                                             throw new Error('Document file not found. Please re-upload.');
                                         }
+
+                                        console.log('[Dashboard] Retrieved document file from IndexedDB:', docFile.fileName);
 
                                         // Create FormData with the actual File
                                         const formData = new FormData();
@@ -602,7 +604,7 @@
                                         });
 
                                         // Clear the document file after upload
-                                        VisioNovaStorage.clearDocumentFile();
+                                        await VisioNovaStorage.clearDocumentFile();
                                     } else {
                                         // Plain text - use regular text endpoint
                                         const textContent = inputData.data;
