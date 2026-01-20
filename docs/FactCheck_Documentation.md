@@ -1,61 +1,124 @@
-# Fact Check Module Documentation
+# Fact Check Module
 
-## Overview
-The **Fact Check Module** in VisioNova is designed to verify the credibility of text content and claims by analyzing their source, extracting key information, and understanding the temporal context. It serves as a backend service that powers the fact-checking capabilities of the application.
+## What It Does
 
-## Core Components
+The Fact Check module verifies whether claims are true or false by:
+1. Extracting text from web pages
+2. Understanding when events happened (past vs. present)
+3. Checking if sources are trustworthy
 
-### 1. Content Extractor (`content_extractor.py`)
-**Purpose:** Responsbile for fetching and processing web pages to extract meaningful text and scannable claims.
+---
 
-**Key Features:**
-- **URL Text Extraction:** Uses `BeautifulSoup` to parse HTML and extract the main article body, removing clutter like scripts, styles, and navigation elements.
-- **Claim Extraction:** Automatically identifies sentences that look like verifiable claims (statements of fact) based on length and structure, filtering out questions or exclamations.
-- **Robust Networking:** Implements `requests` with realistic browser headers to avoid 403 Forbidden errors and includes a retry mechanism with exponential backoff for reliability.
+## Components
 
-**Usage:**
+### 1. Content Extractor
+
+**File:** `content_extractor.py`
+
+Fetches and cleans web page content.
+
+**How it works:**
+- Downloads a web page from a URL
+- Removes irrelevant parts (ads, menus, scripts)
+- Extracts the main article text
+- Identifies key claims that can be fact-checked
+
+**Example:**
 ```python
+from fact_check.content_extractor import ContentExtractor
+
 extractor = ContentExtractor()
-result = extractor.extract_from_url("https://example.com/article")
-# Returns: { 'success': True, 'content': "...", 'claims': ["Claim 1", ...], ... }
+result = extractor.extract_from_url("https://example.com/news-article")
+
+print(result['title'])    # Article title
+print(result['content'])  # Main text
+print(result['claims'])   # List of verifiable statements
 ```
 
-### 2. Temporal Analyzer (`temporal_analyzer.py`)
-**Purpose:** Analyzes text to distinct when the events described likely took place, which is crucial for distinguishing between historical facts and breaking news.
+---
 
-**Key Features:**
-- **Date & Year Extraction:** Uses regular expressions to find specific dates (e.g., "January 15, 2020") and years (e.g., "1969") within the text.
-- **Context Categorization:** Categorizes content into time periods:
-  - **Historical:** (e.g., > 50 years ago)
-  - **Recent/Current:** (e.g., last 0-5 years)
-- **Search Optimization:** Determines the "Search Year From" to guide external search APIs. For example, if a claim mentions "1969", it knows search for historical records rather than just recent news.
+### 2. Temporal Analyzer
 
-**Usage:**
+**File:** `temporal_analyzer.py`
+
+Detects dates and time periods in text.
+
+**Why this matters:**
+- A claim about "1969" needs historical sources
+- A claim about "today" needs recent news
+
+**How it works:**
+- Finds years (e.g., 1969, 2024) and full dates (e.g., January 15, 2020)
+- Categorizes as "historical" or "recent"
+- Guides search APIs to look in the right time period
+
+**Example:**
 ```python
+from fact_check.temporal_analyzer import TemporalAnalyzer
+
 analyzer = TemporalAnalyzer()
-context = analyzer.extract_temporal_context("The moon landing happened in 1969.")
-# Returns: { 'search_year_from': 1969, 'is_historical': True, ... }
+result = analyzer.extract_temporal_context("The moon landing happened in 1969")
+
+print(result['search_year_from'])  # 1969
+print(result['is_historical'])     # True
+print(result['time_period'])       # 'historical'
 ```
 
-### 3. Credibility Manager (`credibility_manager.py`)
-**Purpose:** Assesses the trustworthiness of the source domain.
+---
 
-**Key Features:**
-- **Database Lookup:** Checks domains against a local JSON database (`source_credibility.json`) containing known reliable and unreliable sources.
-- **Trust Scoring:** Returns a trust score (0-100), bias rating (e.g., "left", "center", "conspiracy"), and category (e.g., "news", "satire", "factcheck").
-- **Classification:** Helper methods to quickly identify if a site is a known fact-checker or unreliable.
+### 3. Credibility Manager
 
-**Usage:**
+**File:** `credibility_manager.py`
+
+Rates how trustworthy a website is.
+
+**How it works:**
+- Looks up the domain in a database of 70+ rated sources
+- Returns a trust score (0-100)
+- Identifies if it's a fact-checking site or known unreliable source
+
+**Trust Levels:**
+| Score | Level |
+|-------|-------|
+| 85-100 | High (Reuters, AP, Snopes) |
+| 70-84 | Medium-High |
+| 50-69 | Medium |
+| 30-49 | Low |
+| 0-29 | Unreliable |
+
+**Example:**
 ```python
+from fact_check.credibility_manager import CredibilityManager
+
 manager = CredibilityManager()
-info = manager.get_credibility("snopes.com")
-# Returns: { 'trust': 95, 'category': 'factcheck', 'bias': 'center' }
+
+print(manager.get_trust_score("reuters.com"))  # 95
+print(manager.get_trust_score("snopes.com"))   # 95
+print(manager.is_factcheck_site("snopes.com")) # True
 ```
 
-## Workflow
-1.  **Input:** A user provides a URL or text claim.
-2.  **Extraction:** `ContentExtractor` pulls the text.
-3.  **Analysis:**
-    *   `TemporalAnalyzer` determines the time frame.
-    *   `CredibilityManager` checks the source's reputation.
-4.  **Verification:** (External APIs would typically be used here, guided by the temporal and content data).
+---
+
+## How It All Works Together
+
+```
+User Input (URL or Claim)
+         |
+         v
++-------------------+
+| Content Extractor |  --> Extracts text & claims
++-------------------+
+         |
+         v
++-------------------+
+| Temporal Analyzer |  --> Determines time context
++-------------------+
+         |
+         v
++---------------------+
+| Credibility Manager |  --> Rates source trust
++---------------------+
+         |
+         v
+    Final Verdict
+```
