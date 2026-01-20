@@ -87,6 +87,11 @@ Access the web interface by opening the corresponding HTML files in the `fronten
 *   **Dashboard:** `frontend/html/AnalysisDashboard.html`
 *   **Fact Check:** `frontend/html/FactCheckPage.html`
 
+## Contributors
+
+*   Dhanush Pillay
+*   Shubhangini Dixit
+
 ## License
 
 This project is intended for educational and research purposes.
