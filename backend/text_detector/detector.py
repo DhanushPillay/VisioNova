@@ -17,31 +17,54 @@ import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 
-# Common AI-generated text patterns
+# Common AI-generated text patterns (expanded for better offline detection)
 AI_PATTERNS = {
     "hedging": [
         r"\b(it'?s important to note|it should be noted|it'?s worth mentioning)\b",
         r"\b(generally speaking|in general|typically)\b",
         r"\b(may|might|could|possibly|potentially|perhaps)\b.*\b(suggest|indicate|imply)\b",
+        r"\b(tends to|appears to|seems to)\b",
     ],
     "formal_transitions": [
         r"\b(furthermore|moreover|additionally|consequently)\b",
         r"\b(in conclusion|to summarize|in summary|to conclude)\b",
         r"\b(on the other hand|conversely|nevertheless|however)\b",
         r"\b(first and foremost|lastly|finally)\b",
+        r"\b(as a result|therefore|thus|hence)\b",
     ],
     "ai_phrases": [
         r"\b(as an ai|as a language model|i don'?t have personal)\b",
-        r"\b(delve into|navigate|leverage|utilize)\b",
+        r"\b(delve into|delve deeper|delving into)\b",
+        r"\b(navigate|navigating|leverage|leveraging)\b",
         r"\b(it'?s crucial|it'?s essential|it'?s vital)\b",
-        r"\b(in today'?s world|in this day and age)\b",
-        r"\b(a testament to|speaks volumes)\b",
+        r"\b(in today'?s world|in this day and age|in the modern era)\b",
+        r"\b(a testament to|speaks volumes|bears witness to)\b",
+        r"\b(tapestry of|landscape of|realm of|fabric of)\b",
+        r"\b(myriad of|plethora of|multitude of)\b",
     ],
     "filler_phrases": [
         r"\b(in order to)\b",
         r"\b(due to the fact that)\b",
         r"\b(at the end of the day)\b",
         r"\b(when it comes to)\b",
+        r"\b(it is worth noting that)\b",
+    ],
+    "overly_formal": [
+        r"\b(utilize|utilizes|utilizing)\b",
+        r"\b(commence|commences|commencing)\b",
+        r"\b(facilitate|facilitates|facilitating)\b",
+        r"\b(endeavor|endeavors|endeavoring)\b",
+        r"\b(ascertain|ascertains|ascertaining)\b",
+    ],
+    "meta_awareness": [
+        r"\b(for example, consider|imagine a scenario where)\b",
+        r"\b(let'?s explore|let'?s examine|let'?s consider)\b",
+        r"\b(one might argue|one could say)\b",
+    ],
+    "passive_voice_indicators": [
+        r"\b(is being|are being|was being|were being)\b",
+        r"\b(has been|have been|had been).*\b(created|established|developed|implemented)\b",
+        r"\b(can be seen|can be observed|can be noted)\b",
     ]
 }
 
@@ -58,18 +81,28 @@ class AIContentDetector:
     MODEL_DIR = "model"
     CACHE_SIZE = 100  # Number of texts to cache
     
-    def __init__(self, model_path: Optional[str] = None):
-        """Initialize the detector with model path."""
-        if model_path is None:
-            base_path = os.path.dirname(os.path.abspath(__file__))
-            model_path = os.path.join(base_path, self.MODEL_DIR)
+    def __init__(self, model_path: Optional[str] = None, use_ml_model: bool = False):
+        """Initialize the detector with model path.
         
-        self.model_path = model_path
+        Args:
+            model_path: Path to ML model directory (optional)
+            use_ml_model: If True, load Transformer model (requires downloads).
+                         If False, use lightweight statistical detection only.
+        """
+        self.use_ml_model = use_ml_model
         self.tokenizer = None
         self.model = None
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         
-        self._load_model()
+        if use_ml_model:
+            if model_path is None:
+                base_path = os.path.dirname(os.path.abspath(__file__))
+                model_path = os.path.join(base_path, self.MODEL_DIR)
+            self.model_path = model_path
+            self._load_model()
+        else:
+            print("Initialized in OFFLINE mode (no ML model, statistical detection only)")
+            self.model_path = None
     
     def _load_model(self):
         """Load the tokenizer and model."""
@@ -82,7 +115,10 @@ class AIContentDetector:
             print("Model loaded successfully.")
         except Exception as e:
             print(f"Error loading model: {e}")
-            raise
+            print("Falling back to offline mode...")
+            self.use_ml_model = False
+            self.model = None
+            self.tokenizer = None
     
     def _get_text_hash(self, text: str) -> str:
         """Generate hash for caching."""
@@ -110,12 +146,19 @@ class AIContentDetector:
         if not sentence.strip() or len(sentence.split()) < 3:
             return None
         
-        # Get AI probability for this sentence
-        text_hash = self._get_text_hash(sentence)
-        human_prob, ai_prob = self._cached_inference(text_hash, sentence)
-        
         # Detect patterns in this sentence
         patterns = self._detect_patterns_in_text(sentence)
+        
+        # Get AI probability for this sentence
+        if self.use_ml_model and self.model is not None:
+            text_hash = self._get_text_hash(sentence)
+            try:
+                human_prob, ai_prob = self._cached_inference(text_hash, sentence)
+            except Exception:
+                # Fallback if inference fails
+                human_prob, ai_prob = self._calculate_offline_score(sentence, patterns)
+        else:
+            human_prob, ai_prob = self._calculate_offline_score(sentence, patterns)
         
         return {
             "text": sentence.strip(),
@@ -188,6 +231,66 @@ class AIContentDetector:
         uniformity = 1 - min(1, variance / max_variance) if max_variance > 0 else 0.5
         
         return round(uniformity, 3)
+    
+    def _calculate_ttr(self, text: str) -> float:
+        """
+        Calculate Type-Token Ratio (vocabulary diversity).
+        Returns 0-1 (higher = more diverse vocabulary = more human-like)
+        """
+        words = [w.lower() for w in text.split() if w.strip()]
+        if len(words) < 10:
+            return 0.5  # Not enough data
+        
+        unique_words = set(words)
+        ttr = len(unique_words) / len(words)
+        return round(ttr, 3)
+    
+    def _calculate_offline_score(self, text: str, detected_patterns: List[Dict]) -> Tuple[float, float]:
+        """
+        Calculate AI probability using lightweight statistical methods (no ML model).
+        Returns (human_prob, ai_prob) tuple.
+        
+        Scoring weights:
+        - Pattern matching: 40%
+        - Burstiness: 30%
+        - N-gram uniformity: 20%
+        - Vocabulary richness: 10%
+        """
+        sentences = re.split(r'[.!?]+', text)
+        sentences = [s.strip() for s in sentences if s.strip()]
+        sentence_count = len(sentences) if sentences else 1
+        
+        # 1. Pattern matching score (40% weight)
+        pattern_density = len(detected_patterns) / sentence_count
+        pattern_score = min(1.0, pattern_density * 5) * 0.4  # Scale up (5 patterns = max)
+        
+        # 2. Burstiness score (30% weight) - inverted (low burstiness = AI)
+        words_per_sentence = [len(s.split()) for s in sentences]
+        if len(words_per_sentence) > 1:
+            mean = sum(words_per_sentence) / len(words_per_sentence)
+            variance = sum((x - mean) ** 2 for x in words_per_sentence) / len(words_per_sentence)
+            burstiness = min(1.0, variance / 100)
+        else:
+            burstiness = 0
+        burstiness_score = (1 - burstiness) * 0.3  # Invert
+        
+        # 3. N-gram uniformity score (20% weight)
+        bigram_uniformity = self._calculate_ngram_uniformity(text, 2)
+        trigram_uniformity = self._calculate_ngram_uniformity(text, 3)
+        avg_uniformity = (bigram_uniformity + trigram_uniformity) / 2
+        uniformity_score = avg_uniformity * 0.2
+        
+        # 4. Vocabulary richness score (10% weight) - inverted (low TTR = AI)
+        ttr = self._calculate_ttr(text)
+        ttr_score = (1 - ttr) * 0.1  # Invert
+        
+        # Combine scores
+        ai_prob = pattern_score + burstiness_score + uniformity_score + ttr_score
+        ai_prob = min(1.0, max(0.0, ai_prob))  # Clamp to [0, 1]
+        
+        human_prob = 1 - ai_prob
+        
+        return (human_prob, ai_prob)
     
     def _calculate_linguistic_metrics(self, text: str) -> Dict:
         """Calculate comprehensive linguistic metrics."""
@@ -308,18 +411,23 @@ class AIContentDetector:
         
         text = text.strip()
         
-        # Main prediction (cached)
-        text_hash = self._get_text_hash(text)
-        human_prob, ai_prob = self._cached_inference(text_hash, text)
+        # Detect patterns in full text (needed for both ML and offline modes)
+        all_patterns = self._detect_patterns_in_text(text)
+        
+        # Main prediction - use ML model or offline scoring
+        if self.use_ml_model and self.model is not None:
+            # ML-based prediction (cached)
+            text_hash = self._get_text_hash(text)
+            human_prob, ai_prob = self._cached_inference(text_hash, text)
+        else:
+            # Offline statistical prediction
+            human_prob, ai_prob = self._calculate_offline_score(text, all_patterns)
         
         prediction = "ai_generated" if ai_prob > human_prob else "human"
         confidence = max(human_prob, ai_prob) * 100
         
         # Linguistic metrics
         metrics = self._calculate_linguistic_metrics(text)
-        
-        # Detect patterns in full text
-        all_patterns = self._detect_patterns_in_text(text)
         
         # Group patterns by category
         pattern_summary = {}

@@ -48,3 +48,4 @@ MANIFEST
 datasets/
 checkpoints/
 model/
+model_backup_*/
