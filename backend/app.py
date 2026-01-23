@@ -24,7 +24,7 @@ limiter = Limiter(
 
 # Initialize the fact checker and AI content detector
 fact_checker = FactChecker()
-ai_detector = AIContentDetector(use_ml_model=True)  # Enable ML text detection
+ai_detector = AIContentDetector(use_ml_model=False)  # Use offline statistical detection (more reliable)
 text_explainer = TextExplainer()
 doc_parser = DocumentParser()
 

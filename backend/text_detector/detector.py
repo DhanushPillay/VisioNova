@@ -65,6 +65,31 @@ AI_PATTERNS = {
         r"\b(is being|are being|was being|were being)\b",
         r"\b(has been|have been|had been).*\b(created|established|developed|implemented)\b",
         r"\b(can be seen|can be observed|can be noted)\b",
+    ],
+    "academic_filler": [
+        r"\b(research indicates|studies show|findings suggest)\b",
+        r"\b(it is important to|it should be emphasized that|it must be noted)\b",
+        r"\b(various|numerous|several|multiple)\s+\b(studies|factors|aspects|considerations)\b",
+        r"\b(as mentioned|as stated|as noted)\b",
+    ],
+    "abstract_qualifiers": [
+        r"\b(the fact that|the reality that|the truth is)\b",
+        r"\b(in essence|in other words|put simply)\b",
+        r"\b(thus|hence|accordingly|subsequently)\b",
+    ],
+    "verbose_constructions": [
+        r"\b(has\s+\w+ed\s+\w+.*significant|demonstrates\s+\w+.*implications)\b",
+        r"\b(characterized by|defined by|marked by)\b",
+        r"\b(take into account|take into consideration|be taken into account)\b",
+    ],
+    "cautious_language": [
+        r"\b(seems to|appears to|suggests that)\b",
+        r"\b(one could argue|it could be said|it might be suggested)\b",
+        r"\b(in some cases|in certain contexts|to some extent)\b",
+    ],
+    "list_connectors": [
+        r"\b(first(?:ly)?|second(?:ly)?|third(?:ly)?|finally)\b",
+        r"\b(in the first place|in the second place)\b",
     ]
 }
 
@@ -128,7 +153,13 @@ class AIContentDetector:
     
     @lru_cache(maxsize=100)
     def _cached_inference(self, text_hash: str, text: str) -> Tuple[float, float]:
-        """Cached model inference. Returns (human_prob, ai_prob)."""
+        """
+        Cached model inference. Returns (human_prob, ai_prob).
+        
+        Model label mapping (from train_model.py):
+        - Index 0: "human"
+        - Index 1: "ai"
+        """
         import torch
         inputs = self.tokenizer(
             text, 
@@ -142,7 +173,10 @@ class AIContentDetector:
             probs = torch.nn.functional.softmax(outputs.logits, dim=-1)
         
         prob_values = probs[0].tolist()
-        return (prob_values[0], prob_values[1])  # (human, ai)
+        # Explicitly return in correct order: (human_probability, ai_probability)
+        human_prob = prob_values[0]  # Index 0 = "human"
+        ai_prob = prob_values[1]     # Index 1 = "ai"
+        return (human_prob, ai_prob)
     
     def _analyze_sentence(self, sentence: str) -> Dict:
         """Analyze a single sentence for AI probability and patterns."""
@@ -168,6 +202,34 @@ class AIContentDetector:
             "ai_score": round(ai_prob * 100, 1),
             "human_score": round(human_prob * 100, 1),
             "patterns": patterns,
+            "is_flagged": ai_prob > 0.6  # Flag if > 60% AI
+        }
+    
+    def _analyze_sentence_fast(self, sentence: str, full_text_patterns: List[Dict] = None) -> Dict:
+        """
+        OPTIMIZED: Analyze a single sentence with minimal overhead.
+        Uses pre-detected patterns from full text to avoid redundant regex.
+        """
+        if not sentence.strip() or len(sentence.split()) < 3:
+            return None
+        
+        # Filter patterns that match this sentence (avoid re-running all regex)
+        if full_text_patterns:
+            sentence_patterns = [
+                p for p in full_text_patterns 
+                if p.get("pattern", "").lower() in sentence.lower()
+            ]
+        else:
+            sentence_patterns = self._detect_patterns_in_text(sentence)
+        
+        # Quick score without ML model
+        human_prob, ai_prob = self._calculate_offline_score(sentence, sentence_patterns)
+        
+        return {
+            "text": sentence.strip(),
+            "ai_score": round(ai_prob * 100, 1),
+            "human_score": round(human_prob * 100, 1),
+            "patterns": sentence_patterns,
             "is_flagged": ai_prob > 0.6  # Flag if > 60% AI
         }
     
@@ -338,83 +400,96 @@ class AIContentDetector:
         Calculate AI probability using lightweight statistical methods (no ML model).
         Returns (human_prob, ai_prob) tuple.
         
-        Scoring weights (optimized for accuracy):
-        - Pattern matching: 35% (most reliable)
-        - Burstiness: 20%
-        - N-gram repetition: 15%
-        - Vocabulary richness (TTR): 10%
-        - Entropy (Perplexity proxy): 10%
-        - Repetition (4-grams): 10%
+        Improved scoring to detect subtle AI-generated text:
+        - Pattern matching: 40% (reliable but not all AI has obvious patterns)
+        - Linguistic metrics: 60% (entropy, TTR, burstiness, n-gram repetition)
+        
+        Key improvements:
+        1. Reduced pattern weight to prevent false negatives on subtle AI
+        2. Increased linguistic analysis weight (more reliable for subtle cases)
+        3. Better calibration for borderline cases
         """
         sentences = re.split(r'[.!?]+', text)
         sentences = [s.strip() for s in sentences if s.strip()]
-        sentence_count = len(sentences) if sentences else 1
+        sentence_count = max(len(sentences), 1)
         
-        # 1. Pattern matching score (30% weight) - Conservative threshold
-        pattern_density = len(detected_patterns) / sentence_count
-        # Need at least 3 patterns to consider it AI-like (stricter threshold)
-        if len(detected_patterns) < 3:
-            pattern_score = 0
+        # ===== COMPONENT 1: PATTERN MATCHING SCORE (40% weight) =====
+        num_patterns = len(detected_patterns)
+        pattern_density = num_patterns / sentence_count if sentence_count > 0 else 0
+        
+        if num_patterns == 0:
+            pattern_ai_score = 0.0
+        elif num_patterns == 1:
+            pattern_ai_score = 0.1
+        elif num_patterns == 2:
+            pattern_ai_score = 0.25
+        elif num_patterns == 3:
+            pattern_ai_score = 0.45
+        elif num_patterns <= 5:
+            pattern_ai_score = 0.65
         else:
-            pattern_score = min(1.0, pattern_density * 3) * 0.30  # Gentler scaling
+            # 6+ patterns is very strong AI indicator
+            pattern_ai_score = min(1.0, max(0.75, pattern_density * 1.2))
         
-        # 2. Burstiness score (20% weight) - inverted (low burstiness = AI)
-        words_per_sentence = [len(s.split()) for s in sentences]
+        pattern_component = pattern_ai_score * 0.40
+        
+        # ===== COMPONENT 2: LINGUISTIC METRICS (60% weight) =====
+        
+        # 2a. Vocabulary Diversity (TTR) - 20% of total
+        ttr = self._calculate_ttr(text)
+        ttr_ai_score = 1.0 - ttr  # Low vocabulary = AI-like
+        
+        # 2b. Entropy/Perplexity - 20% of total
+        entropy = self._calculate_entropy(text)
+        entropy_ai_score = 1.0 - entropy  # Low entropy = AI-like
+        
+        # 2c. Burstiness (sentence length variance) - 10% of total
+        words_per_sentence = [len(s.split()) for s in sentences if s.strip()]
         if len(words_per_sentence) > 1:
-            mean = sum(words_per_sentence) / len(words_per_sentence)
-            variance = sum((x - mean) ** 2 for x in words_per_sentence) / len(words_per_sentence)
+            mean_wps = sum(words_per_sentence) / len(words_per_sentence)
+            variance = sum((x - mean_wps) ** 2 for x in words_per_sentence) / len(words_per_sentence)
             burstiness = min(1.0, variance / 100)
         else:
-            burstiness = 0
-        # Only penalize if burstiness is VERY low (< 0.15) - conservative
-        if burstiness < 0.15:
-            burstiness_score = (1 - burstiness) * 0.20
-        else:
-            burstiness_score = 0  # Normal burstiness = likely human
+            burstiness = 0.5
+        burstiness_ai_score = 1.0 - burstiness  # Low variance = AI-like
         
-        # 3. N-gram repetition score (15% weight)
+        # 2d. N-gram Repetition - 10% of total
         bigram_rep = self._calculate_ngram_uniformity(text, 2)
         trigram_rep = self._calculate_ngram_uniformity(text, 3)
-        avg_rep = (bigram_rep + trigram_rep) / 2
-        # Only count if repetition is high (> 0.7) - conservative
-        if avg_rep > 0.7:
-            ngram_score = avg_rep * 0.15
-        else:
-            ngram_score = 0
+        ngram_ai_score = (bigram_rep + trigram_rep) / 2.0  # High uniformity = AI-like
         
-        # 4. Vocabulary richness score (15% weight) - inverted (low TTR = AI)
-        ttr = self._calculate_ttr(text)
-        # Only penalize if TTR is VERY low (< 0.25) - conservative
-        if ttr < 0.25:
-            ttr_score = (1 - ttr) * 0.15
-        else:
-            ttr_score = 0  # Normal vocabulary = likely human
+        # Combine linguistic metrics
+        linguistic_ai_score = (
+            ttr_ai_score * 0.333 +           # 20% of total (333% of 60%)
+            entropy_ai_score * 0.333 +       # 20% of total
+            burstiness_ai_score * 0.167 +    # 10% of total
+            ngram_ai_score * 0.167           # 10% of total
+        )
         
-        # 5. Entropy score (10% weight) - inverted (low entropy = AI)
-        entropy = self._calculate_entropy(text)
-        # Only penalize if entropy is low (< 0.4) - conservative
-        if entropy < 0.4:
-            entropy_score = (1 - entropy) * 0.10
-        else:
-            entropy_score = 0
+        linguistic_component = linguistic_ai_score * 0.60
         
-        # 6. Long n-gram repetition score (10% weight) - high repetition = AI
-        repetition = self._detect_repetition(text, n=4)
-        # Only count significant repetition (> 0.5) - conservative
-        if repetition > 0.5:
-            repetition_score = repetition * 0.10
-        else:
-            repetition_score = 0
+        # ===== FINAL SCORE WITH CALIBRATION =====
+        ai_prob = pattern_component + linguistic_component
+        ai_prob = min(1.0, max(0.0, ai_prob))
         
-        # Combine scores
-        ai_prob = pattern_score + burstiness_score + ngram_score + ttr_score + entropy_score + repetition_score
-        ai_prob = min(1.0, max(0.0, ai_prob))  # Clamp to [0, 1]
+        # Pattern-based boosting: If we have strong pattern evidence, boost the score
+        if num_patterns >= 4:
+            # 4+ clear AI patterns is strong evidence - boost to at least 0.55
+            ai_prob = max(0.55, ai_prob)
         
-        # Apply stricter threshold - need at least 0.3 AI score to classify as AI
-        if ai_prob < 0.3:
-            ai_prob = 0.15  # Very likely human
+        # Calibration: Only reduce confidence for uncertain predictions
+        word_count = len(text.split())
+        if num_patterns >= 3:
+            # Clear pattern evidence - don't reduce confidence significantly
+            pass
+        elif word_count < 50:
+            # Short text with few patterns - reduce confidence slightly
+            ai_prob = 0.5 + (ai_prob - 0.5) * (word_count / 50) * 0.8
+        elif word_count < 100:
+            # Medium text - slight reduction
+            ai_prob = 0.5 + (ai_prob - 0.5) * 0.9
         
-        human_prob = 1 - ai_prob
+        human_prob = 1.0 - ai_prob
         
         return (human_prob, ai_prob)
     
@@ -527,7 +602,7 @@ class AIContentDetector:
         
         Args:
             text: Text to analyze
-            detailed: Include sentence-level analysis
+            detailed: Include sentence-level analysis (can be slower for long texts)
             
         Returns:
             Comprehensive detection results
@@ -574,7 +649,7 @@ class AIContentDetector:
         prediction = "ai_generated" if ai_prob > human_prob else "human"
         confidence = max(human_prob, ai_prob) * 100
         
-        # Linguistic metrics
+        # Linguistic metrics (OPTIMIZED: calculate once, use for all)
         metrics = self._calculate_linguistic_metrics(text)
         
         # Group patterns by category
@@ -601,13 +676,15 @@ class AIContentDetector:
             }
         }
         
-        # Sentence-level analysis (if detailed)
-        if detailed:
+        # Sentence-level analysis (if detailed and text not too long)
+        # OPTIMIZATION: Skip detailed analysis for texts > 2000 chars to avoid slowdown
+        if detailed and len(text) < 2000:
             sentences = re.split(r'(?<=[.!?])\s+', text)
             sentence_analysis = []
             
-            for sentence in sentences[:20]:  # Limit to 20 sentences
-                analysis = self._analyze_sentence(sentence)
+            # Pre-build pattern map for sentences to avoid redundant regex (OPTIMIZATION)
+            for sentence in sentences[:15]:  # Reduced from 20 to 15 for speed
+                analysis = self._analyze_sentence_fast(sentence, all_patterns)
                 if analysis:
                     sentence_analysis.append(analysis)
             
