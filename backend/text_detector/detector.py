@@ -350,9 +350,13 @@ class AIContentDetector:
         sentences = [s.strip() for s in sentences if s.strip()]
         sentence_count = len(sentences) if sentences else 1
         
-        # 1. Pattern matching score (35% weight) - Most reliable indicator
+        # 1. Pattern matching score (30% weight) - Conservative threshold
         pattern_density = len(detected_patterns) / sentence_count
-        pattern_score = min(1.0, pattern_density * 4) * 0.35  # 4 patterns = max
+        # Need at least 3 patterns to consider it AI-like (stricter threshold)
+        if len(detected_patterns) < 3:
+            pattern_score = 0
+        else:
+            pattern_score = min(1.0, pattern_density * 3) * 0.30  # Gentler scaling
         
         # 2. Burstiness score (20% weight) - inverted (low burstiness = AI)
         words_per_sentence = [len(s.split()) for s in sentences]
@@ -362,29 +366,53 @@ class AIContentDetector:
             burstiness = min(1.0, variance / 100)
         else:
             burstiness = 0
-        burstiness_score = (1 - burstiness) * 0.20  # Invert
+        # Only penalize if burstiness is VERY low (< 0.15) - conservative
+        if burstiness < 0.15:
+            burstiness_score = (1 - burstiness) * 0.20
+        else:
+            burstiness_score = 0  # Normal burstiness = likely human
         
         # 3. N-gram repetition score (15% weight)
         bigram_rep = self._calculate_ngram_uniformity(text, 2)
         trigram_rep = self._calculate_ngram_uniformity(text, 3)
         avg_rep = (bigram_rep + trigram_rep) / 2
-        ngram_score = avg_rep * 0.15
+        # Only count if repetition is high (> 0.7) - conservative
+        if avg_rep > 0.7:
+            ngram_score = avg_rep * 0.15
+        else:
+            ngram_score = 0
         
-        # 4. Vocabulary richness score (10% weight) - inverted (low TTR = AI)
+        # 4. Vocabulary richness score (15% weight) - inverted (low TTR = AI)
         ttr = self._calculate_ttr(text)
-        ttr_score = (1 - ttr) * 0.10  # Invert
+        # Only penalize if TTR is VERY low (< 0.25) - conservative
+        if ttr < 0.25:
+            ttr_score = (1 - ttr) * 0.15
+        else:
+            ttr_score = 0  # Normal vocabulary = likely human
         
         # 5. Entropy score (10% weight) - inverted (low entropy = AI)
         entropy = self._calculate_entropy(text)
-        entropy_score = (1 - entropy) * 0.10  # Invert
+        # Only penalize if entropy is low (< 0.4) - conservative
+        if entropy < 0.4:
+            entropy_score = (1 - entropy) * 0.10
+        else:
+            entropy_score = 0
         
         # 6. Long n-gram repetition score (10% weight) - high repetition = AI
         repetition = self._detect_repetition(text, n=4)
-        repetition_score = repetition * 0.10
+        # Only count significant repetition (> 0.5) - conservative
+        if repetition > 0.5:
+            repetition_score = repetition * 0.10
+        else:
+            repetition_score = 0
         
         # Combine scores
         ai_prob = pattern_score + burstiness_score + ngram_score + ttr_score + entropy_score + repetition_score
         ai_prob = min(1.0, max(0.0, ai_prob))  # Clamp to [0, 1]
+        
+        # Apply stricter threshold - need at least 0.3 AI score to classify as AI
+        if ai_prob < 0.3:
+            ai_prob = 0.15  # Very likely human
         
         human_prob = 1 - ai_prob
         
@@ -522,17 +550,22 @@ class AIContentDetector:
             # This prevents specific models from overfitting on human text
             off_human, off_ai = self._calculate_offline_score(text, all_patterns)
             
-            # Weighted Hybrid Score: 70% ML, 30% Linguistic analysis
-            # If ML is extremely confident (>99%), we trust it more (90/10 split)
-            if ml_ai > 0.99 or ml_human > 0.99:
-                 weight_ml = 0.90
-            else:
-                 weight_ml = 0.70
+            # Weighted Hybrid Score: Balance ML with linguistic analysis
+            # CRITICAL: Current model is overfit and biased toward AI
+            # Until retrained, we trust linguistic analysis MUCH more
             
-            weight_off = 1.0 - weight_ml
+            # EMERGENCY FIX: Model is severely overfit, minimize its influence
+            weight_ml = 0.25  # Only 25% weight to ML (it's unreliable)
+            weight_off = 0.75  # 75% weight to linguistic analysis
             
             ai_prob = (ml_ai * weight_ml) + (off_ai * weight_off)
             human_prob = 1.0 - ai_prob
+            
+            # Apply conservative threshold - require strong evidence for AI classification
+            # If AI probability is between 0.45-0.55, lean toward human (benefit of doubt)
+            if 0.45 <= ai_prob <= 0.55:
+                ai_prob = 0.40  # Shift to human side
+                human_prob = 0.60
             
         else:
             # Offline statistical prediction
