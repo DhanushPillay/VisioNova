@@ -41,6 +41,12 @@ AI_PATTERNS = {
         r"\b(a testament to|speaks volumes|bears witness to)\b",
         r"\b(tapestry of|landscape of|realm of|fabric of)\b",
         r"\b(myriad of|plethora of|multitude of)\b",
+        # Added domain-specific promotional / marketing phrases often used in AI-generated content
+        r"\b(game-changing|game changing)\b",
+        r"\b(streamlining workflows|streamline workflows)\b",
+        r"\b(boosting productivity|boost productivity)\b",
+        r"\b(foster innovation|fostering innovation)\b",
+        r"\b(hybrid approach|hybrid approaches)\b",
     ],
     "filler_phrases": [
         r"\b(in order to)\b",
