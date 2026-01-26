@@ -28,6 +28,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Generate and display mock analysis results
         displayAnalysisResults(imageData);
+
+        // Load text detection result (if AnalysisDashboard stored it)
+        loadTextDetectionResult();
     } else {
         updateElement('analysisTime', 'No analysis performed');
         updateElement('pageTitle', 'Image Analysis');
@@ -129,4 +132,37 @@ function formatFileSize(bytes) {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+/**
+ * Load text detection result stored by AnalysisDashboard and display it
+ */
+function loadTextDetectionResult() {
+    const raw = sessionStorage.getItem('visioNova_text_result');
+    if (!raw) return;
+    try {
+        const res = JSON.parse(raw);
+        const prediction = res.prediction || 'N/A';
+        const confidence = res.confidence != null ? (Number(res.confidence).toFixed(2) + '%') : 'N/A';
+
+        const predEl = document.getElementById('td_prediction');
+        const confEl = document.getElementById('td_confidence');
+        const decEl = document.getElementById('td_decision');
+
+        if (predEl) predEl.querySelector('span') ? predEl.querySelector('span').textContent = prediction : predEl.textContent = 'Prediction: ' + prediction;
+        if (confEl) confEl.querySelector('span') ? confEl.querySelector('span').textContent = confidence : confEl.textContent = 'Confidence: ' + confidence;
+
+        let decisionText = 'N/A';
+        if (res.prediction === 'uncertain' && res.decision) {
+            const leaning = res.decision.leaning || res.decision.reason || 'unknown';
+            const margin = res.decision.margin != null ? Number(res.decision.margin).toFixed(3) : 'n/a';
+            decisionText = `Uncertain — leaning: ${leaning} (margin ${margin})`;
+        } else if (res.decision) {
+            try { decisionText = typeof res.decision === 'string' ? res.decision : JSON.stringify(res.decision); } catch(e) { decisionText = String(res.decision); }
+        }
+
+        if (decEl) decEl.querySelector('span') ? decEl.querySelector('span').textContent = decisionText : decEl.textContent = 'Decision: ' + decisionText;
+    } catch (e) {
+        console.error('Failed to parse visioNova_text_result:', e);
+    }
 }
