@@ -624,8 +624,25 @@ class AIContentDetector:
             # Offline statistical prediction
             human_prob, ai_prob = self._calculate_offline_score(text, all_patterns)
         
-        prediction = "ai_generated" if ai_prob > human_prob else "human"
-        confidence = max(human_prob, ai_prob) * 100
+        # Determine prediction with uncertainty handling
+        margin = abs(ai_prob - human_prob)
+        max_prob = max(ai_prob, human_prob)
+        confidence = round(max_prob * 100, 2)
+
+        # If margin is small, mark as 'uncertain' and include reason and leaning
+        uncertainty_threshold = 0.12  # if <12% margin, consider uncertain
+        if margin < uncertainty_threshold:
+            leaning = "ai_generated" if ai_prob > human_prob else "human"
+            prediction = "uncertain"
+            decision_reason = {
+                "reason": "low_margin",
+                "margin": round(margin, 3),
+                "leaning": leaning
+            }
+        else:
+            prediction = "ai_generated" if ai_prob > human_prob else "human"
+            decision_reason = {"reason": "clear_margin", "margin": round(margin, 3)}
+
         metrics = self._calculate_linguistic_metrics(text)
         
         # Group patterns by category
@@ -651,6 +668,10 @@ class AIContentDetector:
                 "categories": pattern_summary
             }
         }
+
+        # Add decision reasoning and uncertainty metadata to help frontend and debugging
+        result["decision"] = decision_reason
+        result["uncertainty_threshold"] = uncertainty_threshold
         
         # Sentence-level analysis (if detailed and text not too long)
         # OPTIMIZATION: Skip detailed analysis for texts > 2000 chars to avoid slowdown
