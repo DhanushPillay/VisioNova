@@ -41,12 +41,21 @@ AI_PATTERNS = {
         r"\b(a testament to|speaks volumes|bears witness to)\b",
         r"\b(tapestry of|landscape of|realm of|fabric of)\b",
         r"\b(myriad of|plethora of|multitude of)\b",
-        # Added domain-specific promotional / marketing phrases often used in AI-generated content
         r"\b(game-changing|game changing)\b",
         r"\b(streamlining workflows|streamline workflows)\b",
         r"\b(boosting productivity|boost productivity)\b",
         r"\b(foster innovation|fostering innovation)\b",
         r"\b(hybrid approach|hybrid approaches)\b",
+        r"\b(pre-trained models|pretrained models|pre-training)\b",
+        r"\b(multimodal|contextual understanding|downstream tasks)\b",
+        r"\b(end-to-end pipeline|orchestration|interpretability)\b",
+        r"\b(generalize|generalization|training distribution)\b",
+        r"\b(attention mechanisms|transformer|embeddings)\b",
+        r"\b(model deployments?|automated systems|automated insights)\b",
+        r"\b(research indicates|studies show|findings suggest)\b",
+        r"\b(methodology|confounders|causal|robustness across)\b",
+        r"\b(framework|scalable|throughput|lifecycle)\b",
+        r"\b(standardize deployment|operational burden|sustainable adoption)\b",
     ],
     "filler_phrases": [
         r"\b(in order to)\b",
@@ -118,9 +127,9 @@ class AIContentDetector:
     CACHE_SIZE = 100  # Number of texts to cache
 
     # Tunable defaults (can be adjusted or tuned via scripts)
-    PATTERN_WEIGHT = 0.65
-    LINGUISTIC_WEIGHT = 0.35
-    UNCERTAINTY_THRESHOLD = 0.05
+    PATTERN_WEIGHT = 0.75  # Increased pattern weight for better precision
+    LINGUISTIC_WEIGHT = 0.25
+    UNCERTAINTY_THRESHOLD = 0.08
     
     def __init__(self, model_path: Optional[str] = None, use_ml_model: bool = False):
         """Initialize the detector with model path.
@@ -434,14 +443,14 @@ class AIContentDetector:
         pattern_density = num_patterns / sentence_count if sentence_count > 0 else 0
         
         if num_patterns == 0:
-            pattern_ai_score = 0.0
+            pattern_ai_score = 0.1  # Small base boost for borderline cases
         elif num_patterns == 1:
-            pattern_ai_score = 0.60  # CHANGED from 0.35 to 0.60 - single formal pattern is STRONG
+            pattern_ai_score = 0.65  # Single pattern = moderate AI indicator
         elif num_patterns == 2:
-            pattern_ai_score = 0.75  # CHANGED from 0.50 to 0.75
+            pattern_ai_score = 0.80  # Two patterns = strong AI indicator
         elif num_patterns >= 3:
             # 3+ patterns is very strong AI indicator
-            pattern_ai_score = min(1.0, 0.90)  # CHANGED
+            pattern_ai_score = min(1.0, 0.95)
         
         pattern_component = pattern_ai_score * self.PATTERN_WEIGHT
         
