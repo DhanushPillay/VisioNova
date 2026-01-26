@@ -116,6 +116,11 @@ class AIContentDetector:
     
     MODEL_DIR = "model"
     CACHE_SIZE = 100  # Number of texts to cache
+
+    # Tunable defaults (can be adjusted or tuned via scripts)
+    PATTERN_WEIGHT = 0.65
+    LINGUISTIC_WEIGHT = 0.35
+    UNCERTAINTY_THRESHOLD = 0.05
     
     def __init__(self, model_path: Optional[str] = None, use_ml_model: bool = False):
         """Initialize the detector with model path.
@@ -438,7 +443,7 @@ class AIContentDetector:
             # 3+ patterns is very strong AI indicator
             pattern_ai_score = min(1.0, 0.90)  # CHANGED
         
-        pattern_component = pattern_ai_score * 0.60  # CHANGED from 0.50 to 0.60
+        pattern_component = pattern_ai_score * self.PATTERN_WEIGHT
         
         # ===== COMPONENT 2: LINGUISTIC METRICS (40% weight - DECREASED to balance) =====
         
@@ -473,7 +478,7 @@ class AIContentDetector:
             ngram_ai_score * 0.25           # 10% of total
         )
         
-        linguistic_component = linguistic_ai_score * 0.40  # CHANGED from 0.50 to 0.40
+        linguistic_component = linguistic_ai_score * self.LINGUISTIC_WEIGHT
         
         # ===== FINAL SCORE =====
         ai_prob = pattern_component + linguistic_component
@@ -636,7 +641,7 @@ class AIContentDetector:
         confidence = round(max_prob * 100, 2)
 
         # If margin is small, mark as 'uncertain' and include reason and leaning
-        uncertainty_threshold = 0.12  # if <12% margin, consider uncertain
+        uncertainty_threshold = self.UNCERTAINTY_THRESHOLD
         if margin < uncertainty_threshold:
             leaning = "ai_generated" if ai_prob > human_prob else "human"
             prediction = "uncertain"
