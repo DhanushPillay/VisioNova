@@ -1,14 +1,16 @@
 """
 VisioNova Backend API Server
-Flask application providing fact-checking API endpoints.
+Flask application providing fact-checking and AI detection API endpoints.
 """
 import re
+import base64
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from fact_check import FactChecker
 from text_detector import AIContentDetector, TextExplainer, DocumentParser
+from image_detector import ImageDetector, MetadataAnalyzer, ELAAnalyzer
 
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
@@ -27,6 +29,11 @@ fact_checker = FactChecker()
 ai_detector = AIContentDetector(use_ml_model=False)  # Use offline statistical detection (more reliable)
 text_explainer = TextExplainer()
 doc_parser = DocumentParser()
+
+# Initialize image detector
+image_detector = ImageDetector(use_gpu=False)
+metadata_analyzer = MetadataAnalyzer()
+ela_analyzer = ELAAnalyzer()
 
 # File upload limits
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
@@ -85,12 +92,14 @@ def health_check():
     cache_info = fact_checker.cache_info()
     return jsonify({
         'status': 'ok',
-        'service': 'VisioNova Fact-Check API',
+        'service': 'VisioNova API',
         'version': '1.0.0',
         'cache': cache_info,
         'endpoints': {
             'fact_check': '/api/fact-check (POST)',
             'deep_check': '/api/fact-check/deep (POST)',
+            'detect_text': '/api/detect-ai (POST)',
+            'detect_image': '/api/detect-image (POST)',
             'feedback': '/api/fact-check/feedback (POST)'
         }
     })
@@ -395,6 +404,237 @@ def detect_ai_file_upload():
             result['explanation'] = explanation
         
         result['success'] = True
+        return jsonify(result)
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Internal server error: {str(e)}',
+            'error_code': 'INTERNAL_ERROR'
+        }), 500
+
+
+# ============================================
+# IMAGE DETECTION ENDPOINTS
+# ============================================
+
+@app.route('/api/detect-image', methods=['POST'])
+@limiter.limit("10 per minute")
+def detect_ai_image():
+    """
+    Detect if an image is AI-generated.
+    
+    Request body:
+        {
+            "image": "base64_encoded_image_data",
+            "filename": "optional_filename.jpg",
+            "include_ela": true,  // optional, default false
+            "include_metadata": true  // optional, default true
+        }
+    
+    Response:
+        {
+            "success": true,
+            "ai_probability": 75.5,
+            "verdict": "LIKELY_AI",
+            "verdict_description": "...",
+            "analysis_scores": {...},
+            "metadata": {...},
+            "ela": {...}  // if include_ela=true
+        }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'image' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Missing "image" field in request body',
+                'error_code': 'MISSING_IMAGE'
+            }), 400
+        
+        image_data = data['image']
+        filename = data.get('filename', 'uploaded_image')
+        include_ela = data.get('include_ela', False)
+        include_metadata = data.get('include_metadata', True)
+        
+        # Remove data URL prefix if present
+        if ',' in image_data:
+            image_data = image_data.split(',')[1]
+        
+        # Decode base64
+        try:
+            image_bytes = base64.b64decode(image_data)
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': f'Invalid base64 image data: {str(e)}',
+                'error_code': 'INVALID_IMAGE'
+            }), 400
+        
+        # Check file size (max 50MB for images)
+        max_image_size = 50 * 1024 * 1024
+        if len(image_bytes) > max_image_size:
+            return jsonify({
+                'success': False,
+                'error': f'Image too large (max {max_image_size // 1024 // 1024}MB)',
+                'error_code': 'IMAGE_TOO_LARGE'
+            }), 400
+        
+        # Run AI detection
+        detection_result = image_detector.detect(image_bytes, filename)
+        
+        if not detection_result.get('success', False):
+            return jsonify(detection_result), 400
+        
+        # Add metadata analysis if requested
+        if include_metadata:
+            metadata_result = metadata_analyzer.analyze(image_bytes)
+            detection_result['metadata'] = metadata_result
+            
+            # Adjust AI probability based on metadata
+            modifier = metadata_result.get('ai_probability_modifier', 0)
+            original_prob = detection_result['ai_probability']
+            adjusted_prob = max(0, min(100, original_prob + modifier))
+            detection_result['ai_probability'] = round(adjusted_prob, 2)
+            detection_result['probability_adjustment'] = modifier
+        
+        # Add ELA analysis if requested
+        if include_ela:
+            ela_result = ela_analyzer.analyze(image_bytes)
+            detection_result['ela'] = ela_result
+        
+        return jsonify(detection_result)
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Internal server error: {str(e)}',
+            'error_code': 'INTERNAL_ERROR'
+        }), 500
+
+
+@app.route('/api/detect-image/ela', methods=['POST'])
+@limiter.limit("10 per minute")
+def get_ela_heatmap():
+    """
+    Generate Error Level Analysis heatmap for an image.
+    
+    Request body:
+        {
+            "image": "base64_encoded_image_data",
+            "colormap": "hot"  // optional: "hot", "jet", "viridis"
+        }
+    
+    Response:
+        {
+            "success": true,
+            "ela_heatmap": "base64_encoded_heatmap",
+            "manipulation_likelihood": 45.5,
+            "analysis": {...}
+        }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'image' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Missing "image" field',
+                'error_code': 'MISSING_IMAGE'
+            }), 400
+        
+        image_data = data['image']
+        colormap = data.get('colormap', 'hot')
+        
+        # Remove data URL prefix if present
+        if ',' in image_data:
+            image_data = image_data.split(',')[1]
+        
+        # Decode base64
+        try:
+            image_bytes = base64.b64decode(image_data)
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': f'Invalid base64 image data: {str(e)}',
+                'error_code': 'INVALID_IMAGE'
+            }), 400
+        
+        # Generate ELA analysis
+        ela_result = ela_analyzer.analyze(image_bytes)
+        
+        # Generate colored heatmap
+        heatmap = ela_analyzer.generate_heatmap(image_bytes, colormap)
+        
+        return jsonify({
+            'success': True,
+            'ela_heatmap': heatmap,
+            'ela_raw': ela_result.get('ela_image'),
+            'manipulation_likelihood': ela_result.get('manipulation_likelihood', 0),
+            'suspicious_regions': ela_result.get('suspicious_regions', []),
+            'analysis': ela_result.get('analysis', {})
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Internal server error: {str(e)}',
+            'error_code': 'INTERNAL_ERROR'
+        }), 500
+
+
+@app.route('/api/detect-image/metadata', methods=['POST'])
+@limiter.limit("20 per minute")
+def get_image_metadata():
+    """
+    Extract and analyze image metadata (EXIF).
+    
+    Request body:
+        {
+            "image": "base64_encoded_image_data"
+        }
+    
+    Response:
+        {
+            "success": true,
+            "has_exif": true,
+            "has_camera_info": true,
+            "camera_make": "Canon",
+            "camera_model": "EOS 5D Mark IV",
+            "anomalies": [...],
+            "metadata": {...}
+        }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'image' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Missing "image" field',
+                'error_code': 'MISSING_IMAGE'
+            }), 400
+        
+        image_data = data['image']
+        
+        # Remove data URL prefix if present
+        if ',' in image_data:
+            image_data = image_data.split(',')[1]
+        
+        # Decode base64
+        try:
+            image_bytes = base64.b64decode(image_data)
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': f'Invalid base64 image data: {str(e)}',
+                'error_code': 'INVALID_IMAGE'
+            }), 400
+        
+        # Analyze metadata
+        result = metadata_analyzer.analyze(image_bytes)
+        
         return jsonify(result)
     
     except Exception as e:
