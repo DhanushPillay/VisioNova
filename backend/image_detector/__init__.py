@@ -25,6 +25,7 @@ from .watermark_detector import WatermarkDetector
 from .content_credentials import ContentCredentialsDetector
 from .image_explainer import ImageExplainer, create_image_explainer
 from .ensemble_detector import EnsembleDetector, create_ensemble_detector
+from .noise_analyzer import NoiseAnalyzer
 
 # ML detectors (may require additional dependencies)
 try:
@@ -52,9 +53,10 @@ __all__ = [
     
     # Analyzers
     'MetadataAnalyzer', 
-    'ELAAnalyzer',
+    'EL AAnalyzer',
     'WatermarkDetector',
     'ContentCredentialsDetector',
+    'NoiseAnalyzer',
     
     # AI Explainer
     'ImageExplainer',
