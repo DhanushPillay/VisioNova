@@ -14,7 +14,7 @@ from text_detector import AIContentDetector, TextExplainer, DocumentParser
 from image_detector import (
     ImageDetector, MetadataAnalyzer, ELAAnalyzer, 
     WatermarkDetector, ContentCredentialsDetector, ImageExplainer,
-    EnsembleDetector, ML_DETECTORS_AVAILABLE
+    NoiseAnalyzer, EnsembleDetector, ML_DETECTORS_AVAILABLE
 )
 
 
@@ -43,6 +43,7 @@ metadata_analyzer = MetadataAnalyzer()
 ela_analyzer = ELAAnalyzer()
 watermark_detector = WatermarkDetector()
 content_credentials_detector = ContentCredentialsDetector()
+noise_analyzer = NoiseAnalyzer()
 image_explainer = ImageExplainer()  # Groq Vision API for AI-powered image analysis
 
 # Ensemble detector (advanced, loads ML models on demand)
@@ -682,6 +683,24 @@ def detect_ai_image():
                 adjustment = min(30, wm_confidence * 0.4)
                 detection_result['ai_probability'] = min(100, round(ai_prob + adjustment, 2))
                 detection_result['watermark_adjustment'] = round(adjustment, 2)
+        
+        # Add advanced noise analysis (always run for forensics)
+        noise_result = noise_analyzer.analyze(image_bytes)
+        if noise_result.get('success'):
+            # Add noise map to top-level response for UI
+            detection_result['noise_map'] = noise_result.get('noise_map')
+            # Update analysis_scores with noise consistency from advanced analyzer
+            if 'analysis_scores' in detection_result:
+                detection_result['analysis_scores']['noise_consistency'] = noise_result.get('noise_consistency', 
+                    detection_result['analysis_scores'].get('noise_consistency', 50))
+            # Store full noise details for forensics tab (frontend expects 'noise_analysis')
+            detection_result['noise_analysis'] = {
+                'consistency': noise_result.get('noise_consistency', 50),
+                'low_freq': noise_result.get('low_freq', 'N/A'),
+                'mid_freq': noise_result.get('mid_freq', 'N/A'),
+                'high_freq': noise_result.get('high_freq', 'N/A'),
+                'pattern_analysis': noise_result.get('pattern_analysis', {})
+            }
         
         # Add C2PA Content Credentials detection if requested
         if include_c2pa:
