@@ -48,7 +48,7 @@ class ImageDetector:
         self.device = 'cpu'
         self.ml_detectors = None
         
-        # Try to load ML models (DIRE + NYUAD)
+        # Try to load ML models (DIRE + NYUAD + Flux)
         try:
             from .ml_detector import create_ml_detectors
             self.ml_detectors = create_ml_detectors(
@@ -56,16 +56,45 @@ class ImageDetector:
                 load_all=False
             )
             
-            # Check if any ML models loaded
+            # Check for active models
+            loaded_models = []
+            if self.ml_detectors.get('flux') and self.ml_detectors['flux'].model_loaded:
+                loaded_models.append("Flux")
             if self.ml_detectors.get('dire') and self.ml_detectors['dire'].model_loaded:
+                loaded_models.append("DIRE")
+            if self.ml_detectors.get('nyuad') and self.ml_detectors['nyuad'].model_loaded:
+                loaded_models.append("NYUAD")
+            if self.ml_detectors.get('smogy') and self.ml_detectors['smogy'].model_loaded:
+                loaded_models.append("SMOGY")
+            if self.ml_detectors.get('siglip') and self.ml_detectors['siglip'].model_loaded:
+                loaded_models.append("SigLIP")
+            
+            if loaded_models:
                 self.model_loaded = True
-                logger.info("✓ DIRE ML model loaded - 94% accuracy on latest AI generators")
-            elif self.ml_detectors.get('nyuad') and self.ml_detectors['nyuad'].model_loaded:
-                self.model_loaded = True
-                logger.info("✓ NYUAD ML model loaded - 97% accuracy")
+                logger.info(f"✓ ML models loaded: {', '.join(loaded_models)}")
             else:
                 logger.warning("No ML models loaded. Using statistical analysis only.")
                 logger.info("Run 'python backend/setup_ml_models.py' to download models")
+
+            # Initialize Content Credentials detector
+            try:
+                from .content_credentials import ContentCredentialsDetector
+                self.c2pa_detector = ContentCredentialsDetector()
+            except ImportError:
+                logger.warning("Content Credentials module not found")
+                self.c2pa_detector = None
+            
+            # Initialize Semantic Plausibility detector (Groq LLaVA)
+            try:
+                from .semantic_detector import SemanticPlausibilityDetector
+                self.semantic_detector = SemanticPlausibilityDetector()
+                if self.semantic_detector.available:
+                    logger.info("✓ Semantic plausibility detector loaded (Groq LLaVA)")
+                else:
+                    logger.info("Semantic detector: GROQ_API_KEY not set (optional)")
+            except ImportError:
+                logger.warning("Semantic detector module not found")
+                self.semantic_detector = None
                 
         except Exception as e:
             logger.warning(f"Could not load ML models: {e}. Using statistical analysis only.")
@@ -175,8 +204,18 @@ class ImageDetector:
             stats = self._statistical_analysis(image)
             results.update(stats)
             
+            # Content Credentials (C2PA) analysis
+            if self.c2pa_detector:
+                c2pa_result = self.c2pa_detector.analyze(image_data, filename)
+                results['c2pa'] = c2pa_result
+                
+                # If C2PA says it's AI, override or significantly boost probability
+                if c2pa_result.get('is_ai_generated'):
+                    results['ai_probability'] = max(results.get('ai_probability', 0), 95.0)
+                    results['provenance_source'] = c2pa_result.get('ai_generator', 'Unknown AI Tool')
+
             # Deep learning prediction (if model loaded)
-            if self.model_loaded and self.model is not None:
+            if self.model_loaded:
                 ml_result = self._ml_prediction(image)
                 results['ml_prediction'] = ml_result
                 # Combine ML and statistical scores
@@ -191,6 +230,23 @@ class ImageDetector:
                         results['ml_heatmap'] = ml_heatmap
                 except Exception as e:
                     logger.warning(f"ML heatmap generation failed: {e}")
+            
+            # Semantic Plausibility Analysis (Groq LLaVA - common sense detection)
+            if hasattr(self, 'semantic_detector') and self.semantic_detector and self.semantic_detector.available:
+                try:
+                    semantic_result = self.semantic_detector.analyze(image_data)
+                    results['semantic_analysis'] = semantic_result
+                    
+                    if semantic_result.get('success'):
+                        # If semantic analysis finds issues, boost AI probability
+                        plausibility = semantic_result.get('plausibility_score', 100)
+                        if plausibility < 70:  # Low plausibility = likely AI
+                            # Calculate boost: lower plausibility = higher AI probability boost
+                            ai_boost = (70 - plausibility) * 0.5
+                            results['ai_probability'] = min(100, results.get('ai_probability', 50) + ai_boost)
+                            logger.info(f"Semantic analysis: plausibility {plausibility}%, AI boost +{ai_boost:.1f}%")
+                except Exception as e:
+                    logger.warning(f"Semantic analysis failed: {e}")
             
             # Determine verdict
             ai_prob = results['ai_probability']
@@ -555,10 +611,17 @@ class ImageDetector:
     
     def _ml_prediction(self, image: Image.Image) -> dict:
         """
-        Run ML model prediction using DIRE or NYUAD detectors.
+        Run ML model prediction using weighted ensemble voting.
+        
+        Uses all available models with weighted voting for best accuracy:
+        - NYUAD: 30% (97% accuracy, proven general detector)
+        - SMOGY: 25% (specialized for 2024 generators)
+        - SigLIP: 20% (human vs AI classification)
+        - DIRE: 15% (diffusion model detection)
+        - Flux: 10% (specialized Flux detection)
         
         Returns:
-            dict with 'label' and 'confidence'
+            dict with 'label', 'confidence', and ensemble details
         """
         if not self.ml_detectors:
             return {
@@ -567,43 +630,120 @@ class ImageDetector:
                 'note': 'No ML models loaded'
             }
         
+        # Model weights for ensemble voting
+        WEIGHTS = {
+            'nyuad': 0.30,
+            'smogy': 0.25,
+            'siglip': 0.20,
+            'dire': 0.15,
+            'flux': 0.10
+        }
+        
+        results = {}
+        weighted_sum = 0.0
+        total_weight = 0.0
+        
         try:
-            # Convert image to bytes for detector
+            # Convert image to bytes for some detectors
             img_buffer = io.BytesIO()
             image.save(img_buffer, format='PNG')
             img_bytes = img_buffer.getvalue()
             
-            # Try DIRE first (best for latest generators)
-            if self.ml_detectors.get('dire') and self.ml_detectors['dire'].model_loaded:
-                result = self.ml_detectors['dire'].detect(img_bytes)
-                if result.get('success'):
-                    return {
-                        'label': 'AI' if result['ai_probability'] > 50 else 'Real',
-                        'confidence': result['ai_probability'],
-                        'model': 'DIRE',
-                        'specialization': 'Diffusion models (SD, DALL-E 3, Midjourney v6)'
-                    }
-            
-            # Fallback to NYUAD
+            # Run all available detectors
+            # NYUAD detector
             if self.ml_detectors.get('nyuad') and self.ml_detectors['nyuad'].model_loaded:
-                result = self.ml_detectors['nyuad'].detect(img_bytes)
-                if result.get('success'):
-                    return {
-                        'label': 'AI' if result['ai_probability'] > 50 else 'Real',
-                        'confidence': result['ai_probability'],
-                        'model': 'NYUAD',
-                        'specialization': 'General AI detection'
-                    }
+                try:
+                    result = self.ml_detectors['nyuad'].predict(image)
+                    if result.get('success'):
+                        ai_prob = result.get('ai_probability', 50.0)
+                        results['nyuad'] = {'ai_probability': ai_prob, 'model': 'NYUAD-ViT'}
+                        weighted_sum += ai_prob * WEIGHTS['nyuad']
+                        total_weight += WEIGHTS['nyuad']
+                except Exception as e:
+                    logger.debug(f"NYUAD failed: {e}")
             
-            # No models available
+            # SMOGY detector (2024 models)
+            if self.ml_detectors.get('smogy') and self.ml_detectors['smogy'].model_loaded:
+                try:
+                    result = self.ml_detectors['smogy'].predict(image)
+                    if result.get('success'):
+                        ai_prob = result.get('ai_probability', 50.0)
+                        results['smogy'] = {'ai_probability': ai_prob, 'model': 'SMOGY-2024'}
+                        weighted_sum += ai_prob * WEIGHTS['smogy']
+                        total_weight += WEIGHTS['smogy']
+                except Exception as e:
+                    logger.debug(f"SMOGY failed: {e}")
+            
+            # SigLIP detector (human vs AI)
+            if self.ml_detectors.get('siglip') and self.ml_detectors['siglip'].model_loaded:
+                try:
+                    result = self.ml_detectors['siglip'].predict(image)
+                    if result.get('success'):
+                        ai_prob = result.get('ai_probability', 50.0)
+                        results['siglip'] = {'ai_probability': ai_prob, 'model': 'SigLIP'}
+                        weighted_sum += ai_prob * WEIGHTS['siglip']
+                        total_weight += WEIGHTS['siglip']
+                except Exception as e:
+                    logger.debug(f"SigLIP failed: {e}")
+            
+            # DIRE detector (diffusion models)
+            if self.ml_detectors.get('dire') and self.ml_detectors['dire'].model_loaded:
+                try:
+                    result = self.ml_detectors['dire'].detect(img_bytes)
+                    if result.get('success'):
+                        ai_prob = result.get('ai_probability', 50.0)
+                        results['dire'] = {'ai_probability': ai_prob, 'model': 'DIRE'}
+                        weighted_sum += ai_prob * WEIGHTS['dire']
+                        total_weight += WEIGHTS['dire']
+                except Exception as e:
+                    logger.debug(f"DIRE failed: {e}")
+            
+            # Flux detector (Flux.1 specific)
+            if self.ml_detectors.get('flux') and self.ml_detectors['flux'].model_loaded:
+                try:
+                    result = self.ml_detectors['flux'].predict(image)
+                    if result.get('success') and result.get('is_flux'):
+                        ai_prob = result.get('confidence', 50.0)
+                        results['flux'] = {'ai_probability': ai_prob, 'model': 'Flux-Detector'}
+                        weighted_sum += ai_prob * WEIGHTS['flux']
+                        total_weight += WEIGHTS['flux']
+                except Exception as e:
+                    logger.debug(f"Flux failed: {e}")
+            
+            # Calculate ensemble result
+            if total_weight > 0:
+                final_ai_probability = weighted_sum / total_weight
+            else:
+                # Fallback if no models ran
+                return {
+                    'label': 'unknown',
+                    'confidence': 50.0,
+                    'note': 'No ML models produced results'
+                }
+            
+            # Determine label based on probability
+            if final_ai_probability >= 50:
+                label = 'AI'
+            else:
+                label = 'Real'
+            
+            # Count votes
+            ai_votes = sum(1 for r in results.values() if r.get('ai_probability', 50) > 50)
+            total_models = len(results)
+            
             return {
-                'label': 'unknown',
-                'confidence': 50.0,
-                'note': 'ML models not loaded - download with setup_ml_models.py'
+                'label': label,
+                'confidence': round(final_ai_probability, 2),
+                'model': 'Ensemble',
+                'models_used': list(results.keys()),
+                'model_count': total_models,
+                'ensemble_votes': f"{ai_votes}/{total_models} voted AI",
+                'individual_results': results,
+                'specialization': 'Weighted ensemble (NYUAD+SMOGY+SigLIP+DIRE+Flux)'
             }
             
         except Exception as e:
-            logger.error(f"ML prediction failed: {e}")
+            logger.error(f"ML ensemble prediction failed: {e}")
             return {
                 'label': 'unknown',
                 'confidence': 50.0,

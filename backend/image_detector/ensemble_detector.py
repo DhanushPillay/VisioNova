@@ -13,14 +13,14 @@ Architecture:
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │              Parallel Detection Methods                  │   │
 │  │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌─────────┐  │   │
-│  │  │Statistical│ │ NYUAD ViT │ │   CLIP    │ │Frequency│  │   │
-│  │  │ Analysis  │ │ Detector  │ │ Universal │ │Analysis │  │   │
+│  │  │Statistical│ │ dima806   │ │   CLIP    │ │Frequency│  │   │
+│  │  │ Analysis  │ │ ViT 98.2% │ │ Universal │ │Analysis │  │   │
 │  │  └─────┬─────┘ └─────┬─────┘ └─────┬─────┘ └────┬────┘  │   │
 │  │        │             │             │            │        │   │
 │  │        ▼             ▼             ▼            ▼        │   │
 │  │  ┌─────────────────────────────────────────────────┐    │   │
 │  │  │         Weighted Score Fusion Layer             │    │   │
-│  │  │  statistical: 20% | nyuad: 25% | clip: 35%     │    │   │
+│  │  │  statistical: 20% | dima806: 30% | clip: 30%   │    │   │
 │  │  │  frequency: 10% | watermark: 10%               │    │   │
 │  │  └────────────────────┬────────────────────────────┘    │   │
 │  └───────────────────────┼─────────────────────────────────┘   │
@@ -56,12 +56,13 @@ class EnsembleDetector:
     
     Combines multiple detection methods:
     - Statistical analysis (frequency, noise, texture, edges)
-    - NYUAD ViT (Vision Transformer - HuggingFace)
-    - UniversalFakeDetect (CLIP-based)
+    - dima806 ViT (Vision Transformer - 98.25% accuracy on HuggingFace)
+    - UniversalFakeDetect (CLIP-based - generalizes across generators)
     - Frequency domain analysis (GAN fingerprints)
     - Watermark detection
     - Content Credentials (C2PA)
     - Metadata forensics
+    - ELA manipulation detection
     
     Uses weighted score fusion with confidence calibration.
     """
@@ -69,8 +70,8 @@ class EnsembleDetector:
     # Default weights for each detector (sum to 1.0)
     DEFAULT_WEIGHTS = {
         'statistical': 0.20,    # Basic statistical analysis
-        'nyuad': 0.25,          # NYUAD ViT detector
-        'clip': 0.35,           # UniversalFakeDetect (CLIP)
+        'deepfake': 0.30,       # dima806 ViT detector (98.25% accuracy)
+        'clip': 0.30,           # UniversalFakeDetect (CLIP)
         'frequency': 0.10,      # FFT/DCT analysis
         'watermark': 0.10,      # Watermark detection contribution
     }
@@ -229,25 +230,32 @@ class EnsembleDetector:
                 result['individual_results']['statistical'] = stat_result
                 scores['statistical'] = stat_result.get('ai_probability', 50)
             
-            # 2. NYUAD ViT detector
+            # 2. dima806 ViT detector (primary ML model - 98.25% accuracy)
+            if self.deepfake_detector and self.deepfake_detector.model_loaded:
+                df_result = self.deepfake_detector.predict(image)
+                result['individual_results']['deepfake'] = df_result
+                if df_result.get('success', False):
+                    scores['deepfake'] = df_result.get('ai_probability', 50)
+            
+            # 3. NYUAD ViT detector (fallback if loaded)
             if self.nyuad_detector and self.nyuad_detector.model_loaded:
                 nyuad_result = self.nyuad_detector.predict(image)
                 result['individual_results']['nyuad'] = nyuad_result
                 scores['nyuad'] = nyuad_result.get('ai_probability', 50)
             
-            # 3. UniversalFakeDetect (CLIP)
+            # 4. UniversalFakeDetect (CLIP)
             if self.clip_detector and self.clip_detector.model_loaded:
                 clip_result = self.clip_detector.predict(image)
                 result['individual_results']['clip'] = clip_result
                 scores['clip'] = clip_result.get('ai_probability', 50)
             
-            # 4. Frequency analysis
+            # 5. Frequency analysis
             if self.frequency_analyzer:
                 freq_result = self.frequency_analyzer.analyze(image)
                 result['individual_results']['frequency'] = freq_result
                 scores['frequency'] = freq_result.get('ai_probability_contribution', 0)
             
-            # 5. Watermark detection
+            # 6. Watermark detection
             watermark_boost = 0
             if self.watermark_detector:
                 wm_result = self.watermark_detector.analyze(image_data)
@@ -260,7 +268,7 @@ class EnsembleDetector:
                     )
                 scores['watermark'] = watermark_boost
             
-            # 6. Metadata analysis
+            # 7. Metadata analysis
             if self.metadata_analyzer:
                 meta_result = self.metadata_analyzer.analyze(image_data)
                 result['individual_results']['metadata'] = meta_result
@@ -271,7 +279,7 @@ class EnsembleDetector:
                         f"AI software detected in metadata: {meta_result.get('software_detected')}"
                     )
             
-            # 7. C2PA/Content Credentials
+            # 8. C2PA/Content Credentials
             c2pa_override = False
             if self.c2pa_detector:
                 c2pa_result = self.c2pa_detector.analyze(image_data, filename)
@@ -283,20 +291,10 @@ class EnsembleDetector:
                         f"C2PA Content Credentials declare AI generation: {c2pa_result.get('ai_generator')}"
                     )
             
-            # 8. ELA analysis (for manipulation detection)
+            # 9. ELA analysis (for manipulation detection)
             if self.ela_analyzer:
                 ela_result = self.ela_analyzer.analyze(image_data)
                 result['individual_results']['ela'] = ela_result
-            
-            # 9. Deepfake detection (if faces present)
-            if self.deepfake_detector and self.deepfake_detector.model_loaded:
-                df_result = self.deepfake_detector.predict(image)
-                result['individual_results']['deepfake'] = df_result
-                
-                if df_result.get('has_face') and df_result.get('deepfake_probability', 0) > 70:
-                    result['overrides_applied'].append(
-                        f"Deepfake indicators detected (confidence: {df_result.get('deepfake_probability')}%)"
-                    )
             
             # Calculate weighted ensemble score
             final_score = self._calculate_ensemble_score(scores)

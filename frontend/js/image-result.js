@@ -24,20 +24,20 @@ let imageData = null;               // Store original image data
 
 document.addEventListener('DOMContentLoaded', async function () {
     console.log('[ImageResult] Page loaded, checking for image data...');
-    
+
     // Check if accessed via file:// protocol
     if (window.location.protocol === 'file:') {
         console.error('[ImageResult] ERROR: Page opened from file system. CORS will block API calls.');
         displayError('Please access this page through the Flask server (http://localhost:5000) instead of opening the HTML file directly.');
         return;
     }
-    
+
     // Initialize tab system
     initTabs();
-    
+
     // Initialize button handlers
     initButtonHandlers();
-    
+
     // Load image data from storage
     imageData = VisioNovaStorage.getFile('image');
     console.log('[ImageResult] Image data found:', imageData ? 'Yes' : 'No');
@@ -68,7 +68,7 @@ function initButtonHandlers() {
     if (exportPdfBtn) {
         exportPdfBtn.addEventListener('click', exportToPDF);
     }
-    
+
     // Re-analyze button
     const reanalyzeBtn = document.getElementById('reanalyzeBtn');
     if (reanalyzeBtn) {
@@ -83,30 +83,30 @@ async function processImageAnalysis(imageData) {
     try {
         // Update page metadata
         updatePageMetadata(imageData);
-        
+
         // Display the uploaded image
         displayUploadedImage(imageData);
-        
+
         // Check for pre-fetched results from AnalysisDashboard
         const prefetchedResult = sessionStorage.getItem('visioNova_image_result');
-        
+
         if (prefetchedResult) {
             console.log('[ImageResult] Using pre-fetched analysis result from AnalysisDashboard');
             try {
                 const analysisResult = JSON.parse(prefetchedResult);
-                
+
                 // Clear the pre-fetched result
                 sessionStorage.removeItem('visioNova_image_result');
-                
+
                 // Store result for tab switching
                 currentResult = analysisResult;
-                
+
                 // Update status to completed
                 updateStatusBadge('COMPLETED', 'success');
-                
+
                 // Render overview tab directly
                 renderTabContent(analysisResult, currentTab);
-                
+
                 console.log('[ImageResult] Pre-fetched result displayed successfully');
                 return;
             } catch (parseError) {
@@ -114,30 +114,30 @@ async function processImageAnalysis(imageData) {
                 // Fall through to API call
             }
         }
-        
+
         // No pre-fetched result - call API directly
         console.log('[ImageResult] No pre-fetched result found, calling API...');
-        
+
         // Show loading state
         showLoadingState();
-        
+
         // Call backend API for analysis
         console.log('[ImageResult] Calling backend API...');
         const analysisResult = await analyzeImage(imageData);
         console.log('[ImageResult] API Response:', analysisResult);
-        
+
         // Update status to completed
         updateStatusBadge('COMPLETED', 'success');
-        
+
         // Store result for tab switching
         currentResult = analysisResult;
-        
+
         // Render overview tab by default
         renderTabContent(analysisResult, currentTab);
-        
+
         // Hide loading, show success
         hideLoadingState();
-        
+
     } catch (error) {
         console.error('[ImageResult] Analysis failed:', error);
         updateStatusBadge('FAILED', 'error');
@@ -154,13 +154,13 @@ function updatePageMetadata(imageData) {
     if (pageTitle) {
         pageTitle.textContent = 'Analyzing: ' + imageData.fileName;
     }
-    
+
     const analysisTime = document.getElementById('analysisTime');
     if (analysisTime) {
         const date = new Date(imageData.timestamp);
         analysisTime.textContent = date.toLocaleDateString() + ' at ' + date.toLocaleTimeString();
     }
-    
+
     const statusBadge = document.getElementById('statusBadge');
     if (statusBadge) {
         statusBadge.textContent = 'ANALYZING...';
@@ -178,18 +178,18 @@ function displayUploadedImage(imageData) {
     if (uploadedImage && imageData.data) {
         uploadedImage.src = imageData.data;
         uploadedImage.classList.remove('hidden');
-        
-        uploadedImage.onerror = function() {
+
+        uploadedImage.onerror = function () {
             console.error('[ImageResult] Failed to load image!');
             displayError('Failed to display image. The image data may be corrupted.');
         };
-        
-        uploadedImage.onload = function() {
+
+        uploadedImage.onload = function () {
             console.log('[ImageResult] Image loaded successfully!');
             console.log('[ImageResult] Dimensions:', uploadedImage.naturalWidth, 'x', uploadedImage.naturalHeight);
         };
     }
-    
+
     if (placeholder) {
         placeholder.classList.add('hidden');
     }
@@ -201,7 +201,7 @@ function displayUploadedImage(imageData) {
 async function analyzeImage(imageData) {
     const apiUrl = `${API_BASE_URL}/api/detect-image`;
     console.log('[ImageResult] API URL:', apiUrl);
-    
+
     try {
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -222,7 +222,7 @@ async function analyzeImage(imageData) {
         if (!response.ok) {
             const errorText = await response.text();
             console.error('[ImageResult] Error response:', errorText);
-            
+
             try {
                 const errorData = JSON.parse(errorText);
                 throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
@@ -234,14 +234,14 @@ async function analyzeImage(imageData) {
         const result = await response.json();
         console.log('[ImageResult] Success! Response keys:', Object.keys(result));
         return result;
-        
+
     } catch (error) {
         console.error('[ImageResult] API call failed:', error);
-        
+
         if (error.name === 'TypeError' && error.message.includes('fetch')) {
             throw new Error('Network error: Cannot reach backend server at ' + API_BASE_URL);
         }
-        
+
         throw error;
     }
 }
@@ -296,7 +296,7 @@ function renderTabContent(result, tabName) {
         default:
             tabContent.innerHTML = buildOverviewHTML(result);
     }
-    
+
     // Re-attach event listeners after rendering
     attachEventListeners();
 }
@@ -311,16 +311,16 @@ function renderTabContent(result, tabName) {
 function buildOverviewHTML(result) {
     const aiProbability = result.ai_probability || 50;
     let verdict = result.verdict || (aiProbability > 50 ? 'LIKELY_AI' : 'LIKELY_REAL');
-    
+
     // If watermark detected or C2PA confirms AI, authenticity = 0 and verdict = AI_GENERATED
     let authenticityScore = Math.round(100 - aiProbability);
     if (result.watermark?.watermark_detected || result.content_credentials?.is_ai_generated) {
         authenticityScore = 0;
         verdict = 'AI_GENERATED';
     }
-    
+
     const verdictConfig = getVerdictConfig(verdict);
-    
+
     return `
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Left Column: Image Viewer & Visualizations -->
@@ -401,7 +401,7 @@ function buildImageViewerCard(result) {
         { id: 'heatmap', label: 'AI Heatmap', icon: 'blur_on' },
         { id: 'noise', label: 'Noise Pattern', icon: 'grain' }
     ];
-    
+
     const visualizationButtons = visualizations.map(viz => `
         <button 
             onclick="switchVisualization('${viz.id}')" 
@@ -411,7 +411,7 @@ function buildImageViewerCard(result) {
             <span class="hidden sm:inline">${viz.label}</span>
         </button>
     `).join('');
-    
+
     return `
         <div class="bg-card-dark border border-[#20324b] rounded-xl p-6">
             <div class="flex items-center justify-between mb-4">
@@ -451,7 +451,7 @@ function buildQuickMetricsGrid(result) {
     const scores = result.analysis_scores || {};
     const aiProb = result.ai_probability || 0;
     const elaScore = result.ela?.ela_score || 0;
-    
+
     const metrics = [
         {
             label: 'AI Detection',
@@ -482,7 +482,7 @@ function buildQuickMetricsGrid(result) {
             color: (scores.noise_consistency || 0) > 70 ? 'text-red-500' : (scores.noise_consistency || 0) > 50 ? 'text-yellow-400' : 'text-accent-green'
         }
     ];
-    
+
     return `
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
             ${metrics.map(metric => `
@@ -503,9 +503,9 @@ function buildQuickMetricsGrid(result) {
  * Build Score Card
  */
 function buildScoreCard(result, authenticityScore, verdictConfig) {
-    const circumference = 251.2;
+    const circumference = 251.2; // 2 * PI * 40
     const offset = circumference - (authenticityScore / 100) * circumference;
-    
+
     // Custom description for screenshot/watermark/C2PA detection
     let description = result.verdict_description || verdictConfig.description;
     if (result.metadata?.is_screenshot) {
@@ -517,49 +517,44 @@ function buildScoreCard(result, authenticityScore, verdictConfig) {
         const generator = result.content_credentials.ai_generator || 'AI tool';
         description = `Confirmed AI-generated by ${generator} (verified via Content Credentials).`;
     }
-    
+
     return `
-        <div class="bg-card-dark border border-[#20324b] rounded-xl p-6 relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-32 h-32 ${verdictConfig.glowClass} rounded-full blur-3xl -mr-10 -mt-10"></div>
+        <div class="bg-card-dark rounded-2xl p-6 border border-white/5 shadow-xl relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                <span class="material-symbols-outlined text-8xl text-white">shield</span>
+            </div>
             
             <h3 class="text-white font-semibold text-lg mb-6 flex items-center gap-2 relative z-10">
-                <span class="material-symbols-outlined text-primary">shield</span>
+                <span class="material-symbols-outlined text-primary">analytics</span>
                 Authenticity Score
             </h3>
             
-            <div class="flex flex-col items-center relative z-10">
-                <!-- Score Circle -->
-                <div class="relative size-40">
-                    <svg class="size-40 -rotate-90">
-                        <circle cx="80" cy="80" r="70" stroke="#1E2338" stroke-width="12" fill="none" />
-                        <circle 
-                            cx="80" 
-                            cy="80" 
-                            r="70" 
-                            stroke="${verdictConfig.circleColor}" 
-                            stroke-width="12" 
-                            fill="none" 
-                            stroke-dasharray="251.2"
-                            stroke-dashoffset="${offset}"
-                            stroke-linecap="round"
-                            class="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_${verdictConfig.circleColor}]" />
+            <div class="flex flex-col items-center justify-center mb-6 relative z-10">
+                <div class="relative size-40 flex items-center justify-center">
+                    <!-- SVG Gauge Background -->
+                    <svg class="transform -rotate-90 size-full" viewbox="0 0 100 100">
+                        <circle cx="50" cy="50" fill="none" r="40" stroke="#20324b" stroke-linecap="round"
+                            stroke-width="8"></circle>
+                        <circle class="transition-all duration-1000 ease-out" cx="50" cy="50" fill="none" r="40"
+                            stroke="${verdictConfig.circleColor}" stroke-dasharray="251.2" stroke-dashoffset="${offset}"
+                            stroke-linecap="round" stroke-width="8"></circle>
                     </svg>
-                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <div class="absolute flex flex-col items-center">
                         <span class="text-4xl font-black text-white">${authenticityScore}</span>
-                        <span class="text-lg font-bold text-slate-400">/100</span>
+                        <span class="text-xs text-slate-400 font-medium">OUT OF 100</span>
                     </div>
                 </div>
                 
                 <!-- Verdict Badge -->
-                <div class="mt-6 px-4 py-2 rounded-full ${verdictConfig.badgeClass} text-sm font-bold border ${verdictConfig.borderClass}">
+                <div id="verdictLabel" class="mt-4 px-3 py-1 rounded-full ${verdictConfig.badgeClass} border ${verdictConfig.borderClass} text-sm font-bold tracking-wide">
                     ${verdictConfig.text}
                 </div>
-                
-                <!-- Description -->
-                <p class="text-slate-400 text-sm text-center mt-4 leading-relaxed">
-                    ${description}
-                </p>
             </div>
+            
+            <!-- Description -->
+            <p class="text-slate-400 text-sm text-center leading-relaxed relative z-10">
+                ${description}
+            </p>
         </div>
     `;
 }
@@ -570,7 +565,7 @@ function buildScoreCard(result, authenticityScore, verdictConfig) {
 function buildVerificationSummaryCard(result) {
     const aiProb = result.ai_probability || 0;
     const elaScore = result.ela?.ela_score || 0;
-    
+
     const checks = [
         {
             label: 'AI Detection',
@@ -593,7 +588,7 @@ function buildVerificationSummaryCard(result) {
             detail: result.ela?.clone_detected ? 'Cloning detected' : elaScore > 0 ? `${Math.round(elaScore)}% manipulation` : 'No manipulation found'
         }
     ];
-    
+
     return `
         <div class="bg-card-dark border border-[#20324b] rounded-xl p-6">
             <h3 class="text-white font-semibold text-lg mb-4 flex items-center gap-2">
@@ -667,7 +662,7 @@ function buildQuickActionsCard() {
  */
 function buildKeyFindingsCard(result) {
     const findings = [];
-    
+
     // Screenshot detection - show first as it's important context
     if (result.metadata?.is_screenshot) {
         findings.push({
@@ -678,7 +673,7 @@ function buildKeyFindingsCard(result) {
             color: 'blue'  // Use blue for screenshot indicators
         });
     }
-    
+
     // Analyze results and generate findings
     if (result.watermark?.watermark_detected) {
         findings.push({
@@ -688,7 +683,7 @@ function buildKeyFindingsCard(result) {
             description: `Found ${result.watermark.watermarks_found.join(', ')} watermark(s) commonly used by AI image generators.`
         });
     }
-    
+
     if (result.metadata?.ai_tool_detected) {
         findings.push({
             type: 'critical',
@@ -697,7 +692,25 @@ function buildKeyFindingsCard(result) {
             description: `Metadata contains signatures from ${result.metadata.ai_tool_detected}, indicating AI generation.`
         });
     }
-    
+
+    if (result.c2pa?.is_ai_generated) {
+        findings.push({
+            type: 'critical',
+            icon: 'verified_user',
+            title: 'Content Credentials (C2PA) Verified',
+            description: `Digital signature confirms image was generated by ${result.c2pa.ai_generator || 'an AI tool'}.`
+        });
+    }
+
+    if (result.ml_prediction?.model === 'FluxDetector' && result.ml_prediction.confidence > 70) {
+        findings.push({
+            type: 'critical',
+            icon: 'psychology',
+            title: 'Flux Generation Detected',
+            description: `Specialized detector identified characteristics of Flux.1 AI generation (${Math.round(result.ml_prediction.confidence)}% confidence).`
+        });
+    }
+
     if (result.ela?.clone_detected) {
         findings.push({
             type: 'warning',
@@ -706,7 +719,7 @@ function buildKeyFindingsCard(result) {
             description: 'Error Level Analysis found evidence of clone stamping or copy-paste manipulation.'
         });
     }
-    
+
     if ((result.ai_probability || 0) > 80) {
         findings.push({
             type: 'critical',
@@ -715,7 +728,7 @@ function buildKeyFindingsCard(result) {
             description: `Analysis shows ${Math.round(result.ai_probability)}% confidence of AI generation.`
         });
     }
-    
+
     if (result.metadata?.exif_stripped) {
         findings.push({
             type: 'info',
@@ -724,7 +737,7 @@ function buildKeyFindingsCard(result) {
             description: 'Camera metadata has been removed, which may indicate post-processing or manipulation.'
         });
     }
-    
+
     if ((result.analysis_scores?.noise_consistency || 100) < 40) {
         findings.push({
             type: 'warning',
@@ -733,7 +746,7 @@ function buildKeyFindingsCard(result) {
             description: 'Digital noise analysis shows patterns inconsistent with natural camera sensors.'
         });
     }
-    
+
     // If no significant findings, add a positive note
     if (findings.length === 0) {
         findings.push({
@@ -743,14 +756,14 @@ function buildKeyFindingsCard(result) {
             description: 'Image passed all verification checks with consistent metadata and natural patterns.'
         });
     }
-    
+
     const typeConfig = {
         critical: { bgClass: 'bg-red-500/10', borderClass: 'border-red-500/20', iconClass: 'text-red-500' },
         warning: { bgClass: 'bg-yellow-400/10', borderClass: 'border-yellow-400/20', iconClass: 'text-yellow-400' },
         info: { bgClass: 'bg-blue-500/10', borderClass: 'border-blue-500/20', iconClass: 'text-blue-500' },
         success: { bgClass: 'bg-accent-green/10', borderClass: 'border-accent-green/20', iconClass: 'text-accent-green' }
     };
-    
+
     return `
         <div class="bg-card-dark border border-[#20324b] rounded-xl p-6">
             <h3 class="text-white font-semibold text-lg mb-4 flex items-center gap-2">
@@ -760,8 +773,8 @@ function buildKeyFindingsCard(result) {
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 ${findings.map(finding => {
-                    const config = typeConfig[finding.type];
-                    return `
+        const config = typeConfig[finding.type];
+        return `
                         <div class="p-4 rounded-lg ${config.bgClass} border ${config.borderClass}">
                             <div class="flex items-start gap-3">
                                 <span class="material-symbols-outlined ${config.iconClass} text-xl shrink-0">${finding.icon}</span>
@@ -772,7 +785,7 @@ function buildKeyFindingsCard(result) {
                             </div>
                         </div>
                     `;
-                }).join('')}
+    }).join('')}
             </div>
         </div>
     `;
@@ -789,63 +802,69 @@ function buildDetectionMethodsCard(result) {
     const aiProb = result.ai_probability || 0;
     const elaScore = result.ela?.ela_score || 0;
     const noiseScore = result.analysis_scores?.noise_consistency || 0;
-    
+
     const methods = [
         {
             name: 'AI Detection',
             score: aiProb,
             weight: 40,
-            description: 'Statistical and ML-based analysis'
+            color: 'bg-primary',
+            description: result.ml_prediction?.model
+                ? `ML Analysis (${result.ml_prediction.model}) & Statistics`
+                : 'Statistical and ML-based analysis'
         },
         {
             name: 'Error Level Analysis',
             score: elaScore,
             weight: 25,
+            color: 'bg-accent-warning',
             description: 'JPEG compression artifact analysis'
         },
         {
             name: 'Metadata Analysis',
             score: result.metadata?.ai_tool_detected ? 100 : 0,
             weight: 20,
+            color: 'bg-purple-500',
             description: 'EXIF data and embedded signatures'
         },
         {
             name: 'Noise Analysis',
             score: noiseScore > 0 ? (100 - noiseScore) : 0,
             weight: 15,
+            color: 'bg-accent-success',
             description: 'Digital noise pattern consistency'
         }
     ];
-    
+
     return `
-        <div class="bg-card-dark border border-[#20324b] rounded-xl p-6">
-            <h3 class="text-white font-semibold text-lg mb-4 flex items-center gap-2">
+        <div class="bg-card-dark rounded-2xl p-6 border border-white/5 shadow-xl">
+            <h3 class="text-white font-semibold text-lg mb-6 flex items-center gap-2">
                 <span class="material-symbols-outlined text-primary">science</span>
                 Detection Methods
             </h3>
             
-            <div class="space-y-4">
+            <div class="space-y-5">
                 ${methods.map(method => {
-                    const percentage = (method.score / 100) * method.weight;
-                    return `
+        const scoreRounded = Math.round(method.score);
+        return `
                         <div class="space-y-2">
-                            <div class="flex items-center justify-between text-sm">
-                                <span class="text-white font-medium">${method.name}</span>
-                                <span class="text-slate-400">${Math.round(method.score)}% (${method.weight}% weight)</span>
+                            <div class="flex items-center justify-between">
+                                <span class="text-white font-medium text-sm">${method.name}</span>
+                                <span class="text-slate-300 text-sm font-semibold">${scoreRounded}% <span class="text-slate-500 font-normal">(${method.weight}% weight)</span></span>
                             </div>
-                            <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
-                                <div class="h-full bg-gradient-to-r from-accent-green to-primary rounded-full transition-all duration-1000" style="width: ${method.score}%"></div>
+                            <div class="h-3 bg-slate-700/50 rounded-full overflow-hidden">
+                                <div class="h-full ${method.color} rounded-full transition-all duration-1000 ease-out" style="width: ${scoreRounded}%"></div>
                             </div>
-                            <p class="text-slate-400 text-xs">${method.description}</p>
+                            <p class="text-slate-500 text-xs">${method.description}</p>
                         </div>
                     `;
-                }).join('')}
+    }).join('')}
             </div>
             
-            <div class="mt-6 pt-4 border-t border-white/5">
+            <div class="mt-6 pt-4 border-t border-white/10">
                 <div class="flex items-center justify-between">
-                    <span class="text-slate-400 text-sm">Weighted Combined Score</span>
-                    <span class="text-2xl font-bold text-primary">${Math.round(result.ai_probability || 50)}%</span>
+                    <span class="text-slate-400 text-sm font-medium">Weighted Combined Score</span>
+                    <span class="text-3xl font-black text-primary">${Math.round(result.ai_probability || 50)}%</span>
                 </div>
             </div>
         </div>
@@ -857,7 +876,7 @@ function buildDetectionMethodsCard(result) {
  */
 function buildForensicAnalysisCard(result) {
     const forensics = result.forensics || {};
-    
+
     return `
         <div class="bg-card-dark border border-[#20324b] rounded-xl p-6">
             <h3 class="text-white font-semibold text-lg mb-4 flex items-center gap-2">
@@ -911,7 +930,7 @@ function buildForensicAnalysisCard(result) {
  */
 function buildELAAnalysisCard(result) {
     const ela = result.ela || {};
-    
+
     return `
         <div class="bg-card-dark border border-[#20324b] rounded-xl p-6">
             <h3 class="text-white font-semibold text-lg mb-4 flex items-center gap-2">
@@ -964,7 +983,7 @@ function buildELAAnalysisCard(result) {
  */
 function buildNoiseAnalysisCard(result) {
     const noiseConsistency = result.analysis_scores?.noise_consistency || 0;
-    
+
     return `
         <div class="bg-card-dark border border-[#20324b] rounded-xl p-6">
             <h3 class="text-white font-semibold text-lg mb-4 flex items-center gap-2">
@@ -1006,9 +1025,9 @@ function buildNoiseAnalysisCard(result) {
             
             <div class="mt-4 p-3 rounded-lg ${noiseConsistency > 70 ? 'bg-accent-green/10 border-accent-green/20' : 'bg-yellow-400/10 border-yellow-400/20'} border">
                 <p class="text-xs ${noiseConsistency > 70 ? 'text-accent-green' : 'text-yellow-400'}">
-                    ${noiseConsistency > 70 
-                        ? '✓ Noise pattern is consistent with natural camera sensors' 
-                        : '⚠ Noise pattern shows irregularities that may indicate AI generation or heavy processing'}
+                    ${noiseConsistency > 70
+            ? '✓ Noise pattern is consistent with natural camera sensors'
+            : '⚠ Noise pattern shows irregularities that may indicate AI generation or heavy processing'}
                 </p>
             </div>
         </div>
@@ -1021,7 +1040,7 @@ function buildNoiseAnalysisCard(result) {
 function buildWatermarkDetectionCard(result) {
     const watermark = result.watermark || {};
     const methods = watermark.detection_methods || {};
-    
+
     return `
         <div class="bg-card-dark border border-[#20324b] rounded-xl p-6">
             <h3 class="text-white font-semibold text-lg mb-4 flex items-center gap-2">
@@ -1158,12 +1177,12 @@ function buildWatermarkMethodRow(name, methodResult, description) {
             </div>
         `;
     }
-    
+
     const detected = methodResult.detected || methodResult.patterns_found || methodResult.anomaly_detected || false;
     const confidence = methodResult.confidence || 0;
     const hasError = methodResult.error;
     const hasNote = methodResult.note;
-    
+
     return `
         <div class="flex items-center justify-between p-3 rounded ${detected ? 'bg-red-500/10 border-red-500/20' : 'bg-background-dark/30 border-white/5'} border transition-all hover:bg-background-dark/50">
             <div class="flex items-center gap-3 flex-1">
@@ -1230,7 +1249,7 @@ function formatGeneratorName(signature) {
         'compositeWithTrainedAlgorithmicMedia': 'AI Composite (IPTC)',
         'algorithmicMedia': 'Algorithmic Media'
     };
-    
+
     return nameMap[signature] || signature.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
@@ -1251,7 +1270,7 @@ function toggleWatermarkFilters() {
  */
 function buildMetadataOverviewCard(result) {
     const metadata = result.metadata || {};
-    
+
     return `
         <div class="bg-card-dark border border-[#20324b] rounded-xl p-6">
             <h3 class="text-white font-semibold text-lg mb-4 flex items-center gap-2">
@@ -1335,12 +1354,12 @@ function buildMetadataOverviewCard(result) {
 function buildWatermarkMetadataCard(result) {
     const watermark = result.watermark || {};
     const metadataWm = watermark.detection_methods?.metadata_watermark || {};
-    
+
     // Only show if metadata watermark was found
     if (!metadataWm.found && !watermark.ai_generator_signature) {
         return ''; // Don't show card if no metadata-based watermarks
     }
-    
+
     return `
         <div class="bg-card-dark border border-[#20324b] rounded-xl p-6">
             <h3 class="text-white font-semibold text-lg mb-4 flex items-center gap-2">
@@ -1412,7 +1431,7 @@ function buildWatermarkMetadataCard(result) {
 function buildEXIFDataCard(result) {
     const exif = result.metadata?.exif_data || {};
     const hasData = Object.keys(exif).length > 0;
-    
+
     return `
         <div class="bg-card-dark border border-[#20324b] rounded-xl p-6">
             <h3 class="text-white font-semibold text-lg mb-4 flex items-center gap-2">
@@ -1447,7 +1466,7 @@ function buildEXIFDataCard(result) {
  */
 function buildC2PACredentialsCard(result) {
     const c2pa = result.content_credentials || {};
-    
+
     return `
         <div class="bg-card-dark border border-[#20324b] rounded-xl p-6">
             <h3 class="text-white font-semibold text-lg mb-4 flex items-center gap-2">
@@ -1470,9 +1489,9 @@ function buildC2PACredentialsCard(result) {
                             ${c2pa.c2pa_found ? 'C2PA Manifest Found' : 'No C2PA Data'}
                         </div>
                         <div class="text-slate-300 text-xs mt-1">
-                            ${c2pa.c2pa_found 
-                                ? 'Image contains verified content credentials' 
-                                : 'No content provenance information available'}
+                            ${c2pa.c2pa_found
+            ? 'Image contains verified content credentials'
+            : 'No content provenance information available'}
                         </div>
                     </div>
                 </div>
@@ -1515,7 +1534,7 @@ function buildFilePropertiesCard(result) {
         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
         return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
     };
-    
+
     return `
         <div class="bg-card-dark border border-[#20324b] rounded-xl p-6">
             <h3 class="text-white font-semibold text-lg mb-4 flex items-center gap-2">
@@ -1567,7 +1586,7 @@ function buildFilePropertiesCard(result) {
  */
 function buildAIExplanationCard(result) {
     const aiAnalysis = result.ai_analysis || {};
-    
+
     return `
         <div class="bg-card-dark border border-[#20324b] rounded-xl p-6">
             <h3 class="text-white font-semibold text-lg mb-4 flex items-center gap-2">
@@ -1579,7 +1598,27 @@ function buildAIExplanationCard(result) {
                 <div class="prose prose-invert max-w-none">
                     <p class="text-slate-300 text-sm leading-relaxed whitespace-pre-line">${escapeHTML(aiAnalysis.explanation)}</p>
                 </div>
-            ` : `
+            ` : ''}
+
+            ${result.ml_prediction?.model ? `
+                <div class="mt-4 p-4 rounded-lg bg-background-dark/50 border border-white/5">
+                    <div class="flex items-start gap-3">
+                        <span class="material-symbols-outlined text-primary">model_training</span>
+                        <div>
+                            <div class="text-white font-medium text-sm">Model Triggered: ${result.ml_prediction.model}</div>
+                            <div class="text-slate-400 text-xs mt-1">
+                                ${result.ml_prediction.specialization || 'General AI Detection Model'}
+                            </div>
+                            <div class="mt-2 flex items-center gap-2">
+                                <div class="w-24 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                    <div class="h-full bg-primary rounded-full" style="width: ${result.ml_prediction.confidence}%"></div>
+                                </div>
+                                <span class="text-xs text-primary font-bold">${Math.round(result.ml_prediction.confidence)}% Confidence</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ` : result.ai_analysis?.explanation ? '' : `
                 <p class="text-slate-400 text-sm">AI analysis not available for this image.</p>
             `}
             
@@ -1608,7 +1647,7 @@ function buildAIExplanationCard(result) {
  */
 function buildVisualAnalysisCard(result) {
     const aiAnalysis = result.ai_analysis || {};
-    
+
     return `
         <div class="bg-card-dark border border-[#20324b] rounded-xl p-6">
             <h3 class="text-white font-semibold text-lg mb-4 flex items-center gap-2">
@@ -1656,14 +1695,14 @@ function buildConfidenceBreakdownCard(result) {
     const aiProb = result.ai_probability || 0;
     const elaScore = result.ela?.ela_score || 0;
     const noiseScore = scores.noise_consistency || 0;
-    
+
     const breakdown = [
         { label: 'AI Detection', value: aiProb, max: 100, weight: 40 },
         { label: 'ELA Analysis', value: elaScore, max: 100, weight: 25 },
         { label: 'Metadata Check', value: result.metadata?.ai_tool_detected ? 100 : 0, max: 100, weight: 20 },
         { label: 'Noise Analysis', value: noiseScore > 0 ? (100 - noiseScore) : 0, max: 100, weight: 15 }
     ];
-    
+
     return `
         <div class="bg-card-dark border border-[#20324b] rounded-xl p-6">
             <h3 class="text-white font-semibold text-lg mb-4 flex items-center gap-2">
@@ -1678,8 +1717,8 @@ function buildConfidenceBreakdownCard(result) {
             
             <div class="space-y-4">
                 ${breakdown.map(item => {
-                    const contribution = (item.value / item.max) * item.weight;
-                    return `
+        const contribution = (item.value / item.max) * item.weight;
+        return `
                         <div class="space-y-2">
                             <div class="flex items-center justify-between text-sm">
                                 <span class="text-white">${item.label}</span>
@@ -1696,7 +1735,7 @@ function buildConfidenceBreakdownCard(result) {
                             </div>
                         </div>
                     `;
-                }).join('')}
+    }).join('')}
             </div>
             
             <div class="mt-6 pt-4 border-t border-white/5">
@@ -1721,7 +1760,7 @@ function buildConfidenceBreakdownCard(result) {
  */
 function switchVisualization(vizType) {
     currentVisualization = vizType;
-    
+
     // Update button states
     document.querySelectorAll('.visualization-btn').forEach(btn => {
         const btnType = btn.id.replace('viz-', '');
@@ -1731,7 +1770,7 @@ function switchVisualization(vizType) {
             btn.className = 'visualization-btn flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all bg-card-dark text-slate-400 hover:text-white hover:bg-card-dark/80';
         }
     });
-    
+
     // Show/hide images
     const images = {
         'original': document.getElementById('viewerImage'),
@@ -1739,7 +1778,7 @@ function switchVisualization(vizType) {
         'heatmap': document.getElementById('heatmapImage'),
         'noise': document.getElementById('noiseImage')
     };
-    
+
     Object.entries(images).forEach(([type, img]) => {
         if (img) {
             if (type === vizType) {
@@ -1761,11 +1800,11 @@ function switchVisualization(vizType) {
 function openFullscreenViewer() {
     const modal = document.getElementById('fullscreenModal');
     const fullscreenImage = document.getElementById('fullscreenImage');
-    
+
     if (modal && fullscreenImage && imageData) {
         // Set the appropriate image based on current visualization
         let imgSrc = imageData.data;
-        
+
         if (currentVisualization === 'ela' && currentResult?.ela?.ela_image) {
             imgSrc = 'data:image/png;base64,' + currentResult.ela.ela_image;
         } else if (currentVisualization === 'heatmap' && currentResult?.ml_heatmap) {
@@ -1773,7 +1812,7 @@ function openFullscreenViewer() {
         } else if (currentVisualization === 'noise' && currentResult?.noise_map) {
             imgSrc = 'data:image/png;base64,' + currentResult.noise_map;
         }
-        
+
         fullscreenImage.src = imgSrc;
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -1819,18 +1858,18 @@ function closeFeedbackModal() {
 function submitFeedback() {
     const feedbackType = document.getElementById('feedbackType')?.value;
     const feedbackDescription = document.getElementById('feedbackDescription')?.value;
-    
+
     if (!feedbackDescription || feedbackDescription.trim() === '') {
         alert('Please provide a description of the issue.');
         return;
     }
-    
+
     // Here you would send feedback to backend
     console.log('[Feedback]', { type: feedbackType, description: feedbackDescription, result: currentResult });
-    
+
     // Show success message
     alert('Thank you for your feedback! It will help us improve our detection accuracy.');
-    
+
     // Close modal and reset form
     closeFeedbackModal();
     if (document.getElementById('feedbackDescription')) {
@@ -1862,10 +1901,10 @@ function exportToPDF() {
         alert('No analysis result to export');
         return;
     }
-    
+
     // Simple PDF export - could be enhanced with a library like jsPDF
     alert('PDF export functionality would generate a comprehensive report with all analysis details, scores, and visualizations.');
-    
+
     // Placeholder for actual PDF generation
     console.log('[Export] Would generate PDF with:', currentResult);
 }
@@ -1878,7 +1917,7 @@ async function handleReanalyze() {
         alert('No image data available to re-analyze');
         return;
     }
-    
+
     const confirmReanalyze = confirm('Re-run the analysis on this image?');
     if (confirmReanalyze) {
         await processImageAnalysis(imageData);
@@ -1935,7 +1974,7 @@ function getVerdictConfig(verdict) {
             description: 'This image appears authentic with consistent metadata, natural noise patterns, and no AI generation signatures detected.'
         }
     };
-    
+
     return configs[verdict] || configs['UNCERTAIN'];
 }
 
@@ -1955,14 +1994,14 @@ function escapeHTML(str) {
 function updateStatusBadge(text, type = 'analyzing') {
     const statusBadge = document.getElementById('statusBadge');
     if (!statusBadge) return;
-    
+
     const classes = {
         analyzing: 'px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 animate-pulse',
         success: 'px-2 py-0.5 rounded text-[10px] font-bold bg-accent-success/10 text-accent-success border border-accent-success/20',
         error: 'px-2 py-0.5 rounded text-[10px] font-bold bg-accent-danger/10 text-accent-danger border border-accent-danger/20',
         complete: 'px-2 py-0.5 rounded text-[10px] font-bold bg-accent-green/10 text-accent-green border border-accent-green/20'
     };
-    
+
     statusBadge.textContent = text;
     statusBadge.className = classes[type] || classes.analyzing;
 }
