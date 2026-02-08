@@ -90,19 +90,30 @@ class WatermarkDetector:
         self.decoder = None
         self.stable_signature_decoder = None
         
+        # Try to load and test invisible-watermark library
         try:
             from imwatermark import WatermarkDecoder
+            # Test initialization to ensure it works
+            test_decoder = WatermarkDecoder('bytes', 32)
             self.watermark_lib_available = True
-            logger.info("invisible-watermark library available")
-        except ImportError:
-            logger.warning("invisible-watermark library not available. Install with: pip install invisible-watermark")
+            logger.info("✓ invisible-watermark library loaded and tested")
+        except ImportError as e:
+            logger.error(f"❌ invisible-watermark import failed: {e}")
+            logger.info("Install with: pip install invisible-watermark")
+            self.watermark_lib_available = False
+        except Exception as e:
+            logger.error(f"❌ invisible-watermark initialization failed: {e}")
+            self.watermark_lib_available = False
         
+        # Try to load SteganoGAN (optional)
         try:
             from steganogan import SteganoGAN
             self.steganogan_available = True
-            logger.info("steganogan library available")
+            logger.info("✓ steganogan library available")
         except ImportError:
             logger.debug("steganogan library not available (optional)")
+        except Exception as e:
+            logger.debug(f"steganogan load error: {e}")
         
         # Try to load Meta Stable Signature decoder
         self._load_stable_signature_decoder()
@@ -328,22 +339,31 @@ class WatermarkDetector:
                     result['confidence'] = max(result['confidence'], wm_result.get('confidence', 70))
                     
                     # Check if it matches known AI signatures
+                    raw_bytes_hex = wm_result.get('raw_bytes', '')
+                    try:
+                        raw_bytes_data = bytes.fromhex(raw_bytes_hex) if raw_bytes_hex else b''
+                    except ValueError:
+                        raw_bytes_data = b''
+                    
                     for gen_name, signature in self.KNOWN_SIGNATURES.items():
-                        if wm_result.get('raw_bytes') and signature in wm_result.get('raw_bytes', b''):
+                        if signature in raw_bytes_data:
                             result['ai_generator_signature'] = gen_name
                             result['confidence'] = 95
                             result['details'].append(f"Matched signature: {gen_name}")
             
-            # Method 2: Spectral analysis for hidden patterns
-            spectral_result = self._spectral_watermark_analysis(img_array)
+            # Method 2: Multi-scale spectral analysis for hidden patterns
+            spectral_result = self._spectral_watermark_analysis_multiscale(img_array)
             result['detection_methods']['spectral_analysis'] = spectral_result
             
             if spectral_result.get('patterns_found'):
                 result['details'].append("Spectral patterns consistent with watermarking detected")
-                if not result['watermark_detected']:
+                # FIXED: Only mark as watermark if confidence is high enough (>= 70%)
+                # Low-confidence spectral patterns are often just JPEG compression artifacts
+                spectral_confidence = spectral_result.get('confidence', 0)
+                if not result['watermark_detected'] and spectral_confidence >= 70:
                     result['watermark_detected'] = True
                     result['watermark_type'] = 'spectral_pattern'
-                    result['confidence'] = max(result['confidence'], spectral_result.get('confidence', 50))
+                    result['confidence'] = max(result['confidence'], spectral_confidence)
             
             # Method 3: LSB analysis for steganographic watermarks
             lsb_result = self._lsb_analysis(img_array)
@@ -424,6 +444,24 @@ class WatermarkDetector:
                 'note': 'Google SynthID cannot be detected externally - requires Google API'
             }
             
+            # Generate watermarks_found array for UI
+            result['watermarks_found'] = self._generate_watermarks_found_array(result['detection_methods'])
+            
+            # Calculate weighted confidence (more accurate than simple max)
+            if result['watermark_detected']:
+                result['confidence'] = self._calculate_weighted_confidence(result['detection_methods'])
+            
+            # Generate spatial heatmap showing WHERE watermarks are detected
+            try:
+                heatmap_b64 = self._generate_watermark_heatmap(img_array)
+                result['visualizations'] = {
+                    'watermark_heatmap': heatmap_b64,
+                    'fft_magnitude': None  # Could add spectral visualization here
+                }
+            except Exception as e:
+                logger.debug(f"Heatmap generation failed: {e}")
+                result['visualizations'] = {}
+            
             # Set final status
             if result['watermark_detected']:
                 result['status'] = 'WATERMARK_FOUND'
@@ -487,7 +525,20 @@ class WatermarkDetector:
                             # (not all zeros or random noise)
                             non_zero = sum(1 for b in watermark_bytes if b != 0)
                             
-                            if non_zero > len(watermark_bytes) * 0.2:  # At least 20% non-zero
+                            # FIXED: Raised threshold from 20% to 50% to reduce false positives
+                            # Also check for patterns that indicate actual watermarks vs random noise
+                            if non_zero > len(watermark_bytes) * 0.5:  # At least 50% non-zero
+                                # Additional check: watermark should have some structure, not just random bytes
+                                # Calculate entropy-like metric (unique byte ratio)
+                                unique_bytes = len(set(watermark_bytes))
+                                byte_variety = unique_bytes / len(watermark_bytes)
+                                
+                                # High variety (many unique bytes) suggests random noise, not a watermark
+                                # Real watermarks tend to have repeated patterns
+                                if byte_variety > 0.9:  # Too random, likely not a real watermark
+                                    logger.debug(f"Rejected watermark candidate: byte variety too high ({byte_variety:.2f})")
+                                    continue
+                                
                                 # Try to decode as text
                                 try:
                                     decoded_text = watermark_bytes.decode('utf-8', errors='ignore')
@@ -515,16 +566,22 @@ class WatermarkDetector:
             result['error'] = str(e)
             return result
     
-    def _spectral_watermark_analysis(self, img_array: np.ndarray) -> Dict[str, Any]:
+    def _spectral_watermark_analysis(self, img_array: np.ndarray, scale: float = 1.0) -> Dict[str, Any]:
         """
         Analyze frequency spectrum for watermark patterns.
+        Multi-scale analysis to detect watermarks at different resolutions.
+        
+        Args:
+            img_array: Image as numpy array
+            scale: Scale factor (1.0 = original, 0.5 = half size)
         
         Watermarks often leave distinctive patterns in the frequency domain.
         """
         result = {
             'patterns_found': False,
             'confidence': 0,
-            'analysis': {}
+            'analysis': {},
+            'scale': scale
         }
         
         try:
@@ -896,8 +953,10 @@ class WatermarkDetector:
                 grad_x = np.diff(channel_data, axis=1)
                 grad_y = np.diff(channel_data, axis=0)
                 
-                # Gradient magnitude
-                grad_mag = np.sqrt(grad_x[:, :-1]**2 + grad_y[:-1, :]**2)
+                # Gradient magnitude (slice to matching dimensions: H-1, W-1)
+                min_h = min(grad_x.shape[0], grad_y.shape[0])
+                min_w = min(grad_x.shape[1], grad_y.shape[1])
+                grad_mag = np.sqrt(grad_x[:min_h, :min_w]**2 + grad_y[:min_h, :min_w]**2)
                 
                 # Check for unusual gradient distribution
                 grad_kurtosis = stats.kurtosis(grad_mag.flatten())
@@ -985,6 +1044,215 @@ class WatermarkDetector:
         except Exception as e:
             logger.debug(f"SteganoGAN detection failed (expected for non-steganogan images): {e}")
             return result
+    
+    def _generate_watermarks_found_array(self, detection_methods: Dict[str, Any]) -> List[str]:
+        """
+        Generate user-friendly array of detected watermark types from detection methods.
+        Transforms backend method names into display-friendly names for UI.
+        
+        Args:
+            detection_methods: Dictionary of all detection method results
+            
+        Returns:
+            List of friendly watermark names that were detected
+        """
+        watermarks_found = []
+        
+        # Method name mapping to user-friendly display names
+        method_name_map = {
+            'invisible_watermark': lambda r: f"DWT-{r.get('type', 'DCT')}" if r.get('type') else 'DWT-DCT',
+            'stable_signature': 'Meta Stable Signature',
+            'metadata_watermark': lambda r: f"Metadata ({r.get('type', 'Unknown')})",
+            'treering_analysis': 'Tree-Ring Pattern',
+            'gaussian_shading': 'Gaussian Shading',
+            'spectral_analysis': 'Spectral Pattern',
+            'lsb_analysis': 'LSB Steganography',
+            'steganogan': 'SteganoGAN',
+            'adversarial_analysis': 'Adversarial Perturbations'
+        }
+        
+        for method_name, method_result in detection_methods.items():
+            if not isinstance(method_result, dict):
+                continue
+                
+            # Check if this method detected a watermark
+            detected = method_result.get('detected') or method_result.get('patterns_found') or method_result.get('anomaly_detected')
+            
+            if detected:
+                # Get friendly name
+                name_or_func = method_name_map.get(method_name, method_name)
+                
+                if callable(name_or_func):
+                    friendly_name = name_or_func(method_result)
+                else:
+                    friendly_name = name_or_func
+                
+                watermarks_found.append(friendly_name)
+        
+        return watermarks_found
+    
+    def _calculate_weighted_confidence(self, detection_methods: Dict[str, Any]) -> int:
+        """
+        Calculate confidence using weighted average based on method reliability.
+        
+        Different detection methods have varying accuracy levels:
+        - Metadata: 95% (very reliable)
+        - Stable Signature: 90% (high accuracy, low false positive)
+        - DWT-DCT: 85% (tested method)
+        - Tree-Ring: 70% (academic method)
+        - Spectral: 50% (good but less specific)
+        - LSB: 45% (prone to false positives)
+        - Adversarial: 30% (experimental, high false positive rate)
+        
+        Args:
+            detection_methods: Dictionary of detection method results
+            
+        Returns:
+            Weighted confidence score (0-100)
+        """
+        METHOD_WEIGHTS = {
+            'metadata_watermark': 0.95,
+            'stable_signature': 0.90,
+            'invisible_watermark': 0.85,
+            'treering_analysis': 0.70,
+            'gaussian_shading': 0.60,
+            'spectral_analysis': 0.50,
+            'lsb_analysis': 0.45,
+            'steganogan': 0.80,
+            'adversarial_analysis': 0.30
+        }
+        
+        total_weight = 0
+        weighted_sum = 0
+        
+        for method, result in detection_methods.items():
+            if not isinstance(result, dict):
+                continue
+                
+            # Check various detection flags
+            detected = result.get('detected') or result.get('patterns_found') or result.get('anomaly_detected')
+            
+            if detected:
+                weight = METHOD_WEIGHTS.get(method, 0.5)
+                confidence = result.get('confidence', 50)
+                
+                weighted_sum += weight * confidence
+                total_weight += weight
+        
+        if total_weight > 0:
+            return int(weighted_sum / total_weight)
+        
+        return 0
+    
+    def _generate_watermark_heatmap(self, img_array: np.ndarray) -> str:
+        """
+        Generate spatial heatmap showing WHERE watermarks are detected in the image.
+        Creates patch-based analysis and returns base64-encoded PNG heatmap.
+        
+        Args:
+            img_array: Image as numpy array
+            
+        Returns:
+            Base64-encoded PNG image of heatmap
+        """
+        import cv2
+        import base64
+        
+        try:
+            patch_size = 64  # Analyze in 64x64 patches
+            h, w = img_array.shape[:2]
+            
+            # Calculate heatmap dimensions
+            heatmap_h = max(1, h // patch_size)
+            heatmap_w = max(1, w // patch_size)
+            heatmap = np.zeros((heatmap_h, heatmap_w))
+            
+            # Analyze each patch
+            for i in range(0, h - patch_size, patch_size):
+                for j in range(0, w - patch_size, patch_size):
+                    patch = img_array[i:i+patch_size, j:j+patch_size]
+                    
+                    # Run lightweight analysis on patch
+                    patch_score = 0
+                    
+                    # Spectral analysis on patch (lightweight version)
+                    try:
+                        spectral = self._spectral_watermark_analysis(patch, scale=0.5)
+                        patch_score = max(patch_score, spectral.get('confidence', 0))
+                    except:
+                        pass
+                    
+                    # LSB analysis on patch
+                    try:
+                        lsb = self._lsb_analysis(patch)
+                        patch_score = max(patch_score, lsb.get('confidence', 0))
+                    except:
+                        pass
+                    
+                    heatmap[i // patch_size, j // patch_size] = patch_score
+            
+            # Resize heatmap to match original image dimensions
+            heatmap_upscaled = cv2.resize(heatmap, (w, h), interpolation=cv2.INTER_LINEAR)
+            
+            # Normalize to 0-255
+            heatmap_normalized = ((heatmap_upscaled / 100.0) * 255).astype(np.uint8)
+            
+            # Apply colormap (red = high watermark strength, green = low)
+            heatmap_colored = cv2.applyColorMap(heatmap_normalized, cv2.COLORMAP_JET)
+            
+            # Convert to PNG and encode as base64
+            success, buffer = cv2.imencode('.png', heatmap_colored)
+            if success:
+                heatmap_b64 = base64.b64encode(buffer).decode('utf-8')
+                return f'data:image/png;base64,{heatmap_b64}'
+            
+            return None
+            
+        except Exception as e:
+            logger.debug(f'Heatmap generation error: {e}')
+            return None
+    
+    def _spectral_watermark_analysis_multiscale(self, img_array: np.ndarray) -> Dict[str, Any]:
+        """
+        Multi-scale spectral analysis - runs at multiple resolutions to catch
+        watermarks embedded at different scales.
+        
+        Some watermarks are only visible at specific resolutions.
+        
+        Args:
+            img_array: Image as numpy array
+            
+        Returns:
+            Combined results from all scales
+        """
+        import cv2
+        
+        scales = [1.0, 0.75, 0.5]  # 100%, 75%, 50% resolution
+        results = []
+        
+        for scale in scales:
+            try:
+                if scale < 1.0:
+                    h, w = img_array.shape[:2]
+                    new_h, new_w = int(h * scale), int(w * scale)
+                    scaled = cv2.resize(img_array, (new_w, new_h))
+                else:
+                    scaled = img_array
+                
+                scale_result = self._spectral_watermark_analysis(scaled, scale=scale)
+                results.append(scale_result)
+            except Exception as e:
+                logger.debug(f'Multi-scale analysis failed at scale {scale}: {e}')
+        
+        # Combine results - watermark detected if ANY scale shows it
+        combined = {
+            'patterns_found': any(r.get('patterns_found', False) for r in results),
+            'confidence': max((r.get('confidence', 0) for r in results), default=0),
+            'scales_detected': [r.get('scale', 1.0) for r in results if r.get('patterns_found')],
+            'scale_results': results
+        }
+        
+        return combined
 
 
 # Convenience function

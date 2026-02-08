@@ -618,7 +618,7 @@ def detect_ai_image():
         
         image_data = data['image']
         filename = data.get('filename', 'uploaded_image')
-        include_ela = data.get('include_ela', False)
+        include_ela = data.get('include_ela', True)
         include_metadata = data.get('include_metadata', True)
         include_watermark = data.get('include_watermark', True)
         include_c2pa = data.get('include_c2pa', True)

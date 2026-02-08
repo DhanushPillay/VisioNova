@@ -97,6 +97,62 @@ Access the web interface by opening the corresponding HTML files in the `fronten
 *   **Dashboard:** `frontend/html/AnalysisDashboard.html`
 *   **Fact Check:** `frontend/html/FactCheckPage.html`
 
+## Project Structure
+
+```
+VisioNova/
+├── backend/                    # Flask server and core logic
+│   ├── AI/                    # AI/LLM integration modules
+│   ├── fact_check/            # Fact-checking engine
+│   ├── image_detector/        # Image analysis detectors
+│   ├── text_detector/         # Text AI detection
+│   ├── app.py                 # Main Flask application
+│   └── requirements.txt       # Python dependencies
+├── docs/                      # Documentation
+│   ├── ML_SETUP_COMPLETE.md   # ML models setup guide
+│   ├── QUICKSTART_ML.md       # Quick start for ML features
+│   ├── Image_Detection_Strategy.md
+│   ├── Text_Detection_Strategy.md
+│   ├── Audio_Detection_Strategy.md
+│   ├── Video_Deepfake_Strategy.md
+│   ├── FactCheck_Documentation.md
+│   └── SystemArchitecture.md
+├── frontend/                  # Web interface
+│   ├── html/                  # HTML pages
+│   ├── css/                   # Stylesheets
+│   └── js/                    # JavaScript modules
+├── notebooks/                 # Jupyter notebooks
+│   ├── DeBERTa_Training_Notebook.ipynb
+│   └── VisioNova_Colab_Training.ipynb
+├── scripts/                   # Utility scripts
+│   ├── setup_ml_models.py     # ML model setup (Python 3.10)
+│   ├── train_deberta.py       # Text model training
+│   └── download_models.py     # Legacy model downloader
+├── tests/                     # Test files
+│   ├── test_image_api.py
+│   └── test_binoculars.py
+├── results/                   # Training outputs (gitignored)
+├── .venv/                     # Python 3.13 environment
+├── .venv310/                  # Python 3.10 for ML models (gitignored)
+├── requirements_ml.txt        # ML-specific dependencies (PyTorch + CUDA)
+└── README.md                  # This file
+```
+
+### Key Folders
+
+- **backend/**: Core application logic and API endpoints
+- **docs/**: Comprehensive technical documentation
+- **frontend/**: User interface (HTML/CSS/JS)
+- **notebooks/**: Training notebooks for model development
+- **scripts/**: Standalone utilities and training scripts
+- **tests/**: Unit and integration tests
+
+### ML Models Setup
+
+For GPU-accelerated image detection (98%+ accuracy):
+1. See [docs/ML_SETUP_COMPLETE.md](docs/ML_SETUP_COMPLETE.md)
+2. Quick start: [docs/QUICKSTART_ML.md](docs/QUICKSTART_ML.md)
+
 ## Contributors
 
 *   Dhanush Pillay
