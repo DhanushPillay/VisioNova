@@ -71,14 +71,12 @@ class EnsembleDetector:
     # Updated weights (Feb 2026) with new high-accuracy detectors
     DEFAULT_WEIGHTS = {
         'statistical': 0.05,        # Basic statistical analysis
-        'deepfake': 0.08,           # dima806 ViT detector (98.25% accuracy)
-        'clip': 0.08,               # UniversalFakeDetect SwinV2 (98.1% accuracy)
-        'sdxl': 0.08,               # Organika/sdxl-detector (98.1% F1, diffusion specialist)
-        'sbi': 0.07,                # SBI Diffusion detector (99.95% AUC)
-        'bombek1': 0.20,            # NEW: Bombek1 SigLIP2+DINOv2 (99.97% AUC, 25+ generators)
-        'siglip2_deepfake': 0.12,   # NEW: SigLIP2 deepfake binary
-        'three_class': 0.05,        # NEW: 3-class AI/Deepfake/Real
-        'dinov2': 0.12,             # NEW: DINOv2 degradation-resilient
+        'deepfake': 0.10,           # dima806 ViT detector (98.25% accuracy)
+        'clip': 0.15,               # UniversalFakeDetect SwinV2 (98.1% accuracy)
+        'sdxl': 0.10,               # Organika/sdxl-detector (98.1% F1, diffusion specialist)
+        'sbi': 0.05,                # SBI Diffusion detector (99.95% AUC)
+        'umm_maybe': 0.25,          # NEW: Umm-Maybe (ResNet-50, 280k+ downloads)
+        'dinov2': 0.15,             # NEW: DINOv2 degradation-resilient
         'frequency': 0.05,          # FFT/DCT analysis
         'watermark': 0.10,          # Watermark detection contribution
     }
@@ -131,9 +129,8 @@ class EnsembleDetector:
         self.sdxl_detector = None         # Organika/sdxl-detector (98.1% for modern diffusion)
         
         # NEW 2026: Latest high-accuracy HuggingFace detectors
-        self.bombek1_detector = None      # Bombek1 SigLIP2+DINOv2 (99.97% AUC, 25+ generators)
-        self.siglip2_deepfake_detector = None  # prithivMLmods Deepfake-Detect-Siglip2
-        self.three_class_detector = None   # prithivMLmods AI-vs-Deepfake-vs-Real-Siglip2
+        # NEW 2026: Latest high-accuracy HuggingFace detectors
+        self.umm_maybe_detector = None     # Umm-Maybe ResNet detector
         self.dinov2_detector = None        # WpythonW DINOv2 deepfake detector
         
         # Load detectors
@@ -272,29 +269,13 @@ class EnsembleDetector:
                 if self.deepfake_detector.model_loaded:
                     logger.info("Deepfake detector loaded")
                 
-                # NEW 2026: Bombek1 SigLIP2+DINOv2 (best overall, 99.97% AUC)
-                from .ml_detector import Bombek1SigLIPDINOv2Detector
-                self.bombek1_detector = Bombek1SigLIPDINOv2Detector(device=self.device)
-                if self.bombek1_detector.model_loaded:
-                    logger.info("Bombek1 SigLIP2+DINOv2 loaded (99.97% AUC, 25+ generators)")
+                # NEW 2026: Umm-Maybe Detector (Popular Community Choice)
+                from .ml_detector import UmmMaybeDetector
+                self.umm_maybe_detector = UmmMaybeDetector(device=self.device)
+                if self.umm_maybe_detector.model_loaded:
+                    logger.info("Umm-Maybe Detector loaded (280k+ downloads)")
                 else:
-                    logger.warning("Bombek1 detector failed to load model")
-                
-                # NEW 2026: Deepfake SigLIP2
-                from .ml_detector import DeepfakeSigLIP2Detector
-                self.siglip2_deepfake_detector = DeepfakeSigLIP2Detector(device=self.device)
-                if self.siglip2_deepfake_detector.model_loaded:
-                    logger.info("Deepfake SigLIP2 loaded")
-                else:
-                    logger.warning("Deepfake SigLIP2 failed to load model")
-                
-                # NEW 2026: 3-Class SigLIP2
-                from .ml_detector import ThreeClassSigLIP2Detector
-                self.three_class_detector = ThreeClassSigLIP2Detector(device=self.device)
-                if self.three_class_detector.model_loaded:
-                    logger.info("3-Class SigLIP2 loaded (AI/Deepfake/Real)")
-                else:
-                    logger.warning("3-Class SigLIP2 failed to load model")
+                    logger.warning("Umm-Maybe detector failed to load model")
                 
                 # NEW 2026: DINOv2 Deepfake (degradation-resilient)
                 from .ml_detector import DINOv2DeepfakeDetector
@@ -320,8 +301,15 @@ class EnsembleDetector:
         Returns:
             Comprehensive detection result with combined verdict
         """
+        # Check if any ML models are active for analysis mode reporting
+        ml_active = (self.nyuad_detector and self.nyuad_detector.model_loaded) or \
+                    (self.deepfake_detector and self.deepfake_detector.model_loaded) or \
+                    (self.clip_detector and self.clip_detector.model_loaded) or \
+                    (self.sdxl_detector and self.sdxl_detector.model_loaded)
+
         result = {
             'success': True,
+            'analysis_mode': 'Multi-Model Ensemble' if ml_active else 'Statistical Analysis (Fallback)',
             'filename': filename,
             'ensemble_verdict': None,
             'ai_probability': 50.0,
@@ -467,37 +455,15 @@ class EnsembleDetector:
                     logger.warning(f"Edge analyzer error: {e}")
             
             # 14. Bombek1 SigLIP2+DINOv2 (best overall - 99.97% AUC, 25+ generators)
-            if self.bombek1_detector and self.bombek1_detector.model_loaded:
+            # 14. Umm-Maybe Detector (ResNet - High Popularity)
+            if self.umm_maybe_detector and self.umm_maybe_detector.model_loaded:
                 try:
-                    bombek1_result = self.bombek1_detector.predict(image)
-                    result['individual_results']['bombek1'] = bombek1_result
-                    if bombek1_result.get('success', False):
-                        scores['bombek1'] = bombek1_result.get('ai_probability', 50)
+                    umm_result = self.umm_maybe_detector.predict(image)
+                    result['individual_results']['umm_maybe'] = umm_result
+                    if umm_result.get('success', False):
+                        scores['umm_maybe'] = umm_result.get('ai_probability', 50)
                 except Exception as e:
-                    logger.warning(f"Bombek1 detector error: {e}")
-            
-            # 15. Deepfake SigLIP2 (binary deepfake detection)
-            if self.siglip2_deepfake_detector and self.siglip2_deepfake_detector.model_loaded:
-                try:
-                    siglip2_df_result = self.siglip2_deepfake_detector.predict(image)
-                    result['individual_results']['siglip2_deepfake'] = siglip2_df_result
-                    if siglip2_df_result.get('success', False):
-                        scores['siglip2_deepfake'] = siglip2_df_result.get('ai_probability', 50)
-                except Exception as e:
-                    logger.warning(f"Deepfake SigLIP2 error: {e}")
-            
-            # 16. 3-Class SigLIP2 (AI-Generated vs Deepfake vs Real)
-            if self.three_class_detector and self.three_class_detector.model_loaded:
-                try:
-                    tc_result = self.three_class_detector.predict(image)
-                    result['individual_results']['three_class'] = tc_result
-                    if tc_result.get('success', False):
-                        scores['three_class'] = tc_result.get('ai_probability', 50)
-                        # Add 3-class breakdown to result for extra info
-                        if tc_result.get('class_breakdown'):
-                            result['three_class_breakdown'] = tc_result['class_breakdown']
-                except Exception as e:
-                    logger.warning(f"3-Class SigLIP2 error: {e}")
+                    logger.warning(f"Umm-Maybe detector error: {e}")
             
             # 17. DINOv2 Deepfake (degradation-resilient, best for social media)
             if self.dinov2_detector and self.dinov2_detector.model_loaded:
