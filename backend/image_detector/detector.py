@@ -47,6 +47,8 @@ class ImageDetector:
         self.use_gpu = use_gpu
         self.device = 'cpu'
         self.ml_detectors = None
+        self.c2pa_detector = None
+        self.semantic_detector = None
         
         # Try to load ML models (DIRE + NYUAD + Flux)
         try:
@@ -193,6 +195,7 @@ class ImageDetector:
             # Run detection methods
             results = {
                 'success': True,
+                'analysis_mode': 'ML Ensemble' if self.model_loaded else 'Statistical Analysis (Fallback)',
                 'filename': filename,
                 'dimensions': {'width': width, 'height': height},
                 'file_size': len(image_data),  # Changed from file_size_bytes for frontend compatibility

@@ -55,9 +55,7 @@ try:
         SDXLDetector,
         DeepfakeDetector,
         FrequencyAnalyzer,
-        Bombek1SigLIPDINOv2Detector,
-        DeepfakeSigLIP2Detector,
-        ThreeClassSigLIP2Detector,
+        UmmMaybeDetector,
         DINOv2DeepfakeDetector,
         create_ml_detectors
     )
