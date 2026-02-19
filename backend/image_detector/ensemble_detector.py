@@ -68,17 +68,32 @@ class EnsembleDetector:
     """
     
     # Default weights for each detector (sum to 1.0)
-    # Updated weights (Feb 2026) with new high-accuracy detectors
+    # Updated weights (Feb 2026) — QUALITY-MAXIMIZED: 100% real ML models
+    # Heuristic detectors (SBI, DIRE, NPR, face, edge, forgery) zeroed out
+    # to eliminate false AI classifications on real images.
+    # clip/SwinV2 also zeroed: scores 99.8% AI on verified real images.
     DEFAULT_WEIGHTS = {
-        'statistical': 0.05,        # Basic statistical analysis
-        'deepfake': 0.10,           # dima806 ViT detector (98.25% accuracy)
-        'clip': 0.15,               # UniversalFakeDetect SwinV2 (98.1% accuracy)
-        'sdxl': 0.10,               # Organika/sdxl-detector (98.1% F1, diffusion specialist)
-        'sbi': 0.05,                # SBI Diffusion detector (99.95% AUC)
-        'umm_maybe': 0.25,          # NEW: Umm-Maybe (ResNet-50, 280k+ downloads)
-        'dinov2': 0.15,             # NEW: DINOv2 degradation-resilient
-        'frequency': 0.05,          # FFT/DCT analysis
-        'watermark': 0.10,          # Watermark detection contribution
+        # Real ML models — trained on labeled datasets, verified accuracy
+        'siglip_dinov2': 0.24,      # Bombek1 SigLIP2+DINOv2 (97.15% cross-dataset, best overall)
+        'umm_maybe': 0.19,          # Umm-Maybe ResNet-50 (280k+ downloads, VERIFIED correct on real)
+        'dinov2': 0.10,             # DINOv2 deepfake (degradation-resilient)
+        'deepfake_v2': 0.10,        # prithivMLmods DeepFake V2 (2025 dataset)
+        'siglip_deepfake': 0.08,    # prithivMLmods SigLIP Deepfake V1
+        'deepfake': 0.08,           # dima806 ViT (98.25% accuracy)
+        'sdxl': 0.05,               # Organika/sdxl-detector (diffusion specialist)
+        'distilled': 0.05,          # jacoballessio distilled ViT (generalization)
+        'ai_or_not': 0.03,          # Nahrawy AIorNot (diversity signal)
+        'frequency': 0.05,          # FFT/DCT analysis (real ML method)
+        'watermark': 0.03,          # Watermark detection
+        # Broken / unreliable detectors — zeroed out
+        'clip': 0.00,               # SwinV2: BROKEN, scores 99.8% AI on real images
+        # Heuristic detectors — zeroed out to prevent false AI bias
+        'statistical': 0.00,
+        'sbi': 0.00,
+        'dire': 0.00,
+        'npr': 0.00,
+        'face': 0.00,
+        'edge': 0.00,
     }
     
     # Override weights when certain signals are strong
@@ -129,9 +144,15 @@ class EnsembleDetector:
         self.sdxl_detector = None         # Organika/sdxl-detector (98.1% for modern diffusion)
         
         # NEW 2026: Latest high-accuracy HuggingFace detectors
-        # NEW 2026: Latest high-accuracy HuggingFace detectors
         self.umm_maybe_detector = None     # Umm-Maybe ResNet detector
         self.dinov2_detector = None        # WpythonW DINOv2 deepfake detector
+        
+        # NEW 2026 Phase 2: Five additional pre-trained detectors
+        self.siglip_dinov2_detector = None  # Bombek1 SigLIP2+DINOv2 (97.15% cross-dataset)
+        self.deepfake_v2_detector = None    # prithivMLmods Deep-Fake V2 (2025 dataset)
+        self.siglip_deepfake_detector = None  # prithivMLmods SigLIP Deepfake V1
+        self.distilled_detector = None     # jacoballessio distilled ViT
+        self.ai_or_not_detector = None     # Nahrawy AIorNot detector
         
         # Load detectors
         self._initialize_detectors(load_ml_models)
@@ -284,6 +305,47 @@ class EnsembleDetector:
                     logger.info("DINOv2 deepfake detector loaded (degradation-resilient)")
                 else:
                     logger.warning("DINOv2 deepfake failed to load model")
+                
+                # NEW 2026 Phase 2: Five additional pre-trained detectors
+                from .ml_detector import (
+                    SigLIPDINOv2Detector, DeepFakeV2Detector,
+                    SigLIPDeepfakeDetector, DistilledDetector, AIorNotDetector
+                )
+                
+                # Bombek1 SigLIP2+DINOv2 (best overall, 97.15% cross-dataset)
+                self.siglip_dinov2_detector = SigLIPDINOv2Detector(device=self.device)
+                if self.siglip_dinov2_detector.model_loaded:
+                    logger.info("SigLIP2+DINOv2 detector loaded (97.15% cross-dataset, best overall)")
+                else:
+                    logger.warning("SigLIP2+DINOv2 detector failed to load")
+                
+                # prithivMLmods DeepFake V2 (2025 dataset)
+                self.deepfake_v2_detector = DeepFakeV2Detector(device=self.device)
+                if self.deepfake_v2_detector.model_loaded:
+                    logger.info("DeepFake V2 detector loaded (2025 dataset)")
+                else:
+                    logger.warning("DeepFake V2 detector failed to load")
+                
+                # prithivMLmods SigLIP Deepfake V1
+                self.siglip_deepfake_detector = SigLIPDeepfakeDetector(device=self.device)
+                if self.siglip_deepfake_detector.model_loaded:
+                    logger.info("SigLIP Deepfake detector loaded")
+                else:
+                    logger.warning("SigLIP Deepfake detector failed to load")
+                
+                # jacoballessio distilled ViT (generalization specialist)
+                self.distilled_detector = DistilledDetector(device=self.device)
+                if self.distilled_detector.model_loaded:
+                    logger.info("Distilled ViT detector loaded")
+                else:
+                    logger.warning("Distilled ViT detector failed to load")
+                
+                # Nahrawy AIorNot (diversity signal)
+                self.ai_or_not_detector = AIorNotDetector(device=self.device)
+                if self.ai_or_not_detector.model_loaded:
+                    logger.info("AIorNot detector loaded (diversity signal)")
+                else:
+                    logger.warning("AIorNot detector failed to load")
                     
             except ImportError as e:
                 logger.warning(f"ML detectors not available: {e}")
@@ -305,7 +367,9 @@ class EnsembleDetector:
         ml_active = (self.nyuad_detector and self.nyuad_detector.model_loaded) or \
                     (self.deepfake_detector and self.deepfake_detector.model_loaded) or \
                     (self.clip_detector and self.clip_detector.model_loaded) or \
-                    (self.sdxl_detector and self.sdxl_detector.model_loaded)
+                    (self.sdxl_detector and self.sdxl_detector.model_loaded) or \
+                    (self.siglip_dinov2_detector and self.siglip_dinov2_detector.model_loaded) or \
+                    (self.umm_maybe_detector and self.umm_maybe_detector.model_loaded)
 
         result = {
             'success': True,
@@ -474,6 +538,60 @@ class EnsembleDetector:
                         scores['dinov2'] = dinov2_result.get('ai_probability', 50)
                 except Exception as e:
                     logger.warning(f"DINOv2 deepfake error: {e}")
+            
+            # ============================================================
+            # NEW 2026 Phase 2: Five additional pre-trained ML detectors
+            # ============================================================
+            
+            # 18. Bombek1 SigLIP2+DINOv2 (BEST OVERALL — 97.15% cross-dataset, 99.97% AUC)
+            if self.siglip_dinov2_detector and self.siglip_dinov2_detector.model_loaded:
+                try:
+                    siglip_dinov2_result = self.siglip_dinov2_detector.predict(image)
+                    result['individual_results']['siglip_dinov2'] = siglip_dinov2_result
+                    if siglip_dinov2_result.get('success', False):
+                        scores['siglip_dinov2'] = siglip_dinov2_result.get('ai_probability', 50)
+                except Exception as e:
+                    logger.warning(f"SigLIP2+DINOv2 detector error: {e}")
+            
+            # 19. DeepFake V2 (prithivMLmods, 2025 training data)
+            if self.deepfake_v2_detector and self.deepfake_v2_detector.model_loaded:
+                try:
+                    dfv2_result = self.deepfake_v2_detector.predict(image)
+                    result['individual_results']['deepfake_v2'] = dfv2_result
+                    if dfv2_result.get('success', False):
+                        scores['deepfake_v2'] = dfv2_result.get('ai_probability', 50)
+                except Exception as e:
+                    logger.warning(f"DeepFake V2 detector error: {e}")
+            
+            # 20. SigLIP Deepfake V1 (prithivMLmods, SigLIP backbone)
+            if self.siglip_deepfake_detector and self.siglip_deepfake_detector.model_loaded:
+                try:
+                    siglip_df_result = self.siglip_deepfake_detector.predict(image)
+                    result['individual_results']['siglip_deepfake'] = siglip_df_result
+                    if siglip_df_result.get('success', False):
+                        scores['siglip_deepfake'] = siglip_df_result.get('ai_probability', 50)
+                except Exception as e:
+                    logger.warning(f"SigLIP Deepfake detector error: {e}")
+            
+            # 21. Distilled ViT (jacoballessio, generalization specialist)
+            if self.distilled_detector and self.distilled_detector.model_loaded:
+                try:
+                    distilled_result = self.distilled_detector.predict(image)
+                    result['individual_results']['distilled'] = distilled_result
+                    if distilled_result.get('success', False):
+                        scores['distilled'] = distilled_result.get('ai_probability', 50)
+                except Exception as e:
+                    logger.warning(f"Distilled detector error: {e}")
+            
+            # 22. AIorNot (Nahrawy, diversity signal)
+            if self.ai_or_not_detector and self.ai_or_not_detector.model_loaded:
+                try:
+                    aion_result = self.ai_or_not_detector.predict(image)
+                    result['individual_results']['ai_or_not'] = aion_result
+                    if aion_result.get('success', False):
+                        scores['ai_or_not'] = aion_result.get('ai_probability', 50)
+                except Exception as e:
+                    logger.warning(f"AIorNot detector error: {e}")
             
             # Calculate weighted ensemble score
             final_score = self._calculate_ensemble_score(scores)
