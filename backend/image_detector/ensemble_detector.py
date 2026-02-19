@@ -599,7 +599,11 @@ class EnsembleDetector:
         
         Returns analysis of how much detectors agree.
         """
-        valid_scores = [s for s in scores.values() if s is not None and s > 0]
+        # Only consider detectors with non-zero weight for agreement
+        valid_scores = [
+            s for det, s in scores.items()
+            if s is not None and s > 0 and self.weights.get(det, 0) > 0
+        ]
         
         if len(valid_scores) < 2:
             return {
