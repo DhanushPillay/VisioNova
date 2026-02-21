@@ -15,9 +15,10 @@ A multi-modal forensic engine that doesn't just detect AI media—it *explains* 
 ## Key Capabilities
 
 ### Image Verification
-*   **AI Generation Detection:** Identifies images created by generative adversarial networks (GANs) or diffusion models.
+*   **State-of-the-art AI Detection:** Uses top-performing 2025-2026 Vision Transformers (Ateeqq SigLIP2, Bombek1 SigLIP2+DINOv2, Organika SDXL-detector) for highly accurate detection across modern generators (Flux, Midjourney v6, DALL-E 3).
+*   **Ensemble Fusion System:** Combines multiple ML models via a weighted scoring system with majority-vote safeguards to prevent false positives.
 *   **Error Level Analysis (ELA):** Highlights areas of potential manipulation within an image file.
-*   **Metadata Forensics:**  Analyzes Exif data for inconsistencies.
+*   **Metadata Forensics & Content Credentials:** Analyzes Exif data and C2PA digital signatures for inconsistencies or AI generation flags.
 *   See [Image Detection Strategy](docs/Image_Detection_Strategy.md) for technical details.
 
 ### Video Analysis
