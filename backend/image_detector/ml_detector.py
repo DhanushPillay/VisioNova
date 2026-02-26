@@ -547,6 +547,7 @@ def create_ml_detectors(device: str = "auto", load_all: bool = False) -> Dict[st
 
 
 
+
 class DINOv2DeepfakeDetector:
     """
     DINOv2-based Deepfake Detector
@@ -1115,9 +1116,5 @@ class AteeqqDetector:
                 'ai_probability': 50.0,
                 'prediction': 'error'
             }
-
-
-
-
 
 
