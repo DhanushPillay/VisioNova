@@ -612,17 +612,13 @@
                                     const controller = new AbortController();
                                     const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s for image processing
 
-                                    const response = await fetch(`${API_BASE_URL}/api/detect-image`, {
+                                    const response = await fetch(`${API_BASE_URL}/api/detect-image/ensemble`, {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({
                                             image: inputData.data,
                                             filename: inputData.fileName,
-                                            include_ela: true,
-                                            include_metadata: true,
-                                            include_watermark: true,
-                                            include_c2pa: true,
-                                            include_ai_analysis: true
+                                            load_ml_models: true
                                         }),
                                         signal: controller.signal
                                     });
