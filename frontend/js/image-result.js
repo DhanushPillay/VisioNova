@@ -120,31 +120,18 @@ async function processImageAnalysis(imgData) {
             console.log('[ImageResult] No stored result found, calling API directly...');
             showLoadingState();
 
-            // Prepare the image data for API
-            const formData = new FormData();
+            // Prepare JSON body for ensemble endpoint
+            const base64Image = imgData.data; // Already base64 data URL or raw base64
+            const jsonBody = {
+                image: base64Image,
+                filename: imgData.fileName || 'image.jpg',
+                load_ml_models: true
+            };
 
-            if (imgData.mimeType === 'url') {
-                // URL-based image
-                formData.append('url', imgData.data);
-            } else {
-                // Base64 image — convert to blob
-                const base64Data = imgData.data.split(',')[1] || imgData.data;
-                const binaryStr = atob(base64Data);
-                const bytes = new Uint8Array(binaryStr.length);
-                for (let i = 0; i < binaryStr.length; i++) {
-                    bytes[i] = binaryStr.charCodeAt(i);
-                }
-                const blob = new Blob([bytes], { type: imgData.mimeType || 'image/jpeg' });
-                formData.append('image', blob, imgData.fileName || 'image.jpg');
-            }
-
-            // Include watermark analysis
-            formData.append('include_watermark', 'true');
-            formData.append('include_ai_analysis', 'true');
-
-            const response = await fetch(`${API_BASE_URL}/api/detect-image`, {
+            const response = await fetch(`${API_BASE_URL}/api/detect-image/ensemble`, {
                 method: 'POST',
-                body: formData
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(jsonBody)
             });
 
             if (!response.ok) {
@@ -191,20 +178,17 @@ function updateUI(result) {
     const humanProb = Math.max(0, 100 - aiProb);
 
     // --- 1. Probability Card (restored) ---
-    // Hybrid "Winner takes all" logic:
-    // Only snap to 100% if confidence is high (> 70%).
-    // Otherwise show raw probabilities to avoid false positives on marginal cases.
+    // Strict "Winner takes all" logic at 50% threshold:
     let displayAI = aiProb;
     let displayHuman = humanProb;
 
-    if (aiProb >= 70) {
+    if (aiProb > 50) {
         displayAI = 100;
         displayHuman = 0;
-    } else if (humanProb >= 70) {
+    } else {
         displayHuman = 100;
         displayAI = 0;
     }
-    // Else: keep raw values (e.g., 55% vs 45%)
 
     // Update Analysis Date (kept from header)
     updateElement('analysisDate', `Analyzed ${formatAnalysisDate(new Date())}`);
