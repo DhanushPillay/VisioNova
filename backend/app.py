@@ -12,7 +12,7 @@ from fact_check import FactChecker
 from fact_check.feedback_handler import FeedbackHandler
 from text_detector import AIContentDetector, TextExplainer, DocumentParser
 from image_detector import (
-    ImageDetector, MetadataAnalyzer, ELAAnalyzer, 
+    MetadataAnalyzer, ELAAnalyzer, 
     WatermarkDetector, ContentCredentialsDetector, ImageExplainer,
     NoiseAnalyzer, EnsembleDetector, FastCascadeDetector, ML_DETECTORS_AVAILABLE
 )
@@ -51,9 +51,7 @@ ai_detector = AIContentDetector(use_ml_model=True)  # Enable hybrid detection (M
 text_explainer = TextExplainer()
 doc_parser = DocumentParser()
 
-# Initialize image detector and AI explainer
-# Basic detector (always available, fast)
-image_detector = ImageDetector(use_gpu=False)
+# Initialize image analyzers and AI explainer
 metadata_analyzer = MetadataAnalyzer()
 ela_analyzer = ELAAnalyzer()
 watermark_detector = WatermarkDetector()
@@ -769,6 +767,13 @@ def detect_ai_image():
                     detection_result['verdict'] = combined['verdict']
                     detection_result['verdict_description'] = combined['verdict_description']
         
+        # Force the final probability to 100 or 0 based on the 50% threshold
+        ai_prob = detection_result.get('ai_probability', 50.0)
+        if ai_prob > 50.0:
+            detection_result['ai_probability'] = 100.0
+        else:
+            detection_result['ai_probability'] = 0.0
+            
         return jsonify(detection_result)
     
     except Exception as e:
@@ -883,6 +888,13 @@ def detect_ai_image_ensemble():
             ai_analysis = image_explainer.analyze_image(image_bytes, result)
             result['ai_analysis'] = ai_analysis
         
+        # Force the final probability to 100 or 0 based on the 50% threshold
+        ai_prob = result.get('ai_probability', 50.0)
+        if ai_prob > 50.0:
+            result['ai_probability'] = 100.0
+        else:
+            result['ai_probability'] = 0.0
+            
         return jsonify(result)
     
     except Exception as e:
@@ -968,6 +980,13 @@ def detect_ai_image_fast():
         # Run fast cascading detection
         result = fast_detector.detect(image_bytes, filename)
         
+        # Force the final probability to 100 or 0 based on the 50% threshold
+        ai_prob = result.get('ai_probability', 50.0)
+        if ai_prob > 50.0:
+            result['ai_probability'] = 100.0
+        else:
+            result['ai_probability'] = 0.0
+            
         return jsonify(result)
     
     except Exception as e:
