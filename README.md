@@ -15,11 +15,16 @@ A multi-modal forensic engine that doesn't just detect AI media—it *explains* 
 ## Key Capabilities
 
 ### Image Verification
-*   **State-of-the-art AI Detection:** Uses top-performing 2025-2026 Vision Transformers (Ateeqq SigLIP2, Bombek1 SigLIP2+DINOv2, Organika SDXL-detector) for highly accurate detection across modern generators (Flux, Midjourney v6, DALL-E 3).
-*   **Ensemble Fusion System:** Combines multiple ML models via a weighted scoring system with majority-vote safeguards to prevent false positives.
-*   **Error Level Analysis (ELA):** Highlights areas of potential manipulation within an image file.
-*   **Metadata Forensics & Content Credentials:** Analyzes Exif data and C2PA digital signatures for inconsistencies or AI generation flags.
-*   See [Image Detection Strategy](docs/Image_Detection_Strategy.md) for technical details.
+*   **Top 5 Pretrained ML Models (2025-2026):** Uses the highest-accuracy Vision Transformers from Hugging Face:
+    1. **Bombek1 SigLIP2+DINOv2** — 99.97% AUC, covers 25+ generators (Jan 2026)
+    2. **Ateeqq SigLIP2** — 99.23% accuracy, 46K downloads (Dec 2025)
+    3. **dima806 ViT** — 98.25% accuracy, 50K downloads (Jan 2025)
+    4. **Organika SDXL-Detector** — 98.1% accuracy, Flux/SDXL specialist
+    5. **WpythonW DINOv2** — Degradation-resilient, social media optimized
+*   **Ensemble Fusion System:** Combines all 5 models via weighted scoring with majority-vote safeguards to prevent false positives.
+*   **Binary Verdict:** Outputs a definitive 100% AI or 100% Human classification.
+*   **Supporting Analysis:** Error Level Analysis (ELA), metadata forensics, C2PA content credentials, AI watermark detection, and Groq Vision AI explanations.
+*   See [Image Detection Docs](docs/Image_Detection.md) for technical details.
 
 ### Video Analysis
 *   **Deepfake Detection:** Analyzes frame-by-frame artifacts, facial landmarks, and lip-sync consistency to identify synthetic videos.
@@ -49,10 +54,8 @@ A multi-modal forensic engine that doesn't just detect AI media—it *explains* 
 ## Technology Stack
 
 *   **Backend:** Python 3.10+, Flask
-*   **AI/ML:** PyTorch, Transformers (DeBERTa-v3, RoBERTa, DistilGPT-2), Groq API (Llama 4 Scout)
-*   **Document Parsing:** PyMuPDF (PDF), python-docx (DOCX), pytesseract (OCR)
-*   **Frontend:** HTML5, Tailwind CSS, JavaScript
-*   **Analysis:** OpenCV, Librosa, Scikit-learn
+*   **AI/ML:** PyTorch, Transformers (SigLIP2, DINOv2, ViT, Swin, DeBERTa-v3, RoBERTa), Groq API (Llama 4 Scout)
+*   **Image Models:** Bombek1 SigLIP2+DINOv2, Ateeqq SigLIP2, dima806 ViT, Organika SDXL-Detector, WpythonW DINOv2
 
 ## Quick Start
 
@@ -110,6 +113,16 @@ VisioNova/
 │   ├── AI/                    # AI/LLM integration modules
 │   ├── fact_check/            # Fact-checking engine
 │   ├── image_detector/        # Image analysis detectors
+│   │   ├── ml_detector.py           # Top 5 pretrained ML models
+│   │   ├── ensemble_detector.py     # Weighted ensemble orchestrator
+│   │   ├── confidence_calibrator.py # Score calibration
+│   │   ├── watermark_detector.py    # AI watermark detection
+│   │   ├── content_credentials.py   # C2PA credentials
+│   │   ├── metadata_analyzer.py     # EXIF metadata forensics
+│   │   ├── ela_analyzer.py          # Error Level Analysis
+│   │   ├── noise_analyzer.py        # Noise pattern analysis
+│   │   ├── image_explainer.py       # Groq Vision AI explanation
+│   │   └── fast_cascade_detector.py # Speed-optimized endpoint
 │   ├── text_detector/         # Text AI detection & document parsing
 │   │   ├── text_detector_service.py  # Core detection engine (offline/ML/binoculars)
 │   │   ├── document_parser.py        # PDF/DOCX/TXT extraction with OCR fallback
@@ -117,52 +130,33 @@ VisioNova/
 │   │   └── preprocessor.py           # NLP preprocessing utilities
 │   ├── audio_detector/        # Audio deepfake detection
 │   ├── video_detector/        # Video deepfake detection
+│   ├── download_image_models.py # Pre-download script for 5 ML models
 │   ├── app.py                 # Main Flask application
 │   └── requirements.txt       # Python dependencies
 ├── docs/                      # Documentation
-│   ├── ML_SETUP_COMPLETE.md   # ML models setup guide
-│   ├── QUICKSTART_ML.md       # Quick start for ML features
 │   ├── Image_Detection.md
 │   ├── Text_Detection.md
 │   ├── Audio_Detection.md
 │   ├── Video_Detection.md
-│   ├── Fact_Check.md
-│   └── SystemArchitecture.md
+│   └── Fact_Check.md
 ├── frontend/                  # Web interface
 │   ├── html/                  # HTML pages
 │   ├── css/                   # Stylesheets
 │   └── js/                    # JavaScript modules
-├── notebooks/                 # Jupyter notebooks
-│   ├── DeBERTa_Training_Notebook.ipynb
-│   └── VisioNova_Colab_Training.ipynb
-├── scripts/                   # Utility scripts
-│   ├── setup_ml_models.py     # ML model setup (Python 3.10)
-│   ├── train_deberta.py       # Text model training
-│   └── download_models.py     # Legacy model downloader
-├── tests/                     # Test files
-│   ├── test_image_api.py
-│   └── test_binoculars.py
-├── results/                   # Training outputs (gitignored)
-├── .venv/                     # Python 3.13 environment
-├── .venv310/                  # Python 3.10 for ML models (gitignored)
-├── requirements_ml.txt        # ML-specific dependencies (PyTorch + CUDA)
 └── README.md                  # This file
 ```
 
-### Key Folders
-
-- **backend/**: Core application logic and API endpoints
-- **docs/**: Comprehensive technical documentation
-- **frontend/**: User interface (HTML/CSS/JS)
-- **notebooks/**: Training notebooks for model development
-- **scripts/**: Standalone utilities and training scripts
-- **tests/**: Unit and integration tests
-
 ### ML Models Setup
 
-For GPU-accelerated image detection (98%+ accuracy):
-1. See [docs/ML_SETUP_COMPLETE.md](docs/ML_SETUP_COMPLETE.md)
-2. Quick start: [docs/QUICKSTART_ML.md](docs/QUICKSTART_ML.md)
+To pre-download all 5 image detection models (recommended):
+```bash
+python backend/download_image_models.py
+```
+Then start the server:
+```bash
+python backend/app.py
+```
+Models are automatically loaded on first use via the ensemble endpoint.
 
 ## Contributors
 
