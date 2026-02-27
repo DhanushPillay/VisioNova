@@ -51,6 +51,9 @@ c2pa-python>=0.6.0  # For C2PA Content Credentials (DALL-E 3, Adobe Firefly, Mic
 # WpythonW/dinoV2-deepfake-detector (DINOv2, degradation-resilient)
 peft>=0.7.0  # LoRA adapter support (Bombek1 SigLIP2+DINOv2 model)
 
+# XAI Explainability
+pytorch-grad-cam>=1.5.0  # Optional: Grad-CAM attention heatmaps for Vision Transformers
+
 # Audio Detection Dependencies
 soundfile>=0.12.0  # Audio file reading (wav, flac, ogg)
 librosa>=0.10.0  # Audio resampling and processing

@@ -229,11 +229,11 @@ class EnsembleDetector:
             Comprehensive detection result with combined verdict
         """
         # Check if any ML models are active for analysis mode reporting
-        ml_active = (self.ateeqq_detector and self.ateeqq_detector.model_loaded) or \
-                    (self.deepfake_detector and self.deepfake_detector.model_loaded) or \
-                    (self.sdxl_detector and self.sdxl_detector.model_loaded) or \
-                    (self.siglip_dinov2_detector and self.siglip_dinov2_detector.model_loaded) or \
-                    (self.dinov2_detector and self.dinov2_detector.model_loaded)
+        ml_active = (getattr(self, 'ateeqq_detector', None) and self.ateeqq_detector.model_loaded) or \
+                    (getattr(self, 'deepfake_detector', None) and self.deepfake_detector.model_loaded) or \
+                    (getattr(self, 'sdxl_detector', None) and self.sdxl_detector.model_loaded) or \
+                    (getattr(self, 'siglip_dinov2_detector', None) and self.siglip_dinov2_detector.model_loaded) or \
+                    (getattr(self, 'dinov2_detector', None) and self.dinov2_detector.model_loaded)
 
         result: Dict[str, Any] = {
             'success': True,
@@ -263,8 +263,8 @@ class EnsembleDetector:
             # Run all detectors
             scores = {}
             
-            # 1. Statistical analysis
-            if self.statistical_detector:
+            # 1. Statistical analysis (only if detector was loaded)
+            if getattr(self, 'statistical_detector', None):
                 stat_result = self.statistical_detector.detect(image_data, filename)
                 result['individual_results']['statistical'] = stat_result
                 scores['statistical'] = stat_result.get('ai_probability', 50)
@@ -291,14 +291,14 @@ class EnsembleDetector:
                     scores['sdxl'] = sdxl_result.get('ai_probability', 50)
             
             # 5. Frequency analysis
-            if self.frequency_analyzer:
+            if getattr(self, 'frequency_analyzer', None):
                 freq_result = self.frequency_analyzer.analyze(image)
                 result['individual_results']['frequency'] = freq_result
                 scores['frequency'] = freq_result.get('ai_probability_contribution', 0)
             
             # 6. Watermark detection
             watermark_boost = 0
-            if self.watermark_detector:
+            if getattr(self, 'watermark_detector', None):
                 wm_result = self.watermark_detector.analyze(image_data)
                 result['individual_results']['watermark'] = wm_result
                 
@@ -310,7 +310,7 @@ class EnsembleDetector:
                 scores['watermark'] = watermark_boost
             
             # 7. Metadata analysis
-            if self.metadata_analyzer:
+            if getattr(self, 'metadata_analyzer', None):
                 meta_result = self.metadata_analyzer.analyze(image_data)
                 result['individual_results']['metadata'] = meta_result
                 
@@ -322,7 +322,7 @@ class EnsembleDetector:
             
             # 8. C2PA/Content Credentials
             c2pa_override = False
-            if self.c2pa_detector:
+            if getattr(self, 'c2pa_detector', None):
                 c2pa_result = self.c2pa_detector.analyze(image_data, filename)
                 result['individual_results']['c2pa'] = c2pa_result
                 
@@ -333,7 +333,7 @@ class EnsembleDetector:
                     )
             
             # 9. ELA analysis (for manipulation detection)
-            if self.ela_analyzer:
+            if getattr(self, 'ela_analyzer', None):
                 ela_result = self.ela_analyzer.analyze(image_data)
                 result['individual_results']['ela'] = ela_result
             
