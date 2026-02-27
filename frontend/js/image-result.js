@@ -283,7 +283,7 @@ function renderModelTags(result) {
     if (result.watermark) tags.push({ name: 'Watermark', color: 'accent-success' });
 
     // AI Analysis (Groq Vision)
-    if (result.ai_analysis) tags.push({ name: 'Groq Vision', color: 'primary' });
+    if (result.ai_analysis) tags.push({ name: 'XAI Analysis', color: 'primary' });
 
     // If no specific tags, show a default
     if (tags.length === 0) tags.push({ name: 'Auto-detect', color: 'primary' });
@@ -351,7 +351,7 @@ function renderKeyFindings(result) {
     // Finding 6: AI analysis verdict
     if (result.ai_analysis && result.ai_analysis.success && result.ai_analysis.combined_verdict) {
         const cv = result.ai_analysis.combined_verdict;
-        findings.push({ icon: 'smart_toy', color: 'primary', text: `Groq Vision: ${cv.verdict_description || cv.verdict}`, detail: `${Math.round(cv.combined_probability || aiProb)}% combined score` });
+        findings.push({ icon: 'smart_toy', color: 'primary', text: `XAI Analysis: ${cv.verdict_description || cv.verdict}`, detail: `${Math.round(cv.combined_probability || aiProb)}% combined score` });
     }
 
     // Update count
@@ -428,7 +428,8 @@ function renderWatermarkResult(result) {
 }
 
 /**
- * Render the AI explanation from Groq Vision.
+ * Render the XAI explanation — Ensemble Disagreement Analysis + Grad-CAM.
+ * Shows: model-by-model breakdown, agreement level, anomalies, reasoning.
  */
 function renderAIExplanation(result) {
     const textEl = document.getElementById('explanationText');
@@ -440,46 +441,109 @@ function renderAIExplanation(result) {
         textEl.innerHTML = `
             <div class="flex items-center gap-2 text-white/40">
                 <span class="material-symbols-outlined !text-[20px]">info</span>
-                <span>AI explanation not available for this analysis. This feature uses Groq Vision to provide a plain-English explanation of the detection.</span>
+                <span>XAI explanation not available for this analysis.</span>
             </div>
         `;
         return;
     }
 
-    // Build formatted explanation
     let html = '';
 
-    // Visual analysis
+    // ─── 1. Agreement Level Badge ─────────────────────────────────────
     if (aiAnalysis.visual_analysis) {
         const va = aiAnalysis.visual_analysis;
+
+        if (va.agreement_detail) {
+            const level = va.agreement_level || '';
+            let badgeColor = 'accent-warning';
+            let badgeIcon = 'balance';
+            if (level.includes('AI_CONSENSUS') || level === 'MAJORITY_AI') {
+                badgeColor = 'accent-danger';
+                badgeIcon = 'warning';
+            } else if (level.includes('HUMAN_CONSENSUS') || level === 'MAJORITY_HUMAN') {
+                badgeColor = 'accent-success';
+                badgeIcon = 'verified';
+            }
+
+            html += `<div class="mb-4 p-3 bg-${badgeColor}/10 rounded-xl border border-${badgeColor}/20">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-${badgeColor} !text-[20px]">${badgeIcon}</span>
+                    <span class="text-white font-semibold text-sm">${escapeHtml(va.agreement_detail)}</span>
+                </div>
+            </div>`;
+        }
+
+        // ─── 2. Assessment Summary ────────────────────────────────────
         if (va.assessment) {
             html += `<div class="mb-4">
                 <h5 class="text-white font-semibold text-sm mb-2 flex items-center gap-1">
-                    <span class="material-symbols-outlined !text-[16px] text-primary">visibility</span>
-                    Visual Assessment
+                    <span class="material-symbols-outlined !text-[16px] text-primary">summarize</span>
+                    Assessment
                 </h5>
                 <p class="text-white/70 text-sm leading-relaxed">${escapeHtml(va.assessment)}</p>
             </div>`;
         }
 
-        // Anomalies
+        // ─── 3. Per-Model Breakdown (compact) ────────────────────────
+        if (va.model_breakdown && va.model_breakdown.length > 0) {
+            html += `<div class="mb-4">
+                <h5 class="text-white font-semibold text-sm mb-2 flex items-center gap-1">
+                    <span class="material-symbols-outlined !text-[16px] text-primary">model_training</span>
+                    Model-by-Model Analysis
+                </h5>
+                <div class="space-y-1.5">
+                    ${va.model_breakdown.map(m => {
+                const isAi = m.flagged_as_ai;
+                const barColor = isAi ? 'accent-danger' : 'accent-success';
+                const labelColor = isAi ? 'accent-danger' : 'accent-success';
+                const label = isAi ? 'AI' : 'Human';
+                const score = Math.round(m.score || 0);
+
+                return `<div class="flex items-center gap-3 p-2 bg-white/[0.03] rounded-lg hover:bg-white/[0.06] transition-colors">
+                            <div class="flex items-center gap-1.5 min-w-0 w-[140px] shrink-0">
+                                <span class="text-white text-[11px] font-semibold truncate">${escapeHtml(m.name)}</span>
+                                <span class="px-1 py-[1px] rounded text-[9px] font-bold bg-${labelColor}/15 text-${labelColor} shrink-0">${label}</span>
+                            </div>
+                            <div class="flex-1 bg-white/10 rounded-full h-1.5 min-w-[60px]">
+                                <div class="h-1.5 rounded-full bg-${barColor}/80 transition-all duration-500" style="width: ${score}%"></div>
+                            </div>
+                            <span class="text-white/70 font-mono text-[11px] font-bold w-[36px] text-right shrink-0">${score}%</span>
+                        </div>`;
+            }).join('')}
+                </div>
+            </div>`;
+        }
+
+        // ─── 4. Anomalies / Key Evidence ──────────────────────────────
         if (va.anomalies && va.anomalies.length > 0) {
             html += `<div class="mb-4">
                 <h5 class="text-white font-semibold text-sm mb-2 flex items-center gap-1">
                     <span class="material-symbols-outlined !text-[16px] text-accent-warning">report</span>
-                    Anomalies Detected
+                    Key Evidence
                 </h5>
-                <ul class="space-y-1">
+                <ul class="space-y-1.5">
                     ${va.anomalies.map(a => `<li class="text-white/60 text-sm flex items-start gap-2">
-                        <span class="text-accent-warning mt-1">•</span>
+                        <span class="text-accent-warning mt-0.5 shrink-0">▸</span>
                         <span>${escapeHtml(a)}</span>
                     </li>`).join('')}
                 </ul>
             </div>`;
         }
+
+        // ─── 5. Grad-CAM Heatmap (if available) ──────────────────────
+        if (va.attention_heatmap) {
+            html += `<div class="mb-4">
+                <h5 class="text-white font-semibold text-sm mb-2 flex items-center gap-1">
+                    <span class="material-symbols-outlined !text-[16px] text-primary">visibility</span>
+                    Attention Heatmap
+                </h5>
+                <p class="text-white/50 text-xs mb-2">Red regions = model focused here when detecting AI artifacts</p>
+                <img src="data:image/png;base64,${va.attention_heatmap}" alt="Grad-CAM heatmap" class="w-full rounded-lg border border-white/10" />
+            </div>`;
+        }
     }
 
-    // Reasoning
+    // ─── 6. Reasoning ─────────────────────────────────────────────────
     if (aiAnalysis.reasoning) {
         html += `<div class="mb-4">
             <h5 class="text-white font-semibold text-sm mb-2 flex items-center gap-1">
@@ -490,17 +554,16 @@ function renderAIExplanation(result) {
         </div>`;
     }
 
-    // Combined verdict
+    // ─── 7. Combined Verdict ──────────────────────────────────────────
     if (aiAnalysis.combined_verdict) {
         const cv = aiAnalysis.combined_verdict;
         html += `<div class="p-3 bg-white/5 rounded-xl">
-            <h5 class="text-white font-semibold text-sm mb-1">Combined Verdict</h5>
+            <h5 class="text-white font-semibold text-sm mb-1">Verdict</h5>
             <p class="text-white/70 text-sm">${escapeHtml(cv.verdict_description || cv.verdict)}</p>
-            <p class="text-white/50 text-xs mt-1">Combined probability: ${Math.round(cv.combined_probability || 0)}%</p>
         </div>`;
     }
 
-    // Fallback: if no structured data, show raw explanation
+    // Fallback
     if (!html && aiAnalysis.explanation) {
         html = `<p class="text-white/70 text-sm leading-relaxed">${escapeHtml(typeof aiAnalysis.explanation === 'string' ? aiAnalysis.explanation : JSON.stringify(aiAnalysis.explanation))}</p>`;
     }
@@ -586,10 +649,10 @@ function renderModelsDetail(result) {
         });
     }
 
-    // AI Explanation (Groq Vision)
+    // XAI Explanation
     if (result.ai_analysis) {
         models.push({
-            name: 'Groq Vision (Image Explainer)',
+            name: 'XAI Explainer (Ensemble Analysis)',
             icon: 'smart_toy',
             description: result.ai_analysis.success
                 ? 'AI-powered visual analysis and explanation generated'
