@@ -357,74 +357,144 @@ class ImageExplainer:
 
         return anomalies
 
+    # ── Plain-English explanation templates per model key ──────────────────
+    # Each entry has:
+    #   'ai': what a high score from this model MEANS in plain English
+    #   'human': what a low score from this model MEANS in plain English
+    PLAIN_REASONS = {
+        'ateeqq': {
+            'ai': 'The semantic visual features — the way shapes, textures, and colors relate — match patterns found in AI-generated images, not real photographs.',
+            'human': 'The overall semantic composition of the image is consistent with how a real camera captures a scene.',
+        },
+        'siglip_dinov2': {
+            'ai': 'Both the high-level meaning of the image and its pixel-level structure independently point to AI generation — a strong dual signal.',
+            'human': 'Both the image meaning and its low-level structure are consistent with authentic, camera-captured content.',
+        },
+        'deepfake': {
+            'ai': "The image's global composition has subtle, regular patterns that cameras don't produce — a hallmark of AI generation.",
+            'human': 'The overall composition and layout of the image looks consistent with natural camera capture.',
+        },
+        'sdxl': {
+            'ai': 'The pixel-level fingerprints match those left behind by Stable Diffusion, Flux, or similar diffusion models.',
+            'human': 'No diffusion-model fingerprints (Stable Diffusion, Flux, SDXL) were found in the image.',
+        },
+        'dinov2': {
+            'ai': 'Structural AI artifacts were detected that persist even after compression or social media processing — a strong indicator.',
+            'human': 'The image structure remains consistent with genuine photos even under compression analysis.',
+        },
+        'frequency': {
+            'ai': 'The frequency domain of the image shows periodic patterns created by upsampling algorithms, which are invisible to the eye but common in GAN-generated images.',
+            'human': 'The frequency spectrum of the image looks natural, without the periodic noise typically introduced by AI generation.',
+        },
+    }
+
     def _generate_summary(self, flagging: int, total: int, ai_prob: float,
                           model_breakdown: List[Dict]) -> str:
-        """Generate a human-readable summary of the analysis."""
+        """
+        Generate a single plain-English verdict sentence.
+        Example: 'This image is very likely AI-generated. Multiple independent
+        checks all point to the same conclusion.'
+        """
         if total == 0:
-            return 'No ML models were available for this analysis.'
+            return 'No detection models were available for this image.'
 
         if ai_prob > 50:
-            # AI-generated
             if flagging == total:
-                return (f'All {total} detection models unanimously identify this image as AI-generated '
-                        f'with high confidence. Multiple architectural approaches (Vision Transformers, '
-                        f'self-supervised learning, diffusion-model specialists) all converge on the same conclusion.')
+                return (f'This image is almost certainly AI-generated. '
+                        f'Every independent check we ran came to the same conclusion.')
             elif flagging > total / 2:
-                return (f'{flagging} out of {total} models flag this image as AI-generated. '
-                        f'The majority consensus, combined with weighted scoring, indicates AI origin.')
+                return (f'This image is very likely AI-generated. '
+                        f'{flagging} out of {total} independent checks agree on this.')
             else:
-                return (f'While individual model opinions are mixed, the weighted ensemble score '
-                        f'exceeds the detection threshold, suggesting AI-generated content.')
+                return (f'This image shows signs of AI generation, '
+                        f'though the evidence is mixed. Treat this result with some caution.')
         else:
-            # Human-created
             if flagging == 0:
-                return (f'All {total} detection models identify this image as human-created. '
-                        f'No AI generation patterns were detected across any architectural approach.')
+                return (f'This image appears to be a real, authentic photograph. '
+                        f'No AI generation patterns were found.')
             elif flagging < total / 2:
-                return (f'{total - flagging} out of {total} models classify this as human-created. '
-                        f'The majority consensus indicates this is an authentic photograph.')
+                return (f'This image is most likely authentic. '
+                        f'{total - flagging} out of {total} checks agree it is human-created.')
             else:
-                return (f'Model opinions are mixed, but the weighted ensemble score falls below '
-                        f'the detection threshold. The image is classified as likely human-created.')
+                return (f'This image appears authentic, but the evidence is mixed. '
+                        f'Some AI patterns were detected — verify with additional sources if needed.')
 
     def _generate_reasoning(self, model_breakdown: List[Dict], agreement_level: str,
-                            ai_prob: float, detection_result: Dict) -> str:
-        """Generate a detailed reasoning paragraph explaining the verdict."""
-        parts = []
+                            ai_prob: float, detection_result: Dict) -> Dict:
+        """
+        Generate plain-English explanation as a list of bullet points.
 
-        # Explain the ensemble approach
-        parts.append(f'This analysis was performed by an ensemble of {len(model_breakdown)} '
-                      f'specialized AI detection models, each using a different architectural approach '
-                      f'to maximize detection coverage.')
+        Returns a dict with:
+          - 'bullets': List[str] — why the verdict was reached, in plain English
+          - 'caveat': str | None — shown only when results are uncertain
+        """
+        bullets = []
+        is_ai = ai_prob > 50
 
-        # Explain key model findings
-        ai_models = [m for m in model_breakdown if m['flagged_as_ai']]
-        if ai_models:
-            top_model = ai_models[0]
-            parts.append(f"The strongest AI signal came from {top_model['name']} ({top_model['score']:.0f}%), "
-                         f"which specializes in: {top_model['specialty'].lower()}.")
+        # Pick the models that agree with the final verdict (strongest signal first)
+        if is_ai:
+            signal_models = sorted(
+                [m for m in model_breakdown if m['flagged_as_ai']],
+                key=lambda m: m['score'], reverse=True
+            )
+        else:
+            signal_models = sorted(
+                [m for m in model_breakdown if not m['flagged_as_ai']],
+                key=lambda m: m['score']
+            )
 
-        human_models = [m for m in model_breakdown if not m['flagged_as_ai']]
-        if human_models and ai_models:
-            parts.append(f"{len(human_models)} model(s) leaned toward human origin, "
-                         f"providing a cross-check against false positives.")
+        # Add up to 3 plain-English reasons from the strongest signalling models
+        seen_reasons = set()
+        for model in signal_models[:3]:
+            key = model['key']
+            direction = 'ai' if is_ai else 'human'
+            reason = self.PLAIN_REASONS.get(key, {}).get(direction)
+            # Deduplicate near-identical reasons
+            if reason and reason not in seen_reasons:
+                bullets.append(reason)
+                seen_reasons.add(reason)
 
-        # Explain agreement
-        if agreement_level == 'STRONG_AI_CONSENSUS':
-            parts.append('The unanimous cross-architecture agreement provides very high confidence in the AI classification.')
-        elif agreement_level == 'SPLIT_DECISION':
-            parts.append('The split decision between models suggests this image may be at the boundary of detection capability, '
-                         'or may be a heavily processed photograph.')
+        # Add a metadata/watermark bullet if detected
+        individual = detection_result.get('individual_results', {})
+        watermark = individual.get('watermark', {})
+        metadata = individual.get('metadata', {})
+        c2pa = individual.get('c2pa', {})
 
-        return ' '.join(parts)
+        if c2pa.get('is_ai_generated'):
+            generator = c2pa.get('ai_generator', 'an AI tool')
+            bullets.append(f'The image contains verified digital credentials (C2PA) that confirm it was created by {generator}.')
+        elif watermark.get('watermark_detected'):
+            bullets.append('An invisible AI watermark was detected embedded in the image — a strong indicator of AI generation.')
+        elif metadata.get('ai_software_detected') and is_ai:
+            sw = metadata.get('software_detected', 'AI software')
+            bullets.append(f'The image metadata records {sw} as the creation tool.')
+        elif not metadata.get('has_exif') and is_ai:
+            bullets.append('The image has no camera metadata (EXIF data). Real photographs almost always contain this information.')
+
+        # Build caveat for uncertain/split cases
+        caveat = None
+        if agreement_level == 'SPLIT_DECISION':
+            caveat = ('The detection models disagree on this image, which can happen when an image is heavily '
+                      'compressed, filtered, or sits at the boundary of what current detectors can identify. '
+                      'We recommend additional verification.')
+        elif agreement_level in ('MAJORITY_HUMAN', 'MAJORITY_AI') and len(model_breakdown) >= 3:
+            dissenting = len(model_breakdown) - len(signal_models)
+            if dissenting > 0:
+                caveat = (f'{dissenting} out of {len(model_breakdown)} checks pointed the other way. '
+                          f'This result is likely correct, but not unanimous.')
+
+        return {
+            'bullets': bullets,
+            'caveat': caveat,
+        }
 
     def _generate_verdict_description(self, verdict: str, ai_prob: float,
                                        flagging: int, total: int) -> str:
-        """Generate a verdict description string."""
+        """Generate a short verdict label."""
         if ai_prob > 50:
-            return f'AI-Generated Content Detected — {flagging}/{total} models agree'
+            return f'AI-Generated — {flagging}/{total} checks agree'
         else:
-            return f'Human-Created Content — {total - flagging}/{total} models agree'
+            return f'Authentic — {total - flagging}/{total} checks agree'
 
     # ─── Layer 2: Grad-CAM Attention Heatmaps ────────────────────────────────
 
