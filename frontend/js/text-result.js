@@ -170,24 +170,24 @@ function displayTextWithHighlighting(text, sentenceAnalysis) {
 
             if (analysis) {
                 const aiScore = analysis.ai_score || 0;
-                const humanScore = analysis.human_score || 0;
-                let highlightClass, tooltipClass, tooltipText;
 
+                // Only highlight AI or Uncertain sentences. Short sentences naturally
+                // score as "human" statistically, which causes massive false-green blocks
+                // that contradict the overall document ML score.
                 if (aiScore > 60) {
-                    highlightClass = 'sentence-ai';
-                    tooltipClass = 'sentence-tooltip-ai';
-                    tooltipText = `AI: ${aiScore.toFixed(0)}%`;
+                    const highlightClass = 'sentence-ai';
+                    const tooltipClass = 'sentence-tooltip-ai';
+                    const tooltipText = `AI: ${aiScore.toFixed(0)}%`;
+                    formattedHtml += `<span class="sentence-highlight ${highlightClass}">${escapeHtml(trimmed)}<span class="sentence-tooltip ${tooltipClass}">${tooltipText}</span></span> `;
                 } else if (aiScore > 40) {
-                    highlightClass = 'sentence-uncertain';
-                    tooltipClass = 'sentence-tooltip-uncertain';
-                    tooltipText = `Uncertain (AI: ${aiScore.toFixed(0)}%)`;
+                    const highlightClass = 'sentence-uncertain';
+                    const tooltipClass = 'sentence-tooltip-uncertain';
+                    const tooltipText = `Uncertain (AI: ${aiScore.toFixed(0)}%)`;
+                    formattedHtml += `<span class="sentence-highlight ${highlightClass}">${escapeHtml(trimmed)}<span class="sentence-tooltip ${tooltipClass}">${tooltipText}</span></span> `;
                 } else {
-                    highlightClass = 'sentence-human';
-                    tooltipClass = 'sentence-tooltip-human';
-                    tooltipText = `Human: ${humanScore.toFixed(0)}%`;
+                    // Do not highlight 'Human' sentences to prevent visual clutter
+                    formattedHtml += escapeHtml(trimmed) + ' ';
                 }
-
-                formattedHtml += `<span class="sentence-highlight ${highlightClass}">${escapeHtml(trimmed)}<span class="sentence-tooltip ${tooltipClass}">${tooltipText}</span></span> `;
             } else {
                 formattedHtml += escapeHtml(trimmed) + ' ';
             }
