@@ -1,6 +1,6 @@
 """
 VisioNova Text Detector Module
-AI-generated text detection with ML + Groq explanation.
+AI-generated text detection with ML + offline XAI explanation.
 """
 from .text_detector_service import AIContentDetector
 from AI import TextExplainer

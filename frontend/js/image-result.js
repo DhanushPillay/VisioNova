@@ -428,8 +428,8 @@ function renderWatermarkResult(result) {
 }
 
 /**
- * Render the XAI explanation — Ensemble Disagreement Analysis + Grad-CAM.
- * Shows: model-by-model breakdown, agreement level, anomalies, reasoning.
+ * Render the XAI explanation — clean plain-English verdict + bullet-point reasons.
+ * No model names, no scores, no bars. Just clear prose a non-technical user can read.
  */
 function renderAIExplanation(result) {
     const textEl = document.getElementById('explanationText');
@@ -441,141 +441,78 @@ function renderAIExplanation(result) {
         textEl.innerHTML = `
             <div class="flex items-center gap-2 text-white/40">
                 <span class="material-symbols-outlined !text-[20px]">info</span>
-                <span>XAI explanation not available for this analysis.</span>
+                <span class="text-sm">Explanation not available for this image.</span>
             </div>
         `;
         return;
     }
 
+    const va = aiAnalysis.visual_analysis || {};
+    const cv = aiAnalysis.combined_verdict || {};
+
+    // ── Determine overall sentiment for styling ──────────────────────────────
+    const isAI = (cv.combined_probability || result.ai_probability || 50) > 50;
+    const accentColor = isAI ? 'accent-danger' : 'accent-success';
+    const accentIcon = isAI ? 'smart_toy' : 'verified_user';
+
     let html = '';
 
-    // ─── 1. Agreement Level Badge ─────────────────────────────────────
-    if (aiAnalysis.visual_analysis) {
-        const va = aiAnalysis.visual_analysis;
-
-        if (va.agreement_detail) {
-            const level = va.agreement_level || '';
-            let badgeColor = 'accent-warning';
-            let badgeIcon = 'balance';
-            if (level.includes('AI_CONSENSUS') || level === 'MAJORITY_AI') {
-                badgeColor = 'accent-danger';
-                badgeIcon = 'warning';
-            } else if (level.includes('HUMAN_CONSENSUS') || level === 'MAJORITY_HUMAN') {
-                badgeColor = 'accent-success';
-                badgeIcon = 'verified';
-            }
-
-            html += `<div class="mb-4 p-3 bg-${badgeColor}/10 rounded-xl border border-${badgeColor}/20">
-                <div class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-${badgeColor} !text-[20px]">${badgeIcon}</span>
-                    <span class="text-white font-semibold text-sm">${escapeHtml(va.agreement_detail)}</span>
-                </div>
-            </div>`;
-        }
-
-        // ─── 2. Assessment Summary ────────────────────────────────────
-        if (va.assessment) {
-            html += `<div class="mb-4">
-                <h5 class="text-white font-semibold text-sm mb-2 flex items-center gap-1">
-                    <span class="material-symbols-outlined !text-[16px] text-primary">summarize</span>
-                    Assessment
-                </h5>
-                <p class="text-white/70 text-sm leading-relaxed">${escapeHtml(va.assessment)}</p>
-            </div>`;
-        }
-
-        // ─── 3. Per-Model Breakdown (compact) ────────────────────────
-        if (va.model_breakdown && va.model_breakdown.length > 0) {
-            html += `<div class="mb-4">
-                <h5 class="text-white font-semibold text-sm mb-2 flex items-center gap-1">
-                    <span class="material-symbols-outlined !text-[16px] text-primary">model_training</span>
-                    Model-by-Model Analysis
-                </h5>
-                <div class="space-y-1.5">
-                    ${va.model_breakdown.map(m => {
-                const isAi = m.flagged_as_ai;
-                const barColor = isAi ? 'accent-danger' : 'accent-success';
-                const labelColor = isAi ? 'accent-danger' : 'accent-success';
-                const label = isAi ? 'AI' : 'Human';
-                const score = Math.round(m.score || 0);
-
-                return `<div class="flex items-center gap-3 p-2 bg-white/[0.03] rounded-lg hover:bg-white/[0.06] transition-colors">
-                            <div class="flex items-center gap-1.5 min-w-0 w-[140px] shrink-0">
-                                <span class="text-white text-[11px] font-semibold truncate">${escapeHtml(m.name)}</span>
-                                <span class="px-1 py-[1px] rounded text-[9px] font-bold bg-${labelColor}/15 text-${labelColor} shrink-0">${label}</span>
-                            </div>
-                            <div class="flex-1 bg-white/10 rounded-full h-1.5 min-w-[60px]">
-                                <div class="h-1.5 rounded-full bg-${barColor}/80 transition-all duration-500" style="width: ${score}%"></div>
-                            </div>
-                            <span class="text-white/70 font-mono text-[11px] font-bold w-[36px] text-right shrink-0">${score}%</span>
-                        </div>`;
-            }).join('')}
-                </div>
-            </div>`;
-        }
-
-        // ─── 4. Anomalies / Key Evidence ──────────────────────────────
-        if (va.anomalies && va.anomalies.length > 0) {
-            html += `<div class="mb-4">
-                <h5 class="text-white font-semibold text-sm mb-2 flex items-center gap-1">
-                    <span class="material-symbols-outlined !text-[16px] text-accent-warning">report</span>
-                    Key Evidence
-                </h5>
-                <ul class="space-y-1.5">
-                    ${va.anomalies.map(a => `<li class="text-white/60 text-sm flex items-start gap-2">
-                        <span class="text-accent-warning mt-0.5 shrink-0">▸</span>
-                        <span>${escapeHtml(a)}</span>
-                    </li>`).join('')}
-                </ul>
-            </div>`;
-        }
-
-        // ─── 5. Grad-CAM Heatmap (if available) ──────────────────────
-        if (va.attention_heatmap) {
-            html += `<div class="mb-4">
-                <h5 class="text-white font-semibold text-sm mb-2 flex items-center gap-1">
-                    <span class="material-symbols-outlined !text-[16px] text-primary">visibility</span>
-                    Attention Heatmap
-                </h5>
-                <p class="text-white/50 text-xs mb-2">Red regions = model focused here when detecting AI artifacts</p>
-                <img src="data:image/png;base64,${va.attention_heatmap}" alt="Grad-CAM heatmap" class="w-full rounded-lg border border-white/10" />
-            </div>`;
-        }
+    // ── 1. Verdict sentence (summary) ───────────────────────────────────────
+    const summary = va.assessment || aiAnalysis.reasoning?.summary || aiAnalysis.explanation || '';
+    if (summary) {
+        html += `
+        <div class="flex items-start gap-3 mb-5 p-4 rounded-xl border bg-${accentColor}/5 border-${accentColor}/20">
+            <span class="material-symbols-outlined text-${accentColor} !text-[22px] shrink-0 mt-0.5">${accentIcon}</span>
+            <p class="text-white font-semibold text-sm leading-relaxed">${escapeHtml(summary)}</p>
+        </div>`;
     }
 
-    // ─── 6. Reasoning ─────────────────────────────────────────────────
-    if (aiAnalysis.reasoning) {
+    // ── 2. Why? — plain-English bullet points ───────────────────────────────
+    // reasoning is now a dict with 'bullets' and 'caveat' keys
+    const reasoning = aiAnalysis.reasoning;
+    const bullets = (reasoning && Array.isArray(reasoning.bullets)) ? reasoning.bullets : [];
+    const caveat = reasoning?.caveat || null;
+
+    if (bullets.length > 0) {
         html += `<div class="mb-4">
-            <h5 class="text-white font-semibold text-sm mb-2 flex items-center gap-1">
-                <span class="material-symbols-outlined !text-[16px] text-primary">psychology</span>
-                Reasoning
-            </h5>
-            <p class="text-white/70 text-sm leading-relaxed">${escapeHtml(typeof aiAnalysis.reasoning === 'string' ? aiAnalysis.reasoning : JSON.stringify(aiAnalysis.reasoning))}</p>
+            <h5 class="text-white/60 text-xs font-semibold uppercase tracking-widest mb-3">Why we think this</h5>
+            <ul class="space-y-2.5">
+                ${bullets.map(b => `
+                <li class="flex items-start gap-2.5 text-sm text-white/75 leading-relaxed">
+                    <span class="text-${accentColor} shrink-0 mt-0.5">●</span>
+                    <span>${escapeHtml(b)}</span>
+                </li>`).join('')}
+            </ul>
         </div>`;
     }
 
-    // ─── 7. Combined Verdict ──────────────────────────────────────────
-    if (aiAnalysis.combined_verdict) {
-        const cv = aiAnalysis.combined_verdict;
-        html += `<div class="p-3 bg-white/5 rounded-xl">
-            <h5 class="text-white font-semibold text-sm mb-1">Verdict</h5>
-            <p class="text-white/70 text-sm">${escapeHtml(cv.verdict_description || cv.verdict)}</p>
+    // ── 3. Caveat (only for uncertain / split results) ───────────────────────
+    if (caveat) {
+        html += `
+        <div class="mt-4 flex items-start gap-2 p-3 bg-accent-warning/5 border border-accent-warning/20 rounded-xl">
+            <span class="material-symbols-outlined text-accent-warning !text-[18px] shrink-0 mt-0.5">info</span>
+            <p class="text-white/60 text-xs leading-relaxed">${escapeHtml(caveat)}</p>
         </div>`;
     }
 
-    // Fallback
-    if (!html && aiAnalysis.explanation) {
-        html = `<p class="text-white/70 text-sm leading-relaxed">${escapeHtml(typeof aiAnalysis.explanation === 'string' ? aiAnalysis.explanation : JSON.stringify(aiAnalysis.explanation))}</p>`;
-    }
+    // ── 4. Verdict chip at the bottom ────────────────────────────────────────
+    const verdictLabel = cv.verdict_description || (isAI ? 'AI-Generated' : 'Authentic');
+    html += `
+    <div class="mt-5 pt-4 border-t border-white/10 flex items-center justify-between">
+        <span class="text-white/40 text-xs">Final verdict</span>
+        <span class="px-3 py-1 rounded-full text-xs font-bold bg-${accentColor}/15 text-${accentColor} border border-${accentColor}/25">
+            ${escapeHtml(verdictLabel)}
+        </span>
+    </div>`;
 
-    textEl.innerHTML = html || '<p class="text-white/40 text-sm">No detailed explanation available.</p>';
+    textEl.innerHTML = html;
 
-    // Auto-expand if there's an explanation
-    if (html) {
-        document.getElementById('explanationContent')?.classList.remove('hidden');
-        document.getElementById('explanationChevron')?.classList.add('rotated');
-    }
+    // Auto-expand the explanation panel
+    document.getElementById('explanationContent')?.classList.remove('hidden');
+    document.getElementById('explanationChevron')?.classList.add('rotated');
 }
+
+
 
 /**
  * Render detection models detail in the collapsible panel.

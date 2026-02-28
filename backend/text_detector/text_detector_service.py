@@ -840,9 +840,17 @@ class AIContentDetector:
             "hedging": "Hedging Language",
             "formal_transitions": "Formal Transition",
             "ai_phrases": "Common AI Phrase",
-            "filler_phrases": "Filler Phrase"
+            "filler_phrases": "Filler Phrase",
+            "overly_formal": "Overly Formal Word",
+            "meta_awareness": "Meta-Awareness Phrase",
+            "passive_voice_indicators": "Passive Voice Indicator",
+            "academic_filler": "Academic Filler",
+            "abstract_qualifiers": "Abstract Qualifier",
+            "verbose_constructions": "Verbose Construction",
+            "cautious_language": "Cautious Language",
+            "list_connectors": "List Connector"
         }
-        return types.get(category, category)
+        return types.get(category, category.replace('_', ' ').title())
     
     def _calculate_ngram_uniformity(self, text: str, n: int = 2) -> float:
         """
