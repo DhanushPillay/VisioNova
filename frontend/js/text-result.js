@@ -397,19 +397,19 @@ function buildExplanationHTML(expl) {
     // ── 1. Verdict Summary Box ──────────────────────────────────────────
     if (expl.summary) {
         html += `
-        <div class="flex items-start gap-3 mb-5 p-4 rounded-xl border bg-${accentColor}/5 border-${accentColor}/20">
-            <span class="material-symbols-outlined text-${accentColor} !text-[22px] shrink-0 mt-0.5">${accentIcon}</span>
+        <div class="flex items-start gap-3 mb-4 p-3.5 rounded-xl border bg-${accentColor}/5 border-${accentColor}/20">
+            <span class="material-symbols-outlined text-${accentColor} !text-[20px] shrink-0 mt-0.5">${accentIcon}</span>
             <p class="text-white font-semibold text-sm leading-relaxed">${escapeHtml(expl.summary)}</p>
         </div>`;
     }
 
     // ── 2. Key Indicators ("Why we think this") ─────────────────────────
     if (expl.key_indicators && expl.key_indicators.length > 0) {
-        html += `<div class="mb-4">
-            <h5 class="text-white/60 text-xs font-semibold uppercase tracking-widest mb-3">Why we think this</h5>
-            <ul class="space-y-2.5">
+        html += `<div class="mb-3">
+            <h5 class="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-2">Why we think this</h5>
+            <ul class="space-y-1.5">
                 ${expl.key_indicators.map(indicator => `
-                <li class="flex items-start gap-2.5 text-sm text-white/75 leading-relaxed">
+                <li class="flex items-start gap-2.5 text-[13px] text-white/75 leading-relaxed">
                     <span class="text-${accentColor} shrink-0 mt-0.5">●</span>
                     <span>${escapeHtml(indicator)}</span>
                 </li>`).join('')}
@@ -419,25 +419,25 @@ function buildExplanationHTML(expl) {
 
     // ── 3. Pattern Breakdown ────────────────────────────────────────────
     if (expl.pattern_breakdown) {
-        html += `<div class="mb-4 p-3 bg-white/[0.03] rounded-xl">
-            <h5 class="text-white/60 text-xs font-semibold uppercase tracking-widest mb-2 flex items-center gap-1.5">
+        html += `<div class="mb-3 p-2.5 bg-white/[0.03] rounded-lg">
+            <h5 class="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
                 <span class="material-symbols-outlined !text-[14px] text-accent-warning">pattern</span>
                 Pattern Analysis
             </h5>
-            <p class="text-white/60 text-sm leading-relaxed">${escapeHtml(expl.pattern_breakdown)}</p>
+            <p class="text-white/60 text-[13px] leading-relaxed">${escapeHtml(expl.pattern_breakdown)}</p>
         </div>`;
     }
 
     // ── 4. Suggestions ─────────────────────────────────────────────────
     if (expl.suggestions && expl.suggestions.length > 0) {
-        html += `<div class="mb-4">
-            <h5 class="text-white/60 text-xs font-semibold uppercase tracking-widest mb-3 flex items-center gap-1.5">
+        html += `<div class="mb-3">
+            <h5 class="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-2 flex items-center gap-1.5">
                 <span class="material-symbols-outlined !text-[14px] text-accent-success">lightbulb</span>
                 ${isAI ? 'How to improve' : 'What\'s working'}
             </h5>
-            <ul class="space-y-2">
+            <ul class="space-y-1.5">
                 ${expl.suggestions.map(s => `
-                <li class="flex items-start gap-2.5 text-sm text-white/60 leading-relaxed">
+                <li class="flex items-start gap-2.5 text-[13px] text-white/60 leading-relaxed">
                     <span class="text-accent-success shrink-0 mt-0.5">›</span>
                     <span>${escapeHtml(s)}</span>
                 </li>`).join('')}
@@ -448,9 +448,9 @@ function buildExplanationHTML(expl) {
     // ── 5. Confidence Note ──────────────────────────────────────────────
     if (expl.confidence_note) {
         html += `
-        <div class="mt-4 pt-3 border-t border-white/10">
+        <div class="mt-3 pt-2.5 border-t border-white/10">
             <div class="flex items-start gap-2">
-                <span class="material-symbols-outlined text-white/30 !text-[16px] shrink-0 mt-0.5">info</span>
+                <span class="material-symbols-outlined text-white/30 !text-[14px] shrink-0 mt-0.5">info</span>
                 <p class="text-white/40 text-xs leading-relaxed">${escapeHtml(expl.confidence_note)}</p>
             </div>
         </div>`;
