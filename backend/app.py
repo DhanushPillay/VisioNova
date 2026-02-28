@@ -480,7 +480,7 @@ def detect_ai_content():
                 'error_code': 'DETECTION_ERROR'
             }), 400
         
-        # Add Groq explanation if requested
+        # Add text explanation if requested
         if explain:
             explanation = text_explainer.explain(result, text[:500])
             result['explanation'] = explanation
@@ -614,7 +614,7 @@ def detect_ai_file_upload():
                 s for s in sentence_analysis if s.get('is_flagged')
             ]
         
-        # Add Groq explanation if requested
+        # Add text explanation if requested
         if explain:
             explanation = text_explainer.explain(result, text[:500])
             result['explanation'] = explanation

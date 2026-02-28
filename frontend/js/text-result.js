@@ -84,12 +84,12 @@ document.addEventListener('DOMContentLoaded', async function () {
             displayText(textData.data);
         }
         await analyzeText(textData.data, preloadedResult);
-        
+
         // Re-render with highlighting if we got sentence analysis from the backend
         if (analysisResults?.sentenceAnalysis?.length > 0) {
             displayTextWithHighlighting(textData.data, analysisResults.sentenceAnalysis);
         }
-        
+
         VisioNovaStorage.clearFile('text');
     } else {
         console.warn('[TextResult] No data found!');
@@ -160,14 +160,14 @@ function displayTextWithHighlighting(text, sentenceAnalysis) {
         formattedHtml += '<p class="mb-4">';
         // Split paragraph into sentences
         const sentences = paragraph.split(/(?<=[.!?])\s+/);
-        
+
         sentences.forEach(sentence => {
             const trimmed = sentence.trim();
             if (!trimmed) return;
 
             // Look up this sentence in analysis data
             const analysis = sentenceMap.get(trimmed.toLowerCase());
-            
+
             if (analysis) {
                 const aiScore = analysis.ai_score || 0;
                 const humanScore = analysis.human_score || 0;
@@ -383,79 +383,82 @@ function renderExplanation(explanation) {
 }
 
 /**
- * Build formatted HTML from a structured explanation object
+ * Build formatted HTML from a structured explanation object.
+ * Shows: verdict box → why bullets → pattern breakdown → suggestions.
  */
 function buildExplanationHTML(expl) {
     let html = '';
 
-    // Confidence note
-    if (expl.confidence_note) {
-        html += `<div class="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/10">
-            <div class="flex items-start gap-2">
-                <span class="material-symbols-outlined text-primary !text-[18px] mt-0.5 shrink-0">info</span>
-                <p class="text-white/70 text-sm leading-relaxed">${escapeHtml(expl.confidence_note)}</p>
-            </div>
+    // Determine if AI or human for styling
+    const isAI = (expl.verdict_explanation || '').toLowerCase().includes('ai-generated');
+    const accentColor = isAI ? 'accent-danger' : 'accent-success';
+    const accentIcon = isAI ? 'smart_toy' : 'verified_user';
+
+    // ── 1. Verdict Summary Box ──────────────────────────────────────────
+    if (expl.summary) {
+        html += `
+        <div class="flex items-start gap-3 mb-5 p-4 rounded-xl border bg-${accentColor}/5 border-${accentColor}/20">
+            <span class="material-symbols-outlined text-${accentColor} !text-[22px] shrink-0 mt-0.5">${accentIcon}</span>
+            <p class="text-white font-semibold text-sm leading-relaxed">${escapeHtml(expl.summary)}</p>
         </div>`;
     }
 
-    // Key indicators
+    // ── 2. Key Indicators ("Why we think this") ─────────────────────────
     if (expl.key_indicators && expl.key_indicators.length > 0) {
         html += `<div class="mb-4">
-            <h5 class="text-white/90 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <span class="material-symbols-outlined !text-[16px] text-accent-amber">key</span>
-                Key Indicators
-            </h5>
-            <ul class="space-y-1.5">`;
-        expl.key_indicators.forEach(indicator => {
-            html += `<li class="flex items-start gap-2 text-white/60 text-sm leading-relaxed">
-                <span class="text-accent-amber mt-1 shrink-0">•</span>
-                <span>${escapeHtml(indicator)}</span>
-            </li>`;
-        });
-        html += `</ul></div>`;
+            <h5 class="text-white/60 text-xs font-semibold uppercase tracking-widest mb-3">Why we think this</h5>
+            <ul class="space-y-2.5">
+                ${expl.key_indicators.map(indicator => `
+                <li class="flex items-start gap-2.5 text-sm text-white/75 leading-relaxed">
+                    <span class="text-${accentColor} shrink-0 mt-0.5">●</span>
+                    <span>${escapeHtml(indicator)}</span>
+                </li>`).join('')}
+            </ul>
+        </div>`;
     }
 
-    // Pattern breakdown
+    // ── 3. Pattern Breakdown ────────────────────────────────────────────
     if (expl.pattern_breakdown) {
-        html += `<div class="mb-4">
-            <h5 class="text-white/90 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <span class="material-symbols-outlined !text-[16px] text-accent-danger">pattern</span>
-                Pattern Breakdown
+        html += `<div class="mb-4 p-3 bg-white/[0.03] rounded-xl">
+            <h5 class="text-white/60 text-xs font-semibold uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <span class="material-symbols-outlined !text-[14px] text-accent-warning">pattern</span>
+                Pattern Analysis
             </h5>
             <p class="text-white/60 text-sm leading-relaxed">${escapeHtml(expl.pattern_breakdown)}</p>
         </div>`;
     }
 
-    // Suggestions
+    // ── 4. Suggestions ─────────────────────────────────────────────────
     if (expl.suggestions && expl.suggestions.length > 0) {
-        html += `<div class="mb-2">
-            <h5 class="text-white/90 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <span class="material-symbols-outlined !text-[16px] text-accent-success">lightbulb</span>
-                Suggestions
+        html += `<div class="mb-4">
+            <h5 class="text-white/60 text-xs font-semibold uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-outlined !text-[14px] text-accent-success">lightbulb</span>
+                ${isAI ? 'How to improve' : 'What\'s working'}
             </h5>
-            <ul class="space-y-1.5">`;
-        expl.suggestions.forEach(suggestion => {
-            html += `<li class="flex items-start gap-2 text-white/60 text-sm leading-relaxed">
-                <span class="text-accent-success mt-1 shrink-0">•</span>
-                <span>${escapeHtml(suggestion)}</span>
-            </li>`;
-        });
-        html += `</ul></div>`;
+            <ul class="space-y-2">
+                ${expl.suggestions.map(s => `
+                <li class="flex items-start gap-2.5 text-sm text-white/60 leading-relaxed">
+                    <span class="text-accent-success shrink-0 mt-0.5">›</span>
+                    <span>${escapeHtml(s)}</span>
+                </li>`).join('')}
+            </ul>
+        </div>`;
     }
 
-    // Fallback: render any remaining top-level string fields
-    if (!html) {
-        const skipKeys = ['ai_explained', 'confidence_note', 'key_indicators', 'pattern_breakdown', 'suggestions'];
-        for (const [key, value] of Object.entries(expl)) {
-            if (skipKeys.includes(key)) continue;
-            if (typeof value === 'string') {
-                html += `<p class="text-white/60 text-sm leading-relaxed mb-2"><strong class="text-white/80">${escapeHtml(key.replace(/_/g, ' '))}:</strong> ${escapeHtml(value)}</p>`;
-            }
-        }
+    // ── 5. Confidence Note ──────────────────────────────────────────────
+    if (expl.confidence_note) {
+        html += `
+        <div class="mt-4 pt-3 border-t border-white/10">
+            <div class="flex items-start gap-2">
+                <span class="material-symbols-outlined text-white/30 !text-[16px] shrink-0 mt-0.5">info</span>
+                <p class="text-white/40 text-xs leading-relaxed">${escapeHtml(expl.confidence_note)}</p>
+            </div>
+        </div>`;
     }
 
     return html || `<p class="text-white/50 text-sm italic">No detailed explanation available.</p>`;
 }
+
 
 /**
  * Show no text state
@@ -574,7 +577,7 @@ async function analyzeText(text, preloadedResult = null) {
 /**
  * Call the backend text detection API
  * @param {string} text - Text to analyze
- * @param {boolean} explain - Request Groq explanation
+ * @param {boolean} explain - Request explanation
  */
 async function callTextDetectionAPI(text, explain = true) {
     const response = await fetch(`${API_BASE_URL}/api/detect-ai`, {
