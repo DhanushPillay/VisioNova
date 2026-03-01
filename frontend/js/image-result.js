@@ -428,8 +428,8 @@ function renderWatermarkResult(result) {
 }
 
 /**
- * Render the XAI explanation — clean plain-English verdict + bullet-point reasons.
- * No model names, no scores, no bars. Just clear prose a non-technical user can read.
+ * Render the XAI explanation — clean plain-English verdict + bullet-point reasons
+ * + forensic evidence + optional Grad-CAM heatmap.
  */
 function renderAIExplanation(result) {
     const textEl = document.getElementById('explanationText');
@@ -449,6 +449,7 @@ function renderAIExplanation(result) {
 
     const va = aiAnalysis.visual_analysis || {};
     const cv = aiAnalysis.combined_verdict || {};
+    const forensic = aiAnalysis.forensic_evidence || {};
 
     // ── Determine overall sentiment for styling ──────────────────────────────
     const isAI = (cv.combined_probability || result.ai_probability || 50) > 50;
@@ -458,17 +459,31 @@ function renderAIExplanation(result) {
     let html = '';
 
     // ── 1. Verdict sentence (summary) ───────────────────────────────────────
-    const summary = va.assessment || aiAnalysis.reasoning?.summary || aiAnalysis.explanation || '';
+    const summary = va.assessment || '';
     if (summary) {
         html += `
-        <div class="flex items-start gap-3 mb-5 p-4 rounded-xl border bg-${accentColor}/5 border-${accentColor}/20">
+        <div class="flex items-start gap-3 mb-4 p-4 rounded-xl border bg-${accentColor}/5 border-${accentColor}/20">
             <span class="material-symbols-outlined text-${accentColor} !text-[22px] shrink-0 mt-0.5">${accentIcon}</span>
-            <p class="text-white font-semibold text-sm leading-relaxed">${escapeHtml(summary)}</p>
+            <div>
+                <p class="text-white font-semibold text-sm leading-relaxed">${escapeHtml(summary)}</p>
+                ${va.agreement_detail ? `<p class="text-white/50 text-xs mt-1">${escapeHtml(va.agreement_detail)}</p>` : ''}
+            </div>
         </div>`;
     }
 
-    // ── 2. Why? — plain-English bullet points ───────────────────────────────
-    // reasoning is now a dict with 'bullets' and 'caveat' keys
+    // ── 2. Grad-CAM Heatmap (if available) ──────────────────────────────────
+    if (va.attention_heatmap) {
+        html += `
+        <div class="mb-4">
+            <h5 class="text-white/60 text-xs font-semibold uppercase tracking-widest mb-2">Attention Heatmap</h5>
+            <div class="rounded-xl overflow-hidden border border-white/10">
+                <img src="${va.attention_heatmap}" alt="Grad-CAM attention heatmap" class="w-full h-auto" />
+            </div>
+            <p class="text-white/40 text-[10px] mt-1">Warm areas show where the AI detector focused. Bright regions triggered the strongest detection signals.</p>
+        </div>`;
+    }
+
+    // ── 3. Why? — plain-English bullet points ───────────────────────────────
     const reasoning = aiAnalysis.reasoning;
     const bullets = (reasoning && Array.isArray(reasoning.bullets)) ? reasoning.bullets : [];
     const caveat = reasoning?.caveat || null;
@@ -486,19 +501,51 @@ function renderAIExplanation(result) {
         </div>`;
     }
 
-    // ── 3. Caveat (only for uncertain / split results) ───────────────────────
+    // ── 4. Forensic Evidence Summary (compact) ──────────────────────────────
+    const evidenceItems = [];
+    if (forensic.metadata && forensic.metadata.status !== 'not_scanned') {
+        const metaIcon = forensic.metadata.status === 'clean' ? 'check_circle' : (forensic.metadata.status === 'missing' ? 'warning' : 'error');
+        const metaColor = forensic.metadata.status === 'clean' ? 'accent-success' : (forensic.metadata.status === 'missing' ? 'accent-warning' : 'accent-danger');
+        evidenceItems.push({ icon: metaIcon, color: metaColor, label: 'Metadata', text: forensic.metadata.summary });
+    }
+    if (forensic.watermark && forensic.watermark.status !== 'not_scanned') {
+        const wmColor = forensic.watermark.status === 'detected' ? 'accent-danger' : 'accent-success';
+        evidenceItems.push({ icon: 'fingerprint', color: wmColor, label: 'Watermark', text: forensic.watermark.summary });
+    }
+    if (forensic.c2pa && forensic.c2pa.status !== 'not_scanned') {
+        const c2Color = forensic.c2pa.status === 'ai_confirmed' ? 'accent-danger' : (forensic.c2pa.status === 'authentic' ? 'accent-success' : 'white/50');
+        evidenceItems.push({ icon: 'verified', color: c2Color, label: 'C2PA', text: forensic.c2pa.summary });
+    }
+
+    if (evidenceItems.length > 0) {
+        html += `<div class="mb-4">
+            <h5 class="text-white/60 text-xs font-semibold uppercase tracking-widest mb-2">Forensic Evidence</h5>
+            <div class="space-y-1.5">
+                ${evidenceItems.map(e => `
+                <div class="flex items-start gap-2 p-2 bg-white/[0.03] rounded-lg">
+                    <span class="material-symbols-outlined text-${e.color} !text-[16px] shrink-0 mt-0.5">${e.icon}</span>
+                    <div class="min-w-0">
+                        <span class="text-white/50 text-[10px] font-bold uppercase">${e.label}</span>
+                        <p class="text-white/60 text-xs leading-relaxed">${escapeHtml(e.text)}</p>
+                    </div>
+                </div>`).join('')}
+            </div>
+        </div>`;
+    }
+
+    // ── 5. Caveat (only for uncertain / split results) ───────────────────────
     if (caveat) {
         html += `
-        <div class="mt-4 flex items-start gap-2 p-3 bg-accent-warning/5 border border-accent-warning/20 rounded-xl">
+        <div class="mt-3 flex items-start gap-2 p-3 bg-accent-warning/5 border border-accent-warning/20 rounded-xl">
             <span class="material-symbols-outlined text-accent-warning !text-[18px] shrink-0 mt-0.5">info</span>
             <p class="text-white/60 text-xs leading-relaxed">${escapeHtml(caveat)}</p>
         </div>`;
     }
 
-    // ── 4. Verdict chip at the bottom ────────────────────────────────────────
+    // ── 6. Verdict chip at the bottom ────────────────────────────────────────
     const verdictLabel = cv.verdict_description || (isAI ? 'AI-Generated' : 'Authentic');
     html += `
-    <div class="mt-5 pt-4 border-t border-white/10 flex items-center justify-between">
+    <div class="mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
         <span class="text-white/40 text-xs">Final verdict</span>
         <span class="px-3 py-1 rounded-full text-xs font-bold bg-${accentColor}/15 text-${accentColor} border border-${accentColor}/25">
             ${escapeHtml(verdictLabel)}
@@ -516,46 +563,32 @@ function renderAIExplanation(result) {
 
 /**
  * Render detection models detail in the collapsible panel.
+ * Uses the model_breakdown from XAI analysis for enriched per-model cards.
  */
 function renderModelsDetail(result) {
     const container = document.getElementById('modelsList');
     if (!container) return;
 
     const models = [];
+    const aiAnalysis = result.ai_analysis;
+    const modelBreakdown = aiAnalysis?.visual_analysis?.model_breakdown || [];
 
-    // Statistical Analysis (always runs)
-    if (result.analysis_scores) {
-        models.push({
-            name: 'Statistical Analysis',
-            icon: 'bar_chart',
-            description: 'Color distribution, noise patterns, edge analysis, texture consistency',
-            status: 'Completed',
-            statusColor: 'accent-success'
-        });
-    }
-
-    // ML Prediction
-    if (result.ml_prediction) {
-        models.push({
-            name: 'ML Ensemble (DIRE + NYUAD)',
-            icon: 'model_training',
-            description: `Prediction: ${result.ml_prediction.label || 'unknown'} • Confidence: ${Math.round(result.ml_prediction.confidence || 0)}%`,
-            status: 'Completed',
-            statusColor: 'accent-success'
-        });
-    }
-
-    // Semantic Analysis
-    if (result.semantic_analysis) {
-        const sa = result.semantic_analysis;
-        models.push({
-            name: 'Semantic Plausibility (Groq LLaVA)',
-            icon: 'visibility',
-            description: sa.success
-                ? `Plausibility: ${sa.plausibility_score || 'N/A'}% • ${sa.summary || 'Visual analysis complete'}`
-                : `Error: ${sa.error || 'Analysis failed'}`,
-            status: sa.success ? 'Completed' : 'Error',
-            statusColor: sa.success ? 'accent-success' : 'accent-danger'
+    // Primary: show real model cards from XAI ensemble analysis
+    if (modelBreakdown.length > 0) {
+        modelBreakdown.forEach(m => {
+            const isAI = m.flagged_as_ai;
+            models.push({
+                name: m.name || m.key,
+                icon: isAI ? 'smart_toy' : 'verified_user',
+                description: m.interpretation || m.specialty,
+                detail: `${m.accuracy ? 'Acc: ' + m.accuracy + ' • ' : ''}Score: ${Math.round(m.score)}%`,
+                specialty: m.specialty,
+                how_it_works: m.how_it_works || '',
+                evidence: m.evidence || '',
+                status: isAI ? 'AI Detected' : 'Human',
+                statusColor: isAI ? 'accent-danger' : 'accent-success',
+                score: m.score,
+            });
         });
     }
 
@@ -586,37 +619,53 @@ function renderModelsDetail(result) {
         });
     }
 
-    // XAI Explanation
-    if (result.ai_analysis) {
-        models.push({
-            name: 'XAI Explainer (Ensemble Analysis)',
-            icon: 'smart_toy',
-            description: result.ai_analysis.success
-                ? 'AI-powered visual analysis and explanation generated'
-                : `Error: ${result.ai_analysis.error || 'Analysis unavailable'}`,
-            status: result.ai_analysis.success ? 'Completed' : 'Error',
-            statusColor: result.ai_analysis.success ? 'accent-success' : 'accent-danger'
-        });
-    }
-
     // Update subtitle
     updateElement('modelsSubtitle', `${models.length} model${models.length !== 1 ? 's' : ''} contributed to this analysis`);
 
-    // Render
-    container.innerHTML = models.map(m => `
-        <div class="flex items-start gap-3 p-3 bg-white/5 rounded-xl">
-            <div class="p-2 rounded-lg bg-white/5 shrink-0">
-                <span class="material-symbols-outlined text-white/60 !text-[20px]">${m.icon}</span>
-            </div>
-            <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                    <p class="text-white text-sm font-medium">${escapeHtml(m.name)}</p>
-                    <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-${m.statusColor}/10 text-${m.statusColor}">${m.status}</span>
+    // Render with enriched cards for ML models
+    container.innerHTML = models.map(m => {
+        // Build expanded card for ML models with how_it_works and evidence
+        let extraHTML = '';
+        if (m.how_it_works || m.evidence) {
+            extraHTML = `<div class="mt-2 space-y-1.5">`;
+            if (m.how_it_works) {
+                extraHTML += `<p class="text-white/40 text-xs leading-relaxed"><span class="text-white/50 font-medium">How:</span> ${escapeHtml(m.how_it_works)}</p>`;
+            }
+            if (m.evidence) {
+                extraHTML += `<p class="text-white/40 text-xs leading-relaxed"><span class="text-white/50 font-medium">Evidence:</span> ${escapeHtml(m.evidence)}</p>`;
+            }
+            extraHTML += `</div>`;
+        }
+
+        // Score bar for ML models
+        let scoreBar = '';
+        if (m.score !== undefined) {
+            const barColor = m.score > 50 ? '#FF4A4A' : '#00D991';
+            scoreBar = `
+                <div class="mt-2 w-full bg-black/30 rounded-full h-1.5">
+                    <div class="h-1.5 rounded-full transition-all duration-700" style="width: ${Math.round(m.score)}%; background: ${barColor}"></div>
+                </div>`;
+        }
+
+        return `
+        <div class="flex flex-col gap-1 p-3 bg-white/5 rounded-xl hover:bg-white/[0.07] transition-colors">
+            <div class="flex items-start gap-3">
+                <div class="p-2 rounded-lg bg-white/5 shrink-0">
+                    <span class="material-symbols-outlined text-white/60 !text-[20px]">${m.icon}</span>
                 </div>
-                <p class="text-white/50 text-xs mt-0.5">${escapeHtml(m.description)}</p>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <p class="text-white text-sm font-medium">${escapeHtml(m.name)}</p>
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-${m.statusColor}/10 text-${m.statusColor}">${m.status}</span>
+                    </div>
+                    <p class="text-white/50 text-xs mt-0.5">${escapeHtml(m.description)}</p>
+                    ${m.detail ? `<p class="text-white/40 text-[10px] mt-0.5">${escapeHtml(m.detail)}</p>` : ''}
+                    ${scoreBar}
+                    ${extraHTML}
+                </div>
             </div>
-        </div>
-    `).join('');
+        </div>`;
+    }).join('');
 }
 
 // ============================================================================
