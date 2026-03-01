@@ -341,6 +341,24 @@
                     </div>
                     <!-- Metrics & Graphs Column -->
                     <div class="lg:col-span-5 flex flex-col gap-4">
+                        <!-- AI Explanation Panel (top of column for visibility) -->
+                        <div id="explanationPanel" class="hidden bg-primary-dark/40 border border-white/5 rounded-2xl overflow-hidden">
+                            <button id="explanationToggle" class="w-full px-5 py-3 flex justify-between items-center hover:bg-white/5 transition-colors">
+                                <div class="flex gap-2 items-center">
+                                    <div class="p-1.5 rounded-lg bg-primary/10 text-primary">
+                                        <span class="material-symbols-outlined !text-[20px]">smart_toy</span>
+                                    </div>
+                                    <div class="text-left">
+                                        <h4 class="text-white font-bold text-sm">AI Explanation</h4>
+                                        <p class="text-white/40 text-xs">Why we reached this verdict</p>
+                                    </div>
+                                </div>
+                                <span class="material-symbols-outlined text-white/40 transition-transform" id="explanationChevron">expand_more</span>
+                            </button>
+                            <div id="explanationContent" class="px-4 pb-3">
+                                <div id="explanationText" class="text-white/70 text-sm leading-snug border-t border-white/5 pt-2"></div>
+                            </div>
+                        </div>
                         <!-- Perplexity Chart -->
                         <div class="bg-primary-dark/40 border border-white/5 rounded-2xl p-5 flex-1 flex flex-col">
                             <div class="flex justify-between items-center mb-4">
@@ -462,24 +480,6 @@
                             </div>
                             <div id="patternCategories" class="flex flex-col gap-2 max-h-[200px] overflow-y-auto custom-scrollbar">
                                 <!-- Populated dynamically -->
-                            </div>
-                        </div>
-                        <!-- AI Explanation Panel -->
-                        <div id="explanationPanel" class="hidden bg-primary-dark/40 border border-white/5 rounded-2xl overflow-hidden">
-                            <button id="explanationToggle" class="w-full px-5 py-3 flex justify-between items-center hover:bg-white/5 transition-colors">
-                                <div class="flex gap-2 items-center">
-                                    <div class="p-1.5 rounded-lg bg-primary/10 text-primary">
-                                        <span class="material-symbols-outlined !text-[20px]">smart_toy</span>
-                                    </div>
-                                    <div class="text-left">
-                                        <h4 class="text-white font-bold text-sm">AI Explanation</h4>
-                                        <p class="text-white/40 text-xs">Detailed analysis breakdown</p>
-                                    </div>
-                                </div>
-                                <span class="material-symbols-outlined text-white/40 transition-transform" id="explanationChevron">expand_more</span>
-                            </button>
-                            <div id="explanationContent" class="hidden px-5 pb-4">
-                                <div id="explanationText" class="text-white/70 text-sm leading-relaxed whitespace-pre-line border-t border-white/5 pt-3"></div>
                             </div>
                         </div>
                     </div>

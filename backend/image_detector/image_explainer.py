@@ -1,14 +1,16 @@
 """
 VisioNova Image Explainer — XAI (Explainable AI) System
 
-Replaces the old Groq Vision-based explainer with a fully offline system that
-extracts real evidence from the detection models themselves.
+Fully offline explanation engine that extracts real evidence from pretrained
+detection models to explain WHY an image was classified as AI or human.
 
-Two-layer explanation approach:
+Three-layer explanation approach:
 1. Ensemble Disagreement Analysis — reads per-model scores, maps each model
    to its specialty, and generates structured, evidence-based findings.
-2. Grad-CAM Attention Heatmaps — extracts attention maps from ViT/DINOv2
+2. Grad-CAM Attention Heatmaps — extracts attention maps from ViT/Swin
    models to show WHERE in the image AI artifacts were detected.
+3. Forensic Evidence Summary — combines metadata, watermark, C2PA, and
+   statistical forensics into a single "evidence dossier".
 
 No external API calls needed. Works 100% offline.
 """
@@ -36,8 +38,11 @@ MODEL_SPECIALTIES = {
         'accuracy': '99.23%',
         'specialty': 'High-precision general AI image detection using semantic visual features',
         'detects': 'Broad AI generators including DALL-E, Midjourney, Stable Diffusion',
+        'how_it_works': 'Analyzes how shapes, textures, and colors relate to each other — AI generators create statistically unusual texture-edge correlations that this model is trained to spot.',
         'ai_explanation': 'Semantic visual features match patterns from known AI image generators',
         'human_explanation': 'Semantic features are consistent with natural photography',
+        'evidence_ai': 'The way textures blend at edges, the distribution of colors, and the overall "look" of the image match the statistical fingerprint of AI-generated content.',
+        'evidence_human': 'Natural texture gradients, realistic edge transitions, and organic color distribution are all consistent with real camera capture.',
     },
     'siglip_dinov2': {
         'name': 'Bombek1 SigLIP2+DINOv2',
@@ -45,8 +50,11 @@ MODEL_SPECIALTIES = {
         'accuracy': '99.97% AUC',
         'specialty': 'Best overall detector — combines semantic + self-supervised features',
         'detects': '25+ generators: Flux, MJ v6, DALL-E 3, SDXL, GPT-Image-1',
+        'how_it_works': 'Cross-references what the image depicts (semantic meaning) with how it was physically rendered (pixel-level structure). Genuine photos have consistent meaning-structure pairs; AI images often have subtle mismatches.',
         'ai_explanation': 'Both semantic (SigLIP2) and structural (DINOv2) features indicate AI origin',
         'human_explanation': 'Both semantic and structural features match authentic photographs',
+        'evidence_ai': 'The image meaning and its low-level pixel structure both independently point to AI generation — this dual-signal is the strongest indicator available.',
+        'evidence_human': 'Both the visual meaning and the pixel-level structure are mutually consistent, matching what we see in authentic camera-captured content.',
     },
     'deepfake': {
         'name': 'dima806 ViT',
@@ -54,8 +62,11 @@ MODEL_SPECIALTIES = {
         'accuracy': '98.25%',
         'specialty': 'General deepfake and AI image detection with strong community validation',
         'detects': 'General AI-generated images and face manipulations',
+        'how_it_works': 'Examines the overall layout and global composition — AI images have subtly regular geometric patterns that cameras never produce, because generators build images from mathematical noise rather than sensor data.',
         'ai_explanation': 'Global compositional patterns detected by Vision Transformer indicate AI generation',
         'human_explanation': 'Global image composition is consistent with natural capture',
+        'evidence_ai': 'The global composition has subtle, regular patterns that cameras don\'t produce — a hallmark of mathematical image generation.',
+        'evidence_human': 'The overall composition, layout, and global structure are consistent with natural camera capture — no synthetic patterns detected.',
     },
     'sdxl': {
         'name': 'Organika SDXL-Detector',
@@ -63,26 +74,11 @@ MODEL_SPECIALTIES = {
         'accuracy': '98.1%',
         'specialty': 'Specialist for modern diffusion models (SDXL, Flux, SD3)',
         'detects': 'Stable Diffusion XL, Flux, and other modern diffusion model outputs',
+        'how_it_works': 'Trained specifically on Stable Diffusion / Flux outputs — recognizes the unique pixel-level "fingerprint" these diffusion models leave behind in the denoising process.',
         'ai_explanation': 'Patterns match known Stable Diffusion / Flux generator fingerprints',
         'human_explanation': 'No diffusion model fingerprints detected',
-    },
-    'dinov2': {
-        'name': 'WpythonW DINOv2',
-        'architecture': 'DINOv2 (Self-Supervised ViT)',
-        'accuracy': 'Degradation-resilient',
-        'specialty': 'Resilient to compression and social media processing',
-        'detects': 'AI images even after heavy JPEG compression, resizing, or social media upload',
-        'ai_explanation': 'AI artifacts persist even through image degradation — strong structural signal',
-        'human_explanation': 'Structural features remain consistent with genuine images under compression',
-    },
-    'frequency': {
-        'name': 'Frequency Analyzer',
-        'architecture': 'FFT/DCT Analysis',
-        'accuracy': 'Supplementary',
-        'specialty': 'Detects GAN-specific spectral fingerprints in the frequency domain',
-        'detects': 'GAN upsampling artifacts, periodic patterns from transposed convolutions',
-        'ai_explanation': 'Frequency domain shows periodic patterns typical of GAN upsampling',
-        'human_explanation': 'Frequency spectrum appears natural',
+        'evidence_ai': 'Pixel-level fingerprints match those left behind by diffusion models (Stable Diffusion, Flux, SDXL) during their denoising generation process.',
+        'evidence_human': 'No diffusion-model fingerprints were found — the pixel patterns don\'t match any known Stable Diffusion, Flux, or SDXL output characteristics.',
     },
 }
 
@@ -91,11 +87,13 @@ class ImageExplainer:
     """
     Generates evidence-based explanations for image detection results.
 
-    Uses two complementary approaches:
+    Uses three complementary approaches:
     1. Ensemble Disagreement Analysis — structures per-model scores into
        human-readable findings with model-specialty context.
     2. Grad-CAM Attention Heatmaps — optional visual overlay showing
        which image regions triggered the AI detection.
+    3. Forensic Evidence Summary — metadata, watermarks, C2PA, and
+       statistical comparisons in a single "evidence dossier".
     """
 
     def __init__(self):
@@ -109,20 +107,21 @@ class ImageExplainer:
         except ImportError:
             logger.info("ImageExplainer initialized (Grad-CAM not available — install pytorch-grad-cam for heatmaps)")
 
-    def analyze_image(self, image_data: bytes, detection_result: Dict) -> Dict[str, Any]:
+    def analyze_image(self, image_data: bytes, detection_result: Dict,
+                      model_registry: Dict = None) -> Dict[str, Any]:
         """
         Perform XAI analysis of an image detection result.
 
         Combines ensemble disagreement analysis with optional Grad-CAM heatmaps
-        to produce a complete, evidence-based explanation.
+        and forensic evidence to produce a complete, evidence-based explanation.
 
         Args:
             image_data: Raw image bytes
             detection_result: Results from the ML ensemble detector
+            model_registry: Optional dict of loaded model objects for Grad-CAM
 
         Returns:
-            dict with visual_analysis, reasoning, combined_verdict — same shape
-            as the old Groq-based explainer for frontend compatibility.
+            dict with visual_analysis, reasoning, combined_verdict, forensic_evidence
         """
         try:
             # Layer 1: Ensemble Disagreement Analysis (always works, no deps)
@@ -130,8 +129,11 @@ class ImageExplainer:
 
             # Layer 2: Grad-CAM Heatmap (optional, needs pytorch-grad-cam)
             heatmap_b64 = None
-            if self.gradcam_available:
-                heatmap_b64 = self._generate_gradcam_heatmap(image_data, detection_result)
+            if self.gradcam_available and model_registry:
+                heatmap_b64 = self._generate_gradcam_heatmap(image_data, detection_result, model_registry)
+
+            # Layer 3: Forensic Evidence Summary
+            forensic_evidence = self._build_forensic_evidence(detection_result)
 
             # Build the response in the same shape the frontend expects
             visual_analysis = {
@@ -149,13 +151,14 @@ class ImageExplainer:
                 'success': True,
                 'visual_analysis': visual_analysis,
                 'reasoning': ensemble_explanation['reasoning'],
+                'forensic_evidence': forensic_evidence,
                 'combined_verdict': {
                     'combined_probability': detection_result.get('ai_probability', 50),
                     'verdict': detection_result.get('verdict', 'UNCERTAIN'),
                     'verdict_description': ensemble_explanation['verdict_description'],
                     'analysis_agreement': ensemble_explanation['agreement_level'],
                 },
-                'explanation_method': 'XAI (Ensemble Disagreement Analysis' + (' + Grad-CAM)' if heatmap_b64 else ')'),
+                'explanation_method': 'XAI (Ensemble Analysis' + (' + Grad-CAM)' if heatmap_b64 else ')'),
             }
 
         except Exception as e:
@@ -164,7 +167,8 @@ class ImageExplainer:
                 'success': False,
                 'error': str(e),
                 'visual_analysis': None,
-                'reasoning': f'Explanation generation failed: {str(e)}',
+                'reasoning': {'bullets': [f'Explanation generation failed: {str(e)}'], 'caveat': None},
+                'forensic_evidence': None,
                 'combined_verdict': {
                     'combined_probability': detection_result.get('ai_probability', 50),
                     'verdict': detection_result.get('verdict', 'UNCERTAIN'),
@@ -223,6 +227,7 @@ class ImageExplainer:
 
             # Pick the right explanation based on whether model thinks AI or not
             interpretation = specialty.get('ai_explanation', 'AI patterns detected') if is_flagging else specialty.get('human_explanation', 'Appears authentic')
+            evidence = specialty.get('evidence_ai') if is_flagging else specialty.get('evidence_human')
 
             model_breakdown.append({
                 'name': specialty.get('name', model_key),
@@ -231,7 +236,9 @@ class ImageExplainer:
                 'accuracy': specialty.get('accuracy', 'N/A'),
                 'specialty': specialty.get('specialty', 'General detection'),
                 'detects': specialty.get('detects', 'AI-generated images'),
+                'how_it_works': specialty.get('how_it_works', ''),
                 'interpretation': interpretation,
+                'evidence': evidence,
                 'flagged_as_ai': is_flagging,
             })
 
@@ -326,10 +333,10 @@ class ImageExplainer:
         for model in model_breakdown:
             if model['key'] == 'sdxl' and model['flagged_as_ai'] and model['score'] > 80:
                 anomalies.append(f"SDXL-Detector ({model['score']}%) — image matches Stable Diffusion / Flux generator patterns")
-            if model['key'] == 'dinov2' and model['flagged_as_ai'] and model['score'] > 80:
-                anomalies.append(f"DINOv2 ({model['score']}%) — AI signal persists even through image degradation")
             if model['key'] == 'siglip_dinov2' and model['flagged_as_ai'] and model['score'] > 95:
                 anomalies.append(f"SigLIP2+DINOv2 ({model['score']}%) — strongest dual-encoder model confirms AI origin")
+            if model['key'] == 'ateeqq' and model['flagged_as_ai'] and model['score'] > 95:
+                anomalies.append(f"Ateeqq SigLIP2 ({model['score']}%) — highest-precision model strongly detects AI")
 
         # Check for outlier models (one model strongly disagrees with the rest)
         if len(model_breakdown) >= 3:
@@ -344,13 +351,13 @@ class ImageExplainer:
                         anomalies.append(f"{model['name']} scores much lower ({model['score']:.0f}% vs avg {mean_score:.0f}%) — this model's specialty may not match the image type")
 
         # Check watermark findings if available
-        watermark = detection_result.get('watermark', {})
+        watermark = detection_result.get('individual_results', {}).get('watermark', {})
         if watermark.get('watermark_detected'):
             source = watermark.get('source', watermark.get('detected_watermark', 'Unknown'))
             anomalies.append(f'Invisible AI watermark detected (source: {source})')
 
         # Check C2PA
-        c2pa = detection_result.get('content_credentials', {})
+        c2pa = detection_result.get('individual_results', {}).get('c2pa', {})
         if c2pa.get('is_ai_generated'):
             generator = c2pa.get('ai_generator', 'Unknown')
             anomalies.append(f'C2PA Content Credentials confirm AI generation by {generator}')
@@ -377,14 +384,6 @@ class ImageExplainer:
         'sdxl': {
             'ai': 'The pixel-level fingerprints match those left behind by Stable Diffusion, Flux, or similar diffusion models.',
             'human': 'No diffusion-model fingerprints (Stable Diffusion, Flux, SDXL) were found in the image.',
-        },
-        'dinov2': {
-            'ai': 'Structural AI artifacts were detected that persist even after compression or social media processing — a strong indicator.',
-            'human': 'The image structure remains consistent with genuine photos even under compression analysis.',
-        },
-        'frequency': {
-            'ai': 'The frequency domain of the image shows periodic patterns created by upsampling algorithms, which are invisible to the eye but common in GAN-generated images.',
-            'human': 'The frequency spectrum of the image looks natural, without the periodic noise typically introduced by AI generation.',
         },
     }
 
@@ -498,44 +497,222 @@ class ImageExplainer:
 
     # ─── Layer 2: Grad-CAM Attention Heatmaps ────────────────────────────────
 
-    def _generate_gradcam_heatmap(self, image_data: bytes, detection_result: Dict) -> Optional[str]:
+    def _generate_gradcam_heatmap(self, image_data: bytes, detection_result: Dict,
+                                   model_registry: Dict = None) -> Optional[str]:
         """
-        Generate a Grad-CAM attention heatmap from the detection models.
+        Generate a Grad-CAM attention heatmap from a loaded detection model.
 
-        Extracts attention weights from the loaded ViT model and produces
-        a heatmap overlay showing which image regions triggered the detection.
+        Extracts attention weights from either ViT (deepfake) or Swin (SDXL)
+        model and produces a heatmap overlay showing which image regions
+        triggered the AI detection.
 
         Args:
             image_data: Raw image bytes
-            detection_result: Results from ensemble detector (used to find loaded models)
+            detection_result: Results from ensemble detector
+            model_registry: Dict mapping model keys to loaded model objects
 
         Returns:
             Base64-encoded heatmap image, or None if generation fails
         """
+        if not model_registry:
+            return None
+
         try:
             from pytorch_grad_cam import GradCAM
             from pytorch_grad_cam.utils.image import show_cam_on_image
+            from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
             import torch
             from torchvision import transforms
 
-            # Try to get a loaded model from the ensemble detector's ML models
-            # We need access to the actual PyTorch model and its target layer
-            individual = detection_result.get('individual_results', {})
+            # Try models in order of preference for Grad-CAM compatibility
+            target_model = None
+            target_layer = None
+            processor = None
 
-            # Prefer deepfake (ViT) model as it's the most standard architecture
-            # for Grad-CAM. Fall back to others.
-            # NOTE: For Grad-CAM to work, we need direct access to the model object.
-            # This may not be available from the detection_result dict alone.
-            # In that case, we return None and let the explanation work without a heatmap.
+            # 1. Try deepfake (ViT) — standard architecture for Grad-CAM
+            deepfake_det = model_registry.get('deepfake')
+            if deepfake_det and hasattr(deepfake_det, 'model') and deepfake_det.model is not None:
+                model = deepfake_det.model
+                if hasattr(model, 'vit') and hasattr(model.vit, 'encoder'):
+                    target_layer = model.vit.encoder.layer[-1].layernorm_after
+                    target_model = model
+                    processor = getattr(deepfake_det, 'processor', None)
 
-            logger.debug("Grad-CAM heatmap generation attempted — model access not yet integrated")
-            return None  # Placeholder: requires model reference integration
+            # 2. Try SDXL (Swin) as fallback
+            if target_model is None:
+                sdxl_det = model_registry.get('sdxl')
+                if sdxl_det and hasattr(sdxl_det, 'model') and sdxl_det.model is not None:
+                    model = sdxl_det.model
+                    if hasattr(model, 'swin') and hasattr(model.swin, 'layernorm'):
+                        target_layer = model.swin.layernorm
+                        target_model = model
+                        processor = getattr(sdxl_det, 'processor', None)
+
+            if target_model is None or target_layer is None:
+                logger.debug("Grad-CAM: No compatible model found in registry")
+                return None
+
+            # Prepare image
+            image = Image.open(io.BytesIO(image_data)).convert('RGB')
+
+            # Process image for model input
+            if processor:
+                inputs = processor(images=image, return_tensors="pt")
+                input_tensor = inputs['pixel_values']
+            else:
+                transform = transforms.Compose([
+                    transforms.Resize((224, 224)),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                         std=[0.229, 0.224, 0.225])
+                ])
+                input_tensor = transform(image).unsqueeze(0)
+
+            # Move to same device as model
+            device = next(target_model.parameters()).device
+            input_tensor = input_tensor.to(device)
+
+            # Run Grad-CAM — target the highest-scoring class
+            cam = GradCAM(model=target_model, target_layers=[target_layer])
+            grayscale_cam = cam(input_tensor=input_tensor, targets=None)
+            grayscale_cam = grayscale_cam[0, :]  # First image in batch
+
+            # Resize cam to match and create overlay
+            cam_h, cam_w = grayscale_cam.shape
+            img_resized = np.array(image.resize((cam_w, cam_h))).astype(np.float32) / 255.0
+            visualization = show_cam_on_image(img_resized, grayscale_cam, use_rgb=True)
+
+            # Convert to base64
+            vis_image = Image.fromarray(visualization)
+            buffer = io.BytesIO()
+            vis_image.save(buffer, format='JPEG', quality=85)
+            buffer.seek(0)
+            heatmap_b64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+
+            logger.info("Grad-CAM heatmap generated successfully")
+            return f"data:image/jpeg;base64,{heatmap_b64}"
 
         except ImportError:
+            logger.debug("pytorch-grad-cam not installed")
             return None
         except Exception as e:
             logger.warning(f"Grad-CAM heatmap generation failed: {e}")
             return None
+
+    # ─── Layer 3: Forensic Evidence Summary ──────────────────────────────────
+
+    def _build_forensic_evidence(self, detection_result: Dict) -> Dict[str, Any]:
+        """
+        Build a forensic evidence summary from all non-ML detection signals.
+        Summarizes metadata, watermark, C2PA, and statistical findings into
+        a structured object the frontend can display as an "evidence dossier".
+        """
+        individual = detection_result.get('individual_results', {})
+        is_ai = detection_result.get('ai_probability', 50) > 50
+
+        return {
+            'metadata': self._summarize_metadata(individual.get('metadata', {})),
+            'watermark': self._summarize_watermark(individual.get('watermark', {})),
+            'c2pa': self._summarize_c2pa(individual.get('c2pa', {})),
+            'ela': self._summarize_ela(individual.get('ela', {})),
+            'comparison': self._build_comparison(is_ai),
+        }
+
+    def _summarize_metadata(self, meta: Dict) -> Dict:
+        if not meta:
+            return {'status': 'not_scanned', 'summary': 'Metadata analysis was not performed.'}
+
+        findings = []
+        if meta.get('has_exif'):
+            camera = meta.get('camera_info', {})
+            if camera.get('make'):
+                findings.append(f"Camera: {camera['make']} {camera.get('model', '')}")
+            if meta.get('has_gps'):
+                findings.append("GPS coordinates present")
+            if meta.get('timestamp'):
+                findings.append(f"Created: {meta['timestamp']}")
+        else:
+            findings.append("No EXIF metadata — AI-generated images typically have no camera data")
+
+        if meta.get('ai_software_detected'):
+            findings.append(f"AI software detected: {meta.get('software_detected', 'Unknown')}")
+        if meta.get('screenshot_detected'):
+            findings.append("This appears to be a screenshot")
+
+        return {
+            'status': 'ai_detected' if meta.get('ai_software_detected') else ('clean' if meta.get('has_exif') else 'missing'),
+            'summary': ' • '.join(findings) if findings else 'No notable metadata findings.',
+            'findings': findings,
+        }
+
+    def _summarize_watermark(self, wm: Dict) -> Dict:
+        if not wm:
+            return {'status': 'not_scanned', 'summary': 'Watermark scan was not performed.'}
+
+        if wm.get('watermark_detected'):
+            source = wm.get('source', wm.get('detected_watermark', 'Unknown'))
+            conf = wm.get('confidence', 0)
+            return {
+                'status': 'detected',
+                'summary': f"AI watermark detected from {source} ({conf}% confidence)",
+                'source': source,
+                'confidence': conf,
+            }
+        return {
+            'status': 'clear',
+            'summary': f"No AI watermarks found (scanned with {wm.get('methods_count', 'multiple')} methods)",
+        }
+
+    def _summarize_c2pa(self, c2pa: Dict) -> Dict:
+        if not c2pa:
+            return {'status': 'not_scanned', 'summary': 'C2PA analysis was not performed.'}
+
+        if c2pa.get('has_content_credentials'):
+            if c2pa.get('is_ai_generated'):
+                return {
+                    'status': 'ai_confirmed',
+                    'summary': f"C2PA confirms AI generation by {c2pa.get('ai_generator', 'Unknown')}",
+                    'generator': c2pa.get('ai_generator'),
+                }
+            return {
+                'status': 'authentic',
+                'summary': 'Content Credentials verify authentic provenance',
+            }
+        return {'status': 'absent', 'summary': 'No C2PA Content Credentials found in image.'}
+
+    def _summarize_ela(self, ela: Dict) -> Dict:
+        if not ela:
+            return {'status': 'not_scanned', 'summary': 'ELA analysis was not performed.'}
+
+        score = ela.get('manipulation_score', 0)
+        if score > 70:
+            return {'status': 'suspicious', 'summary': f'High manipulation indicators (score: {score}/100)'}
+        elif score > 40:
+            return {'status': 'moderate', 'summary': f'Some inconsistencies detected (score: {score}/100)'}
+        return {'status': 'clean', 'summary': f'Error levels appear consistent (score: {score}/100)'}
+
+    def _build_comparison(self, is_ai: bool) -> Dict:
+        """What would a real/AI photo look like? comparison section."""
+        if is_ai:
+            return {
+                'title': 'What makes this look AI-generated?',
+                'points': [
+                    {'label': 'Noise patterns', 'finding': 'Unnaturally uniform — real photos have sensor noise that varies across the image'},
+                    {'label': 'EXIF metadata', 'finding': 'Missing or synthetic — real photos contain camera make, model, GPS, exposure settings'},
+                    {'label': 'Texture transitions', 'finding': 'Statistically unusual edge-texture correlations that don\'t occur in optical capture'},
+                    {'label': 'Global composition', 'finding': 'Subtle regularities in layout that mathematical generators produce'},
+                ],
+            }
+        else:
+            return {
+                'title': 'What makes this look authentic?',
+                'points': [
+                    {'label': 'Noise patterns', 'finding': 'Natural sensor noise with expected spatial variation'},
+                    {'label': 'EXIF metadata', 'finding': 'Camera data present and consistent with the claimed source'},
+                    {'label': 'Texture transitions', 'finding': 'Natural gradient patterns where surfaces meet edges'},
+                    {'label': 'Global composition', 'finding': 'No synthetic regularities detected — appears optically captured'},
+                ],
+            }
 
 
 def create_image_explainer() -> ImageExplainer:
