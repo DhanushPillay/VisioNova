@@ -133,7 +133,7 @@ def main():
     print(f"RESULTS: {successes}/{len(MODELS)} models downloaded successfully")
     
     if failures:
-        print(f"\n⚠️  {len(failures)} model(s) failed:")
+        print(f"\n[WARN] {len(failures)} model(s) failed:")
         for name, error in failures:
             print(f"  - {name}: {error}")
         print("\nYou can re-run this script to retry failed downloads.")
