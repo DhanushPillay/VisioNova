@@ -34,7 +34,7 @@ except ImportError:
 
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
-app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB max upload
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max upload (supports huge RAW/TIFF images)
 CORS(app)  # Enable CORS for frontend requests
 
 # Initialize rate limiter
@@ -97,6 +97,7 @@ if VIDEO_DETECTOR_AVAILABLE:
 
 # File upload limits
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_IMAGE_FILE_SIZE = 500 * 1024 * 1024  # 500MB for images (handles RAW/TIFF/large PNG)
 MAX_AUDIO_FILE_SIZE = 200 * 1024 * 1024  # 200MB for audio (supports long recordings)
 MAX_VIDEO_FILE_SIZE = 50 * 1024 * 1024  # 50MB for video
 ALLOWED_EXTENSIONS = {'.pdf', '.docx', '.txt', '.doc'}
@@ -292,7 +293,6 @@ def health_check():
             'detect_image': '/api/detect-image (POST)',
             'detect_image_fast': '/api/detect-image/fast (POST)',
             'detect_image_ensemble': '/api/detect-image/ensemble (POST)',
-            'detect_audio': '/api/detect-audio (POST)',
             'feedback': '/api/fact-check/feedback (POST)'
         }
     })
@@ -710,17 +710,22 @@ def detect_ai_image():
                 'error_code': 'INVALID_IMAGE'
             }), 400
         
-        # Check file size (max 50MB for images)
-        max_image_size = 50 * 1024 * 1024
-        if len(image_bytes) > max_image_size:
+        # Check file size
+        if len(image_bytes) > MAX_IMAGE_FILE_SIZE:
             return jsonify({
                 'success': False,
-                'error': f'Image too large (max {max_image_size // 1024 // 1024}MB)',
+                'error': f'Image too large (max {MAX_IMAGE_FILE_SIZE // 1024 // 1024}MB)',
                 'error_code': 'IMAGE_TOO_LARGE'
             }), 400
-        
+
         # Run AI detection
-        detection_result = image_detector.detect(image_bytes, filename)
+        if ensemble_detector is None:
+            return jsonify({
+                'success': False,
+                'error': 'Image detector not available',
+                'error_code': 'DETECTOR_UNAVAILABLE'
+            }), 503
+        detection_result = ensemble_detector.detect(image_bytes, filename)
         
         if not detection_result.get('success', False):
             return jsonify(detection_result), 400
@@ -851,14 +856,13 @@ def detect_ai_image_ensemble():
             }), 400
         
         # Check file size
-        max_image_size = 50 * 1024 * 1024
-        if len(image_bytes) > max_image_size:
+        if len(image_bytes) > MAX_IMAGE_FILE_SIZE:
             return jsonify({
                 'success': False,
-                'error': f'Image too large (max {max_image_size // 1024 // 1024}MB)',
+                'error': f'Image too large (max {MAX_IMAGE_FILE_SIZE // 1024 // 1024}MB)',
                 'error_code': 'IMAGE_TOO_LARGE'
             }), 400
-        
+
         # Initialize ensemble detector with ML models if requested
         if ensemble_detector is None or (load_ml_models and not hasattr(ensemble_detector, '_ml_loaded')):
             try:
@@ -956,14 +960,13 @@ def detect_ai_image_fast():
             }), 400
         
         # Check file size
-        max_image_size = 50 * 1024 * 1024
-        if len(image_bytes) > max_image_size:
+        if len(image_bytes) > MAX_IMAGE_FILE_SIZE:
             return jsonify({
                 'success': False,
-                'error': f'Image too large (max {max_image_size // 1024 // 1024}MB)',
+                'error': f'Image too large (max {MAX_IMAGE_FILE_SIZE // 1024 // 1024}MB)',
                 'error_code': 'IMAGE_TOO_LARGE'
             }), 400
-        
+
         # Initialize fast detector if needed
         if fast_detector is None:
             from image_detector import FastCascadeDetector
