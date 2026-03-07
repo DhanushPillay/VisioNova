@@ -397,6 +397,15 @@
                         let inputData = VisioNovaStorage.getFile(mediaType);
                         logDebug(`Input data for ${mediaType}:`, inputData);
 
+                        // For images, data is stored in IndexedDB (not sessionStorage) due to file size
+                        if (mediaType === 'image' && (!inputData || !inputData.data)) {
+                            const imageFromDB = await VisioNovaStorage.getImageFile();
+                            if (imageFromDB && imageFromDB.data) {
+                                inputData = imageFromDB;
+                                logDebug('Image data retrieved from IndexedDB:', inputData.fileName);
+                            }
+                        }
+
                         // For audio, data is stored in IndexedDB (not sessionStorage) due to file size
                         if (mediaType === 'audio' && (!inputData || !inputData.data)) {
                             const audioFromDB = await VisioNovaStorage.getAudioFile();
