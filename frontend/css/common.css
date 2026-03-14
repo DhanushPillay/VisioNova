@@ -5,33 +5,43 @@
    ============================================ */
 
 :root {
-    /* Colors - Dark Mode (Default) */
-    --color-primary: #3A8DFF;
-    --color-primary-rgb: 58, 141, 255;
+    /* ── Forensic Intelligence Palette (v3.0) ── */
+    --color-primary: #47E5BC;
+    --color-primary-rgb: 71, 229, 188;
 
-    --color-bg-main: #0F121A;
-    --color-bg-surface: #0D1B2A;
-    --color-bg-card: #1E2338;
-    --color-bg-panel: #161B2E;
+    /* Backgrounds */
+    --color-bg-main: #08101E;
+    --color-bg-surface: #0C1628;
+    --color-bg-card: #101D30;
+    --color-bg-panel: #152238;
 
-    --color-text-main: #ffffff;
-    --color-text-muted: #94A3B8;
-    --color-text-dim: #64748B;
+    /* Text */
+    --color-text-main: #F0F4FA;
+    --color-text-muted: #8899B4;
+    --color-text-dim: #4A5A72;
 
-    --color-border: #1E2338;
-    --color-border-hover: #2A3450;
+    /* Borders */
+    --color-border: rgba(255, 255, 255, 0.07);
+    --color-border-hover: rgba(255, 255, 255, 0.14);
 
-    --color-accent-success: #00D991;
-    --color-accent-warning: #FFB74A;
-    --color-accent-danger: #FF4A4A;
+    /* Semantic Accent Colors */
+    --color-accent-success: #47E5BC;   /* authentic / verified */
+    --color-accent-warning: #FFAA44;   /* suspicious */
+    --color-accent-danger: #FF4A5E;    /* fake / manipulated */
 
-    /* UI Elements */
-    --header-bg: rgba(13, 27, 42, 0.9);
-    --sidebar-bg: #0D1B2A;
+    /* Legacy aliases for backwards compatibility */
+    --color-authentic: #47E5BC;
+    --color-suspicious: #FFAA44;
+    --color-danger: #FF4A5E;
+    --color-brand: #4B8EF5;
+
+    /* UI Shell */
+    --header-bg: rgba(12, 22, 40, 0.95);
+    --sidebar-bg: #0C1628;
 
     /* Shadows */
-    --shadow-card: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
-    --shadow-glow: 0 0 20px rgba(58, 141, 255, 0.3);
+    --shadow-card: 0 8px 32px -8px rgba(0, 0, 0, 0.6);
+    --shadow-glow: 0 0 20px rgba(71, 229, 188, 0.15);
 }
 
 /* Light Mode Overrides */
@@ -67,6 +77,20 @@ body {
     background-color: var(--color-bg-main);
     color: var(--color-text-main);
     transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Ensure v-* Tailwind vars resolve correctly */
+:root {
+    --tw-color-v-bg: #08101E;
+    --tw-color-v-surface: #0C1628;
+    --tw-color-v-panel: #101D30;
+    --tw-color-v-authentic: #47E5BC;
+    --tw-color-v-suspicious: #FFAA44;
+    --tw-color-v-danger: #FF4A5E;
+    --tw-color-v-brand: #4B8EF5;
+    --tw-color-v-text-main: #F0F4FA;
+    --tw-color-v-text-muted: #8899B4;
+    --tw-color-v-border: rgba(255,255,255,0.07);
 }
 
 /* Smooth theme transitions */
