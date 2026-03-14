@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" class="dark">
 
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>VisioNova - Analysis Dashboard</title>
+    <title>VisioNova - Telemetry Processing</title>
     <!-- Blocking theme script to prevent FOUC -->
     <script>
         (function () {
@@ -13,14 +13,8 @@
             document.documentElement.classList.add(theme);
         })();
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap"
-        rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@300,0..1&display=swap" rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script id="tailwind-config">
         tailwind.config = {
@@ -28,141 +22,188 @@
             theme: {
                 extend: {
                     colors: {
-                        "primary": "#3A8DFF",
-                        "accent-success": "#00D991",
-                        "accent-warning": "#FFB74A",
-                        "accent-danger": "#FF4A4A",
-                        "background-light": "#F5F7FA",
-                        "background-dark": "#0F121A",
-                        "surface-dark": "#0D1B2A",
-                        "panel-dark": "#161B2E",
-                        "card-dark": "#1E2338",
+                        "v-bg": "#0A0F1A", 
+                        "v-surface": "#0F1626", 
+                        "v-panel": "#141C2F", 
+                        "v-border": "rgba(255, 255, 255, 0.08)",
+                        "v-text-main": "#F8FAFC",
+                        "v-text-muted": "#94A3B8",
+                        "v-authentic": "#64FFDA", 
+                        "v-suspicious": "#FFB74D", 
+                        "v-brand": "#3B82F6",
+                        "v-danger": "#FF4A4A",
+                        // Mappings for JS compatibility
+                        "accent-blue": "#3B82F6",
+                        "accent-green": "#64FFDA"
                     },
                     fontFamily: {
-                        "display": ["Inter", "sans-serif"],
                         "sans": ["Inter", "sans-serif"],
+                        "mono": ["Roboto Mono", "monospace"],
                     },
-                    borderRadius: { "DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px" },
                     boxShadow: {
-                        'glow-blue': '0 0 15px rgba(58, 141, 255, 0.4)',
-                        'glow-green': '0 0 15px rgba(0, 217, 145, 0.3)',
+                        'panel': '0 4px 6px -1px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
                     }
                 },
             },
         }
     </script>
+    
+    <style>
+        /* Base system overrides */
+        body { background-color: theme('colors.v-bg'); color: theme('colors.v-text-main'); letter-spacing: -0.01em; }
+        .light body { background-color: #F8FAFC; color: #0F172A; }
+        
+        .panel {
+            background-color: theme('colors.v-panel');
+            border: 1px solid theme('colors.v-border');
+            box-shadow: theme('boxShadow.panel');
+        }
+        
+        .structural-grid {
+            background-image: linear-gradient(theme('colors.v-border') 1px, transparent 1px),
+                              linear-gradient(90deg, theme('colors.v-border') 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.15;
+        }
+
+        .data-label { font-family: theme('fontFamily.mono'); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: theme('colors.v-text-muted'); }
+        
+        /* Retheme Javascript Injected Dynamic Elements */
+        #analysisSteps [data-step] .progress-track {
+            border-radius: 0 !important;
+            background-color: theme('colors.v-bg') !important;
+            border: 1px solid theme('colors.v-border') !important;
+            height: 12px !important;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5) !important;
+        }
+        #analysisSteps [data-step] .step-bar {
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            border-right: 2px solid theme('colors.v-bg') !important;
+            background-image: linear-gradient(90deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent);
+            background-size: 20px 20px;
+            animation: move-bg 1s linear infinite;
+        }
+        
+        @keyframes move-bg {
+            0% { background-position: 0 0; }
+            100% { background-position: 20px 0; }
+        }
+
+        /* Processing Colors (Blue) -> brand */
+        #analysisSteps [data-step] .step-status.text-accent-blue { color: theme('colors.v-brand') !important; }
+        #analysisSteps [data-step] .step-bar.bg-accent-blue { background-color: theme('colors.v-brand') !important; }
+
+        /* Complete Colors (Green) -> authentic */
+        #analysisSteps [data-step] .step-status.text-accent-green { color: theme('colors.v-authentic') !important; }
+        #analysisSteps [data-step] .step-bar.bg-accent-green { 
+            background-color: theme('colors.v-authentic') !important; 
+            animation: none !important;
+            background-image: none !important;
+        }
+
+        #analysisSteps [data-step] .step-name {
+            font-family: theme('fontFamily.mono') !important;
+            font-size: 0.65rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.1em !important;
+            color: #E2E8F0 !important;
+        }
+        #analysisSteps [data-step] .step-status {
+            font-size: 0.65rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.1em !important;
+        }
+    </style>
+
     <link rel="stylesheet" href="../css/common.css">
-    <link rel="stylesheet" href="../css/dashboard.css">
     <!-- Storage Utilities - must load before inline scripts -->
     <script src="../js/storage-utils.js"></script>
     <script src="../js/theme-toggle.js"></script>
+    <script src="../js/layout.js"></script>
 </head>
 
-<body
-    class="relative flex h-screen w-full flex-col bg-background-dark text-white overflow-hidden selection:bg-primary selection:text-white">
-    <div class="fixed inset-0 z-0 pointer-events-none">
-        <div
-            class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay">
-        </div>
-        <div class="absolute inset-0 bg-hero-gradient opacity-40"></div>
-    </div>
+<body class="relative flex h-screen w-full flex-col overflow-hidden selection:bg-v-brand selection:text-white">
+    <!-- Background Texture -->
+    <div class="absolute inset-0 pointer-events-none structural-grid z-0"></div>
+
     <!-- Top Navigation (Injected by layout.js) -->
-    <header></header>
+    <header class="relative z-20 border-b border-v-border bg-v-bg/90 backdrop-blur-sm"></header>
 
-    <!-- Main Layout -->
-    <div class="flex flex-1 overflow-hidden">
+    <div class="flex flex-1 overflow-hidden relative z-10 w-full max-w-[1600px] mx-auto">
         <!-- Sidebar Navigation (Injected by layout.js) -->
-        <aside></aside>
+        <aside class="border-r border-v-border bg-v-bg/90 backdrop-blur-sm hidden md:block w-64"></aside>
 
-        <!-- Content Area -->
-        <main class="flex-1 overflow-y-auto relative bg-background-dark bg-hero-gradient">
-            <!-- Background Decorative Elements -->
-            <div class="absolute inset-0 pointer-events-none overflow-hidden">
-                <div
-                    class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-primary/5 rounded-full blur-[100px]">
-                </div>
-                <!-- Grid pattern -->
-                <div
-                    class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_80%)]">
-                </div>
-            </div>
-            <div class="h-full flex flex-col">
-                <div class="flex flex-1 min-h-0 items-center justify-center p-6">
-                    <div class="w-full max-w-2xl flex flex-col gap-6 relative z-10">
-                        <!-- Real-time Scanner Card -->
-                        <div
-                            class="glass-panel rounded-2xl p-8 relative overflow-hidden shadow-[0_0_50px_rgba(58,141,255,0.15)] border border-[#1E293B] bg-[#0F121A]/80 bg-panel-dark backdrop-blur-xl">
-                            <div class="flex justify-between items-start mb-8">
-                                <div>
-                                    <h3 class="text-xl font-bold text-white flex items-center gap-3">
-                                        <span class="relative flex h-3 w-3">
-                                            <span
-                                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-blue opacity-75"></span>
-                                            <span
-                                                class="relative inline-flex rounded-full h-3 w-3 bg-accent-blue"></span>
-                                        </span>
-                                        Analyzing Media
-                                    </h3>
-                                    <p class="text-sm text-slate-400 mt-1 pl-6 leading-relaxed">Processing multi-modal
-                                        vectors...
-                                    </p>
-                                </div>
-                                <span
-                                    class="material-symbols-outlined text-accent-blue animate-spin-slow text-2xl">settings_motion_mode</span>
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto w-full px-6 py-8 flex items-center justify-center relative">
+            <div class="w-full max-w-3xl flex flex-col gap-6 relative z-10">
+                
+                <!-- Main Processing Console -->
+                <div class="panel border border-v-border p-8 relative flex flex-col">
+                    <!-- Scanner beam effect -->
+                    <div class="absolute top-0 left-0 w-full h-[1px] bg-v-brand stroke-v-brand shadow-[0_0_15px_var(--color-brand)] animate-pulse"></div>
+                    
+                    <div class="flex justify-between items-start mb-8 border-b border-v-border pb-6">
+                        <div>
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="material-symbols-outlined text-v-brand animate-spin" style="animation-duration: 3s;">memory</span>
+                                <h3 class="text-xl font-bold text-white tracking-tight m-0">
+                                    <span class="relative flex h-3 w-3 inline-block -translate-y-0.5 mr-2">
+                                        <span class="animate-ping absolute inline-flex h-full w-full bg-v-brand opacity-75"></span>
+                                        <span class="relative inline-flex h-3 w-3 bg-v-brand"></span>
+                                    </span>
+                                    Analyzing Media
+                                </h3>
                             </div>
-                            <!-- Visualizer -->
-                            <div
-                                class="visualizer-box h-48 rounded-xl bg-[#080b12] border border-[#1E293B] relative flex items-center justify-center mb-8 overflow-hidden group">
-                                <div
-                                    class="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-accent-blue/10 to-transparent opacity-50 animate-pulse">
-                                </div>
-                                <div
-                                    class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay">
-                                </div>
+                            <p class="font-mono text-[10px] text-v-text-muted uppercase tracking-widest pl-9 m-0">Processing multi-modal vectors...</p>
+                        </div>
+                        <span class="font-mono text-v-brand border border-v-brand/30 bg-v-brand/10 px-2 py-1 text-[10px] uppercase tracking-widest animate-pulse">
+                            Processing
+                        </span>
+                    </div>
 
-                                <!-- Abstract Waveform Animation -->
-                                <div class="flex gap-1.5 items-end h-20">
-                                    <div
-                                        class="w-1.5 bg-accent-blue/40 h-6 rounded-full animate-[pulse_1s_ease-in-out_infinite]">
-                                    </div>
-                                    <div
-                                        class="w-1.5 bg-accent-blue/60 h-10 rounded-full animate-[pulse_1.2s_ease-in-out_infinite]">
-                                    </div>
-                                    <div
-                                        class="w-1.5 bg-accent-blue h-16 rounded-full animate-[pulse_0.8s_ease-in-out_infinite]">
-                                    </div>
-                                    <div
-                                        class="w-1.5 bg-accent-blue h-12 rounded-full animate-[pulse_1.1s_ease-in-out_infinite]">
-                                    </div>
-                                    <div
-                                        class="w-1.5 bg-accent-blue/60 h-8 rounded-full animate-[pulse_0.9s_ease-in-out_infinite]">
-                                    </div>
-                                    <div
-                                        class="w-1.5 bg-accent-blue/40 h-5 rounded-full animate-[pulse_1.3s_ease-in-out_infinite]">
-                                    </div>
-                                </div>
-
-                                <!-- Scanning Line -->
-                                <div class="absolute top-0 bottom-0 w-[2px] bg-accent-green/80 shadow-[0_0_15px_#00D991] scan-line"
-                                    style="left: 30%; animation: scan 2s ease-in-out infinite alternate;">
-                                </div>
-                                <div
-                                    class="absolute top-4 right-4 font-mono text-[10px] text-accent-green bg-accent-green/10 px-2 py-1 rounded border border-accent-green/20">
-                                    PROCESSING_FRAMES</div>
-                            </div>
-                            <!-- Progress Bars - Dynamically populated based on media type -->
-                            <div id="analysisSteps" class="space-y-6">
-                                <!-- Will be populated by JavaScript -->
+                    <!-- Tactical Visualizer -->
+                    <div class="h-32 bg-v-bg border border-v-border relative flex flex-col items-center justify-center mb-10 overflow-hidden font-mono text-[9px] text-v-text-muted uppercase tracking-widest p-4">
+                        <!-- Data Rain / Grid -->
+                        <div class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:10px_10px] pointer-events-none opacity-50"></div>
+                        
+                        <div class="flex justify-between w-full z-10 opacity-70">
+                            <span>Hash: VN-ACTIVE-SCAN</span>
+                            <span>Node 14 Online</span>
+                        </div>
+                        
+                        <!-- Animated Core -->
+                        <div class="flex-1 flex w-full items-center justify-center relative z-10 my-2">
+                            <div class="w-full h-1 bg-v-surface border border-v-border relative overflow-hidden">
+                                <div class="absolute inset-y-0 left-0 bg-v-brand w-[20%] opacity-50 animate-[pulse_1s_ease-in-out_infinite]" style="animation: scan 1.5s ease-in-out infinite alternate;"></div>
                             </div>
                         </div>
-                        <p class="text-center text-slate-500 text-sm animate-pulse" id="loadingStatus">establishing
-                            secure
-                            connection...</p>
+
+                        <div class="flex justify-between w-full z-10 opacity-70">
+                            <span id="loadingStatus" class="text-v-brand">establishing secure connection...</span>
+                            <span>Awaiting Sequence</span>
+                        </div>
+                        
+                        <!-- Internal scan line -->
+                        <style>
+                            @keyframes scan {
+                                0% { left: 0%; right: 80%; }
+                                100% { left: 80%; right: 0%; }
+                            }
+                        </style>
+                    </div>
+
+                    <!-- Progress Bars - Dynamically populated based on media type -->
+                    <div id="analysisSteps" class="flex flex-col gap-6">
+                        <!-- Populated by JS -->
                     </div>
                 </div>
+            </div>
+        </main>
+    </div>
 
-                <!-- Dynamic Analysis Script -->
-                <script>
+    <!-- Dynamic Analysis Script -->
+    <script>
                     // Analysis steps configuration by media type
                     const ANALYSIS_CONFIGS = {
                         image: {
@@ -394,26 +435,8 @@
                             return null;
                         }
 
-                        let inputData = VisioNovaStorage.getFile(mediaType);
+                        const inputData = VisioNovaStorage.getFile(mediaType);
                         logDebug(`Input data for ${mediaType}:`, inputData);
-
-                        // For images, data is stored in IndexedDB (not sessionStorage) due to file size
-                        if (mediaType === 'image' && (!inputData || !inputData.data)) {
-                            const imageFromDB = await VisioNovaStorage.getImageFile();
-                            if (imageFromDB && imageFromDB.data) {
-                                inputData = imageFromDB;
-                                logDebug('Image data retrieved from IndexedDB:', inputData.fileName);
-                            }
-                        }
-
-                        // For audio, data is stored in IndexedDB (not sessionStorage) due to file size
-                        if (mediaType === 'audio' && (!inputData || !inputData.data)) {
-                            const audioFromDB = await VisioNovaStorage.getAudioFile();
-                            if (audioFromDB && audioFromDB.data) {
-                                inputData = audioFromDB;
-                                logDebug('Audio data retrieved from IndexedDB:', inputData.fileName);
-                            }
-                        }
 
                         // For document uploads (PDF/DOCX), data is in IndexedDB, not sessionStorage
                         const isDocumentUpload = mediaType === 'text' && sessionStorage.getItem('visioNova_isDocument') === 'true';
@@ -630,13 +653,17 @@
                                     const controller = new AbortController();
                                     const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s for image processing
 
-                                    const response = await fetch(`${API_BASE_URL}/api/detect-image/ensemble`, {
+                                    const response = await fetch(`${API_BASE_URL}/api/detect-image`, {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({
                                             image: inputData.data,
                                             filename: inputData.fileName,
-                                            load_ml_models: true
+                                            include_ela: true,
+                                            include_metadata: true,
+                                            include_watermark: true,
+                                            include_c2pa: true,
+                                            include_ai_analysis: true
                                         }),
                                         signal: controller.signal
                                     });
@@ -681,78 +708,8 @@
                                     logDebug('Image API error:', fetchError);
                                     throw fetchError;
                                 }
-                            } else if (mediaType === 'audio') {
-                                // Handle audio analysis with backend API
-                                logDebug('Starting audio analysis...');
-
-                                // Step 1: Voice Pattern Analysis
-                                updateStepProgress(0, 'processing', 30);
-                                updateLoadingStatus(config.statusMessages[0] || 'Analyzing audio...');
-
-                                let progressValue = 30;
-                                const progressInterval = setInterval(() => {
-                                    if (progressValue < 80) {
-                                        progressValue += 2;
-                                        updateStepProgress(0, 'processing', progressValue);
-                                    }
-                                }, 400);
-
-                                try {
-                                    const controller = new AbortController();
-                                    const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 min for audio
-
-                                    const response = await fetch(`${API_BASE_URL}/api/detect-audio`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            audio: inputData.data,
-                                            filename: inputData.fileName || 'audio.wav'
-                                        }),
-                                        signal: controller.signal
-                                    });
-
-                                    clearTimeout(timeoutId);
-                                    clearInterval(progressInterval);
-
-                                    if (!response.ok) {
-                                        const errorText = await response.text();
-                                        logDebug(`Audio API error: ${response.status}`, errorText);
-                                        throw new Error(`Audio analysis failed: ${response.status}`);
-                                    }
-
-                                    // Step 1: Complete
-                                    updateStepProgress(0, 'complete', 100);
-
-                                    // Step 2: Frequency Spectrum Check
-                                    updateStepProgress(1, 'processing', 50);
-                                    updateLoadingStatus(config.statusMessages[1] || 'Checking frequency spectrum...');
-
-                                    const result = await response.json();
-                                    logDebug('Audio analysis result:', result);
-
-                                    await new Promise(r => setTimeout(r, 400));
-                                    updateStepProgress(1, 'complete', 100);
-
-                                    // Step 3: Speech Synthesis Detection
-                                    updateStepProgress(2, 'processing', 60);
-                                    updateLoadingStatus(config.statusMessages[2] || 'Detecting synthetic speech...');
-
-                                    // Store result for AudioResultPage to use
-                                    sessionStorage.setItem('visioNova_audio_result', JSON.stringify(result));
-                                    logDebug('Audio result stored in sessionStorage');
-
-                                    await new Promise(r => setTimeout(r, 500));
-                                    updateStepProgress(2, 'complete', 100);
-                                    updateLoadingStatus('Analysis complete! Redirecting...');
-
-                                    return result;
-                                } catch (fetchError) {
-                                    clearInterval(progressInterval);
-                                    logDebug('Audio API error:', fetchError);
-                                    throw fetchError;
-                                }
                             } else {
-                                // For other media types (video), simulate progress
+                                // For other media types (video, audio), simulate progress
                                 for (let i = 0; i < config.steps.length; i++) {
                                     updateStepProgress(i, 'processing', 30);
                                     updateLoadingStatus(config.statusMessages[i] || 'Processing...');
