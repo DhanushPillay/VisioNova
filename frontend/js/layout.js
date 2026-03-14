@@ -1,12 +1,9 @@
 /**
- * VisioNova Layout Manager
- * Injects common UI components (Header, Sidebar) into pages to avoid duplication.
+ * VisioNova Layout Manager v3.0
+ * Forensic Intelligence Dashboard — injects header + sidebar
  */
 
 const Layout = {
-    /**
-     * Inject the layout into the current page
-     */
     init: function () {
         this.injectHeader();
         this.injectSidebar();
@@ -14,98 +11,133 @@ const Layout = {
     },
 
     injectHeader: function () {
-        const headerPlaceholder = document.querySelector('header');
-        if (!headerPlaceholder) return;
+        const el = document.querySelector('header[data-inject], header:empty');
+        if (!el) return;
 
-        // If header already has content, assume it's custom and don't overwrite
-        if (headerPlaceholder.children.length > 0 && !headerPlaceholder.hasAttribute('data-inject')) return;
+        el.style.cssText = `
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 52px;
+            padding: 0 24px;
+            background: var(--header-bg);
+            border-bottom: 1px solid var(--color-border);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            flex-shrink: 0;
+        `;
 
-        headerPlaceholder.className = "z-50 flex items-center justify-between whitespace-nowrap border-b border-[var(--color-border)] bg-[var(--header-bg)] backdrop-blur-md px-6 py-3 sticky top-0";
-        headerPlaceholder.innerHTML = `
-            <div class="flex items-center gap-4 text-white">
-                <div class="size-8 text-primary">
-                    <span class="material-symbols-outlined !text-[32px]">hub</span>
+        el.innerHTML = `
+            <a href="homepage.html" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--color-text-main);">
+                <div style="width:28px;height:28px;background:linear-gradient(135deg,var(--color-brand,#4B8EF5),var(--color-accent-success));clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;">
+                    <span class="material-symbols-outlined" style="font-size:13px;color:#fff;">blur_on</span>
                 </div>
-                <h2 class="text-white text-xl font-bold leading-tight tracking-[-0.015em] hidden sm:block">VisioNova</h2>
-            </div>
-            <div class="flex flex-1 justify-center hidden md:flex">
-                <nav class="flex items-center gap-1 bg-[var(--color-bg-card)]/50 p-1 rounded-full border border-[var(--color-border)] ${window.location.pathname.includes('homepage.html') ? 'hidden' : ''}">
-                    <a class="nav-link text-[var(--color-text-muted)] hover:text-white px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
-                        href="homepage.html">Home</a>
-                    <a class="nav-link text-[var(--color-text-muted)] hover:text-white px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
-                        href="AnalysisDashboard.html">Analyze</a>
-                    <a class="nav-link text-[var(--color-text-muted)] hover:text-white px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
-                        href="FactCheckPage.html">Fact Check</a>
-                </nav>
-            </div>
-            <div class="flex items-center gap-3">
-                <button id="themeToggle"
-                    class="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--color-bg-card)] hover:bg-[var(--color-border-hover)] transition-colors border border-[var(--color-border)]"
-                    title="Toggle Dark/Light Mode">
-                    <span class="material-symbols-outlined !text-[20px] theme-icon-dark text-yellow-400">light_mode</span>
-                    <span
-                        class="material-symbols-outlined !text-[20px] theme-icon-light hidden text-slate-700">dark_mode</span>
+                <span style="font-size:15px;font-weight:700;letter-spacing:-0.02em;">VisioNova</span>
+                <span style="font-family:'Roboto Mono',monospace;font-size:10px;color:var(--color-accent-success);background:rgba(71,229,188,0.1);border:1px solid rgba(71,229,188,0.2);padding:1px 6px;">v2.1</span>
+            </a>
+
+            <nav style="display:flex;align-items:center;gap:2px;">
+                <a class="nav-link" href="homepage.html" style="font-family:'Roboto Mono',monospace;font-size:11px;font-weight:500;color:var(--color-text-muted);text-decoration:none;padding:5px 14px;border:1px solid transparent;letter-spacing:0.04em;text-transform:uppercase;transition:all 0.15s;">Home</a>
+                <a class="nav-link" href="AnalysisDashboard.html" style="font-family:'Roboto Mono',monospace;font-size:11px;font-weight:500;color:var(--color-text-muted);text-decoration:none;padding:5px 14px;border:1px solid transparent;letter-spacing:0.04em;text-transform:uppercase;transition:all 0.15s;">Analyze</a>
+                <a class="nav-link" href="FactCheckPage.html" style="font-family:'Roboto Mono',monospace;font-size:11px;font-weight:500;color:var(--color-text-muted);text-decoration:none;padding:5px 14px;border:1px solid transparent;letter-spacing:0.04em;text-transform:uppercase;transition:all 0.15s;">Fact Check</a>
+                <a class="nav-link" href="ReportPage.html" style="font-family:'Roboto Mono',monospace;font-size:11px;font-weight:500;color:var(--color-text-muted);text-decoration:none;padding:5px 14px;border:1px solid transparent;letter-spacing:0.04em;text-transform:uppercase;transition:all 0.15s;">Reports</a>
+            </nav>
+
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="display:flex;align-items:center;gap:6px;font-family:'Roboto Mono',monospace;font-size:10px;color:var(--color-accent-success);padding:4px 10px;border:1px solid rgba(71,229,188,0.2);background:rgba(71,229,188,0.08);">
+                    <div style="width:6px;height:6px;background:var(--color-accent-success);border-radius:50%;animation:vn-pulse 2s infinite;"></div>
+                    ONLINE
+                </div>
+                <button id="themeToggle" style="display:flex;align-items:center;gap:6px;padding:5px 12px;background:var(--color-bg-card);border:1px solid var(--color-border);color:var(--color-text-muted);cursor:pointer;font-family:'Roboto Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.04em;transition:all 0.15s;" title="Toggle Theme">
+                    <span class="material-symbols-outlined theme-icon-dark" style="font-size:14px;color:#FBBF24;">light_mode</span>
+                    <span class="material-symbols-outlined theme-icon-light" style="font-size:14px;display:none;">dark_mode</span>
+                    Theme
                 </button>
             </div>
+            <style>
+                @keyframes vn-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+                .nav-link:hover { color: var(--color-text-main) !important; border-color: var(--color-border-hover) !important; background: var(--color-bg-panel) !important; }
+            </style>
         `;
     },
 
     injectSidebar: function () {
-        const sidebarPlaceholder = document.querySelector('aside');
-        if (!sidebarPlaceholder) return;
+        const el = document.querySelector('aside[data-inject], aside:empty');
+        if (!el) return;
 
-        // If sidebar already has content, assume it's custom and don't overwrite
-        if (sidebarPlaceholder.children.length > 0 && !sidebarPlaceholder.hasAttribute('data-inject')) return;
-
-        sidebarPlaceholder.className = "hidden md:flex w-20 flex-col items-center justify-between bg-[var(--sidebar-bg)] border-r border-[var(--color-border)] py-6 z-40 hover:w-64 transition-all duration-300 group/sidebar absolute md:relative h-full";
-        sidebarPlaceholder.innerHTML = `
-            <div class="flex flex-col gap-6 w-full px-3">
-                <div class="w-full flex flex-col gap-1">
-                    <a href="homepage.html"
-                        class="flex items-center gap-4 px-3 py-3 rounded-xl bg-primary text-white w-full justify-start overflow-hidden whitespace-nowrap shadow-glow">
-                        <span class="material-symbols-outlined shrink-0">add_circle</span>
-                        <span class="text-sm font-semibold opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">New Scan</span>
-                    </a>
-                </div>
-                <div class="w-full h-px bg-[var(--color-border)]"></div>
-                <div class="flex flex-col gap-2 w-full">
-                    <a href="AnalysisDashboard.html"
-                        class="sidebar-link flex items-center gap-4 px-3 py-3 rounded-xl text-[var(--color-text-muted)] hover:text-white hover:bg-[var(--color-bg-card)] w-full justify-start overflow-hidden whitespace-nowrap transition-colors">
-                        <span class="material-symbols-outlined shrink-0">dashboard</span>
-                        <span class="text-sm font-medium opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">Dashboard</span>
-                    </a>
-
-                    <a href="FactCheckPage.html"
-                        class="sidebar-link flex items-center gap-4 px-3 py-3 rounded-xl text-[var(--color-text-muted)] hover:text-white hover:bg-[var(--color-bg-card)] w-full justify-start overflow-hidden whitespace-nowrap transition-colors">
-                        <span class="material-symbols-outlined shrink-0">shield</span>
-                        <span class="text-sm font-medium opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">Threat Intel</span>
-                    </a>
-                </div>
-            </div>
-
+        el.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 56px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--color-border);
+            padding: 20px 0;
+            gap: 4px;
+            flex-shrink: 0;
+            overflow: hidden;
+            transition: width 0.25s ease;
+            position: relative;
+            z-index: 40;
         `;
+
+        el.addEventListener('mouseenter', () => el.style.width = '200px');
+        el.addEventListener('mouseleave', () => el.style.width = '56px');
+
+        const linkStyle = `display:flex;align-items:center;gap:12px;width:100%;padding:11px 18px;text-decoration:none;color:var(--color-text-muted);font-size:12px;font-weight:500;white-space:nowrap;transition:all 0.15s;`;
+
+        el.innerHTML = `
+            <a class="sidebar-link" href="homepage.html" style="${linkStyle}">
+                <span class="material-symbols-outlined" style="font-size:20px;flex-shrink:0;">add_circle</span>
+                <span style="opacity:0;transition:opacity 0.2s;" class="sidebar-label">New Scan</span>
+            </a>
+            <div style="width:70%;height:1px;background:var(--color-border);margin:4px 0;"></div>
+            <a class="sidebar-link" href="AnalysisDashboard.html" style="${linkStyle}">
+                <span class="material-symbols-outlined" style="font-size:20px;flex-shrink:0;">dashboard</span>
+                <span style="opacity:0;transition:opacity 0.2s;" class="sidebar-label">Dashboard</span>
+            </a>
+            <a class="sidebar-link" href="FactCheckPage.html" style="${linkStyle}">
+                <span class="material-symbols-outlined" style="font-size:20px;flex-shrink:0;">shield</span>
+                <span style="opacity:0;transition:opacity 0.2s;" class="sidebar-label">Fact Check</span>
+            </a>
+            <a class="sidebar-link" href="ReportPage.html" style="${linkStyle}">
+                <span class="material-symbols-outlined" style="font-size:20px;flex-shrink:0;">description</span>
+                <span style="opacity:0;transition:opacity 0.2s;" class="sidebar-label">Reports</span>
+            </a>
+            <style>
+                .sidebar-link:hover { color: var(--color-text-main) !important; background: var(--color-bg-panel) !important; }
+            </style>
+        `;
+
+        // Fade labels on hover via parent expand
+        el.addEventListener('mouseenter', () => {
+            el.querySelectorAll('.sidebar-label').forEach(l => l.style.opacity = '1');
+        });
+        el.addEventListener('mouseleave', () => {
+            el.querySelectorAll('.sidebar-label').forEach(l => l.style.opacity = '0');
+        });
     },
 
     highlightCurrentNav: function () {
-        const currentPath = window.location.pathname.split('/').pop();
-
-        // Highlight Header Nav
+        const current = window.location.pathname.split('/').pop();
         document.querySelectorAll('.nav-link').forEach(link => {
-            if (link.getAttribute('href') === currentPath) {
-                link.classList.add('bg-primary/20', 'text-white');
-                link.classList.remove('text-[var(--color-text-muted)]');
+            if (link.getAttribute('href') === current) {
+                link.style.color = 'var(--color-accent-success)';
+                link.style.borderColor = 'rgba(71,229,188,0.3)';
+                link.style.background = 'rgba(71,229,188,0.08)';
             }
         });
-
-        // Highlight Sidebar Nav
         document.querySelectorAll('.sidebar-link').forEach(link => {
-            if (link.getAttribute('href') === currentPath) {
-                link.classList.add('text-white', 'bg-[var(--color-bg-card)]');
-                link.classList.remove('text-[var(--color-text-muted)]');
+            if (link.getAttribute('href') === current) {
+                link.style.color = 'var(--color-accent-success)';
+                link.style.background = 'rgba(71,229,188,0.08)';
             }
         });
     }
 };
 
-// Initialize on load
 document.addEventListener('DOMContentLoaded', () => Layout.init());
+
+
+// (duplicate removed - new Layout defined above)
