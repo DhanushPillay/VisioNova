@@ -1,11 +1,10 @@
 <!DOCTYPE html>
-
-<html lang="en">
+<html lang="en" class="dark">
 
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>VisioNova - AI Credibility Verification</title>
+    <title>VisioNova - Intelligence Dashboard</title>
     <!-- Blocking theme script to prevent FOUC -->
     <script>
         (function () {
@@ -13,14 +12,8 @@
             document.documentElement.classList.add(theme);
         })();
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap"
-        rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@300,0..1&display=swap" rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script id="tailwind-config">
         tailwind.config = {
@@ -28,468 +21,331 @@
             theme: {
                 extend: {
                     colors: {
-                        "primary": "#3A8DFF",
-                        "primary-glow": "#3A8DFF",
-                        "secondary": "#0D1B2A",
-                        "accent-success": "#00D991",
-                        "accent-warning": "#FFB74A",
-                        "accent-danger": "#FF4A4A",
-                        "background-light": "#F5F7FA",
-                        "background-dark": "#0F121A",
-                        "surface-dark": "#0D1B2A",
-                        "panel-dark": "#161B2E",
-                        "card-dark": "#1E2338",
+                        "v-bg": "#0A0F1A", // Deep void 
+                        "v-surface": "#0F1626", // Slightly elevated
+                        "v-panel": "#141C2F", // Card panels
+                        "v-border": "rgba(255, 255, 255, 0.08)",
+                        "v-border-focus": "rgba(100, 255, 218, 0.4)",
+                        "v-text-main": "#F8FAFC",
+                        "v-text-muted": "#94A3B8",
+                        "v-authentic": "#64FFDA", // Teal 
+                        "v-suspicious": "#FFB74D", // Muted Orange
+                        "v-brand": "#3B82F6", // Structural blue
                     },
                     fontFamily: {
-                        "display": ["Inter", "sans-serif"],
-                        "body": ["Inter", "sans-serif"],
+                        "sans": ["Inter", "sans-serif"],
+                        "mono": ["Roboto Mono", "monospace"],
                     },
                     boxShadow: {
-                        'glow': '0 0 20px rgba(58, 141, 255, 0.15)',
-                        'glow-hover': '0 0 30px rgba(58, 141, 255, 0.3)',
-                        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.15)',
-                    },
-                    backgroundImage: {
-                        'hero-gradient': 'radial-gradient(circle at 50% 0%, rgba(58, 141, 255, 0.08) 0%, transparent 60%)',
+                        'panel': '0 4px 6px -1px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+                        'glow': '0 0 15px rgba(100, 255, 218, 0.1)',
                     }
                 },
             },
         }
     </script>
-    <link rel="stylesheet" href="../css/common.css">
-    <link rel="stylesheet" href="../css/dashboard.css">
+    
+    <style>
+        /* Base system overrides replacing common CSS */
+        body { background-color: theme('colors.v-bg'); color: theme('colors.v-text-main'); letter-spacing: -0.01em; }
+        .light body { background-color: #F8FAFC; color: #0F172A; }
+        
+        .panel {
+            background-color: theme('colors.v-panel');
+            border: 1px solid theme('colors.v-border');
+            box-shadow: theme('boxShadow.panel');
+        }
+        .light .panel { background-color: #FFFFFF; border-color: #E2E8F0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        
+        /* Unified 1px Structure Grid */
+        .structural-grid {
+            background-image: linear-gradient(theme('colors.v-border') 1px, transparent 1px),
+                              linear-gradient(90deg, theme('colors.v-border') 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.2;
+        }
+        .light .structural-grid { opacity: 0.05; background-image: linear-gradient(#cbd5e1 1px, transparent 1px), linear-gradient(90deg, #cbd5e1 1px, transparent 1px); }
+
+        /* Typography */
+        .data-label { font-family: theme('fontFamily.mono'); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: theme('colors.v-text-muted'); }
+        .light .data-label { color: #64748B; }
+
+        /* Input / Button Resets */
+        .btn-primary { background: transparent; border: 1px solid theme('colors.v-authentic'); color: theme('colors.v-authentic'); transition: all 0.2s; }
+        .btn-primary:hover { background: rgba(100, 255, 218, 0.1); box-shadow: theme('boxShadow.glow'); }
+        .light .btn-primary { background: #0F172A; color: #FFF; border-color: #0F172A; }
+        .light .btn-primary:hover { background: #334155; }
+        
+        .input-base { background: theme('colors.v-surface'); border: 1px solid theme('colors.v-border'); color: white; transition: border-color 0.2s; }
+        .input-base:focus { border-color: theme('colors.v-border-focus'); outline: none; }
+        .light .input-base { background: #F1F5F9; border-color: #CBD5E1; color: #0F172A; }
+        .light .input-base:focus { border-color: #3B82F6; }
+
+        /* Animations */
+        @keyframes scanline {
+            0% { transform: translateY(-100%); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(400px); opacity: 0; }
+        }
+        .animate-scan { animation: scanline 3s linear infinite; }
+        
+        /* Tab states */
+        .media-tab { transition: all 0.2s; }
+        .active-tab { border-bottom: 2px solid theme('colors.v-authentic'); color: theme('colors.v-authentic'); }
+        .inactive-tab { border-bottom: 2px solid transparent; color: theme('colors.v-text-muted'); }
+        .inactive-tab:hover { color: white; background: rgba(255,255,255,0.02); }
+        .light .active-tab { border-color: #0F172A; color: #0F172A; }
+        .light .inactive-tab { color: #64748B; }
+        .light .inactive-tab:hover { color: #0F172A; background: #F1F5F9; }
+    </style>
+    <link rel="stylesheet" href="../css/common.css"> <!-- Fallback for header/sidebar injection -->
     <script src="../js/layout.js"></script>
 </head>
 
-<body
-    class="relative flex h-screen w-full flex-col bg-background-dark text-white overflow-hidden selection:bg-primary selection:text-white">
+<body class="flex h-screen w-full flex-col overflow-hidden selection:bg-v-brand selection:text-white relative">
+    
+    <!-- Background Grid Texture -->
+    <div class="absolute inset-0 pointer-events-none structural-grid z-0"></div>
+
     <!-- Top Navigation Bar (Injected by layout.js) -->
-    <header></header>
-    <div class="flex flex-1 overflow-hidden">
-        <!-- Sidebar Navigation -->
+    <header class="relative z-20 border-b border-v-border bg-v-bg/90 backdrop-blur-sm"></header>
+
+    <div class="flex flex-1 overflow-hidden relative z-10 w-full max-w-[1600px] mx-auto">
         <!-- Sidebar Navigation (Injected by layout.js) -->
-        <aside></aside>
+        <aside class="border-r border-v-border bg-v-bg/90 backdrop-blur-sm hidden md:block"></aside>
+        
         <!-- Main Content Area -->
-        <main class="flex-1 overflow-y-auto relative bg-background-dark bg-hero-gradient">
-            <!-- Background Decorative Elements -->
-            <div class="absolute inset-0 pointer-events-none overflow-hidden">
-                <div
-                    class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-primary/5 rounded-full blur-[100px]">
+        <main class="flex-1 overflow-y-auto w-full px-6 py-8 md:px-12 flex flex-col gap-8">
+            
+            <!-- Context Header -->
+            <header class="flex flex-col gap-1 w-full max-w-5xl mx-auto mt-4">
+                <div class="flex items-center gap-3">
+                    <span class="flex h-2 w-2 rounded-full bg-v-authentic animate-pulse"></span>
+                    <span class="data-label text-v-authentic">System Active // Visionova v2.1</span>
                 </div>
-                <!-- Grid pattern -->
-                <div
-                    class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_80%)]">
+                <h1 class="text-3xl md:text-5xl font-semibold tracking-tight text-v-text-main mt-2">Intelligence Dashboard</h1>
+                <p class="text-v-text-muted text-sm max-w-2xl mt-1 font-mono">Multi-modal credibility engine. Awaiting telemetry input for deepfake verification.</p>
+            </header>
+
+            <!-- Main Interactive Terminal Panel -->
+            <div class="w-full max-w-5xl mx-auto panel rounded-none flex flex-col">
+                
+                <!-- Tab Navigation (Strict Grid) -->
+                <div class="grid grid-cols-5 border-b border-v-border" id="mediaTabs">
+                    <button data-tab="image" data-result="ImageResultPage.html" class="media-tab flex flex-col items-center justify-center gap-1.5 py-4 active-tab">
+                        <span class="material-symbols-outlined text-lg">image</span>
+                        <span class="data-label !text-[10px] md:!text-xs">Image</span>
+                    </button>
+                    <button data-tab="video" data-result="VideoResultPage.html" class="media-tab flex flex-col items-center justify-center gap-1.5 py-4 inactive-tab border-l border-v-border">
+                        <span class="material-symbols-outlined text-lg">videocam</span>
+                        <span class="data-label !text-[10px] md:!text-xs">Video</span>
+                    </button>
+                    <button data-tab="audio" data-result="AudioResultPage.html" class="media-tab flex flex-col items-center justify-center gap-1.5 py-4 inactive-tab border-l border-v-border">
+                        <span class="material-symbols-outlined text-lg">mic</span>
+                        <span class="data-label !text-[10px] md:!text-xs">Audio</span>
+                    </button>
+                    <button data-tab="text" data-result="TextResultPage.html" class="media-tab flex flex-col items-center justify-center gap-1.5 py-4 inactive-tab border-l border-v-border">
+                        <span class="material-symbols-outlined text-lg">description</span>
+                        <span class="data-label !text-[10px] md:!text-xs">Text</span>
+                    </button>
+                    <button data-tab="url" data-result="FactCheckPage.html" class="media-tab flex flex-col items-center justify-center gap-1.5 py-4 inactive-tab border-l border-v-border">
+                        <span class="material-symbols-outlined text-lg">language</span>
+                        <span class="data-label !text-[10px] md:!text-xs">Fact Check</span>
+                    </button>
                 </div>
-            </div>
-            <div class="relative max-w-7xl mx-auto px-6 py-10 flex flex-col gap-10">
-                <!-- Hero Section -->
-                <div class="flex flex-col items-center text-center gap-2 mb-4 animate-fade-in-up">
-                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-2">
-                        Verify Reality. <span
-                            class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">Detect
-                            Deception.</span>
-                    </h1>
-                    <p class="text-[#94A3B8] text-lg max-w-2xl font-light">
-                        The world's most advanced multi-modal AI credibility engine for enterprise security and media
-                        integrity.
-                    </p>
-                </div>
-                <!-- Analysis Module -->
-                <div class="w-full max-w-4xl mx-auto z-10">
-                    <div
-                        class="bg-[#161b2e] bg-panel-dark border border-[#1E2338] rounded-2xl shadow-2xl overflow-hidden backdrop-blur-sm">
-                        <!-- Tabs -->
-                        <div class="flex border-b border-[#1E2338] overflow-x-auto" id="mediaTabs">
-                            <button data-tab="image" data-result="ImageResultPage.html"
-                                class="media-tab flex-1 flex flex-col items-center justify-center gap-2 py-4 px-6 border-b-2 active-tab transition-colors min-w-[100px]">
-                                <span class="material-symbols-outlined">image</span>
-                                <span class="text-xs font-bold uppercase tracking-wider">Image</span>
-                            </button>
-                            <button data-tab="video" data-result="VideoResultPage.html"
-                                class="media-tab flex-1 flex flex-col items-center justify-center gap-2 py-4 px-6 border-b-2 inactive-tab transition-colors min-w-[100px]">
-                                <span class="material-symbols-outlined">videocam</span>
-                                <span class="text-xs font-bold uppercase tracking-wider">Video</span>
-                            </button>
-                            <button data-tab="audio" data-result="AudioResultPage.html"
-                                class="media-tab flex-1 flex flex-col items-center justify-center gap-2 py-4 px-6 border-b-2 inactive-tab transition-colors min-w-[100px]">
-                                <span class="material-symbols-outlined">mic</span>
-                                <span class="text-xs font-bold uppercase tracking-wider">Audio</span>
-                            </button>
-                            <button data-tab="text" data-result="TextResultPage.html"
-                                class="media-tab flex-1 flex flex-col items-center justify-center gap-2 py-4 px-6 border-b-2 inactive-tab transition-colors min-w-[100px]">
-                                <span class="material-symbols-outlined">description</span>
-                                <span class="text-xs font-bold uppercase tracking-wider">Text</span>
-                            </button>
-                            <button data-tab="url" data-result="FactCheckPage.html"
-                                class="media-tab flex-1 flex flex-col items-center justify-center gap-2 py-4 px-6 border-b-2 inactive-tab transition-colors min-w-[100px]">
-                                <span class="material-symbols-outlined">link</span>
-                                <span class="text-xs font-bold uppercase tracking-wider">URL</span>
-                            </button>
+
+                <!-- Action Stage -->
+                <div id="uploadContents" class="min-h-[400px] flex items-stretch">
+                    
+                    <!-- IMAGE UPLOAD VIEW -->
+                    <div id="image-upload" class="upload-content w-full flex flex-col md:flex-row border-b border-v-border bg-v-surface/30">
+                        <!-- Left Data Sidebar -->
+                        <div class="w-full md:w-64 border-r border-v-border p-6 flex flex-col gap-6 shrink-0 bg-transparent">
+                            <div>
+                                <h3 class="data-label mb-2 pb-1 border-b border-v-border">Target Acquisition</h3>
+                                <p class="text-xs text-v-text-muted mt-2">Awaiting image ingestion targeting ViT Ensemble analysis. Supports JPG, PNG, WEBP (Max 50MB).</p>
+                            </div>
+                            <!-- URL Input -->
+                            <div class="mt-auto flex flex-col gap-2">
+                                <label class="data-label">Remote Source Array</label>
+                                <div class="flex items-center gap-2 h-9 input-base px-3 font-mono text-xs">
+                                    <span class="text-v-text-muted">></span>
+                                    <input id="imageUrlInput" class="bg-transparent border-none w-full outline-none focus:ring-0 p-0 text-xs" placeholder="[ URL INJECTION ]" type="text" />
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Upload Content Sections -->
-                        <div id="uploadContents">
-                            <!-- Image Upload -->
-                            <div id="image-upload"
-                                class="upload-content p-6 md:p-8 flex flex-col items-center justify-center bg-[#0F121A]/50 bg-surface-dark relative">
+                        <!-- Main Drop Zone -->
+                        <div class="flex-1 p-6 flex flex-col justify-center items-center relative group min-h-[300px]">
+                            <div id="image-drop-zone" class="w-full h-full border border-dashed border-v-border group-hover:border-v-authentic flex flex-col items-center justify-center bg-v-bg/50 cursor-pointer relative overflow-hidden transition-colors" tabindex="0">
+                                
+                                <!-- Scanner Decorative Line -->
+                                <div class="absolute top-0 left-0 w-full h-[1px] bg-v-authentic opacity-0 group-hover:opacity-50 animate-scan pointer-events-none"></div>
 
-                                <!-- Drop Zone Container -->
-                                <div id="image-drop-zone"
-                                    class="border-2 border-dashed border-[#2A3450] hover:border-primary/50 transition-all duration-300 rounded-2xl w-full min-h-[300px] flex items-center justify-center bg-[#0D1B2A]/80 cursor-pointer relative overflow-hidden"
-                                    tabindex="0">
-
-                                    <!-- DEFAULT STATE -->
-                                    <div id="image-upload-default"
-                                        class="flex flex-col items-center justify-center gap-4 p-8 transition-opacity duration-300">
-                                        <div
-                                            class="size-16 rounded-2xl bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center text-primary border border-primary/20">
-                                            <span class="material-symbols-outlined !text-4xl">cloud_upload</span>
-                                        </div>
-                                        <div class="text-center">
-                                            <p class="text-xl font-semibold text-white mb-2">Drag &amp; Drop image here
-                                            </p>
-                                            <p class="text-sm text-[#94A3B8]">or <span
-                                                    class="text-primary cursor-pointer hover:underline font-medium"
-                                                    id="imageBrowseLink">browse files</span>
-                                                from your computer</p>
-                                        </div>
-                                        <div class="flex flex-wrap items-center justify-center gap-3 mt-2">
-                                            <button id="pasteImageBtn" type="button"
-                                                class="flex items-center gap-2 px-5 py-2.5 bg-[#1E2338] hover:bg-primary/20 border border-[#2A3450] hover:border-primary/50 rounded-xl text-sm text-[#94A3B8] hover:text-white transition-all duration-200">
-                                                <span class="material-symbols-outlined text-lg">content_paste</span>
-                                                Paste from Clipboard
-                                            </button>
-                                            <span class="text-xs text-[#64748B]">or press <kbd
-                                                    class="px-2 py-1 bg-[#1E2338] rounded-md text-[#94A3B8] font-mono text-[11px] border border-[#2A3450]">Ctrl+V</kbd></span>
-                                        </div>
-                                        <p class="text-xs text-[#64748B] mt-2">Supports JPG, PNG, WEBP up to 50MB</p>
+                                <!-- Default View -->
+                                <div id="image-upload-default" class="flex flex-col items-center justify-center gap-3 text-center transition-opacity z-10">
+                                    <span class="material-symbols-outlined text-v-text-muted group-hover:text-v-authentic transition-colors !text-3xl">add_photo_alternate</span>
+                                    <div>
+                                        <p class="text-sm font-medium">Initialize Media Drop</p>
+                                        <p class="text-xs text-v-text-muted mt-1 font-mono">Drag & Drop or <span class="text-v-authentic hover:underline" id="imageBrowseLink">Browse Storage</span></p>
                                     </div>
-
-                                    <!-- PREVIEW STATE (hidden by default) -->
-                                    <div id="image-preview-state"
-                                        class="hidden absolute inset-0 flex flex-col items-center justify-center p-6 bg-[#0D1B2A] transition-opacity duration-300">
-                                        <!-- Preview Image Container -->
-                                        <div class="relative flex items-center justify-center mb-4 max-h-[180px]">
-                                            <img id="image-preview-img"
-                                                class="max-h-[180px] max-w-full rounded-xl object-contain shadow-2xl ring-1 ring-white/10"
-                                                alt="Preview" />
-                                        </div>
-                                        <!-- File Info & Actions -->
-                                        <div class="flex items-center gap-3">
-                                            <div
-                                                class="flex items-center gap-2 px-4 py-2 bg-green-500/15 border border-green-500/30 rounded-full">
-                                                <span
-                                                    class="material-symbols-outlined text-green-400 text-lg">check_circle</span>
-                                                <span id="image-file-name"
-                                                    class="text-green-400 text-sm font-medium truncate max-w-[180px]">image.png</span>
-                                            </div>
-                                            <button id="clearImageBtn" type="button"
-                                                class="flex items-center gap-1.5 px-4 py-2 bg-[#1E2338] hover:bg-red-500/20 border border-[#2A3450] hover:border-red-500/40 rounded-full text-sm text-[#94A3B8] hover:text-red-400 transition-all duration-200">
-                                                <span class="material-symbols-outlined text-lg">close</span>
-                                                Clear
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- URL Input & Analyze Button -->
-                                <div class="w-full mt-5 flex flex-col md:flex-row items-center gap-3">
-                                    <div class="flex-1 w-full">
-                                        <div
-                                            class="flex items-center gap-3 px-4 py-3 bg-[#0D1B2A] border border-[#2A3450] rounded-xl focus-within:border-primary/50 transition-colors duration-200">
-                                            <span class="material-symbols-outlined text-[#64748B]">link</span>
-                                            <input id="imageUrlInput"
-                                                class="bg-transparent border-none outline-none text-white text-sm w-full placeholder-[#64748B] focus:ring-0"
-                                                placeholder="Or paste an image URL here..." type="text" />
-                                        </div>
-                                    </div>
-                                    <button id="analyzeBtn" onclick="navigateToResult()"
-                                        class="w-full md:w-auto px-7 py-3 bg-primary hover:bg-blue-600 text-white font-bold rounded-xl shadow-glow hover:shadow-glow-hover transition-all duration-200 flex items-center justify-center gap-2 whitespace-nowrap group/btn">
-                                        <span
-                                            class="material-symbols-outlined group-hover/btn:animate-spin">radar</span>
-                                        Analyze Credibility
+                                    <button id="pasteImageBtn" type="button" class="mt-4 px-4 py-1.5 border border-v-border hover:border-v-text-muted bg-v-surface text-xs font-mono text-v-text-muted transition-colors flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-sm">content_paste</span> [CLIPBOARD PASTE]
                                     </button>
                                 </div>
-                            </div>
 
-                            <!-- Video Upload -->
-                            <div id="video-upload"
-                                class="upload-content hidden p-8 md:p-12 flex flex-col items-center justify-center bg-[#0F121A]/50 relative group">
-                                <div
-                                    class="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                </div>
-                                <div
-                                    class="border-2 border-dashed border-[#2A3450] group-hover:border-purple-500/50 group-hover:scale-[1.01] transition-all rounded-xl w-full h-64 flex flex-col items-center justify-center gap-4 bg-[#0D1B2A]">
-                                    <div
-                                        class="size-16 rounded-full bg-[#1E2338] flex items-center justify-center text-purple-400 group-hover:text-white group-hover:bg-purple-500 transition-all shadow-glow">
-                                        <span class="material-symbols-outlined !text-3xl">videocam</span>
+                                <!-- Preview View -->
+                                <div id="image-preview-state" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-v-bg transition-opacity">
+                                    <img id="image-preview-img" class="max-h-[220px] max-w-full object-contain border border-v-border opacity-90" alt="Preview Output" />
+                                    <div class="flex items-center gap-4 mt-4 bg-v-surface border border-v-border px-4 py-2">
+                                        <span id="image-file-name" class="font-mono text-xs text-v-text-main truncate max-w-[150px]">target.png</span>
+                                        <button id="clearImageBtn" type="button" class="text-v-suspicious hover:text-red-400 font-mono text-[10px] tracking-wider transition-colors pt-px">[ WIPE ]</button>
                                     </div>
-                                    <div class="text-center">
-                                        <p class="text-lg font-medium text-white mb-1">Drag &amp; Drop video here</p>
-                                        <p class="text-sm text-[#94A3B8]">or <span
-                                                class="text-purple-400 cursor-pointer hover:underline">browse
-                                                files</span> from your computer</p>
-                                    </div>
-                                    <p class="text-xs text-[#64748B] mt-2">Supports MP4, MOV, AVI, WEBM up to 500MB</p>
-                                </div>
-                                <div class="w-full mt-8 flex flex-col md:flex-row items-center gap-4">
-                                    <div class="flex-1 w-full">
-                                        <div
-                                            class="flex items-center gap-3 px-4 py-3 bg-[#0D1B2A] border border-[#2A3450] rounded-lg">
-                                            <span class="material-symbols-outlined text-[#64748B]">link</span>
-                                            <input
-                                                class="bg-transparent border-none outline-none text-white text-sm w-full placeholder-[#64748B] focus:ring-0"
-                                                placeholder="Or paste a video URL here..." type="text" />
-                                        </div>
-                                    </div>
-                                    <button onclick="navigateToResult()"
-                                        class="w-full md:w-auto px-8 py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-lg shadow-glow hover:shadow-glow-hover transition-all flex items-center justify-center gap-2 whitespace-nowrap group/btn">
-                                        <span
-                                            class="material-symbols-outlined group-hover/btn:animate-spin">radar</span>
-                                        Analyze Video
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Audio Upload -->
-                            <div id="audio-upload"
-                                class="upload-content hidden p-8 md:p-12 flex flex-col items-center justify-center bg-[#0F121A]/50 relative group">
-                                <div
-                                    class="absolute inset-0 bg-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                </div>
-                                <div
-                                    class="border-2 border-dashed border-[#2A3450] group-hover:border-green-500/50 group-hover:scale-[1.01] transition-all rounded-xl w-full h-64 flex flex-col items-center justify-center gap-4 bg-[#0D1B2A]">
-                                    <div
-                                        class="size-16 rounded-full bg-[#1E2338] flex items-center justify-center text-green-400 group-hover:text-white group-hover:bg-green-500 transition-all shadow-glow">
-                                        <span class="material-symbols-outlined !text-3xl">mic</span>
-                                    </div>
-                                    <div class="text-center">
-                                        <p class="text-lg font-medium text-white mb-1">Drag &amp; Drop audio here</p>
-                                        <p class="text-sm text-[#94A3B8]">or <span
-                                                class="text-green-400 cursor-pointer hover:underline">browse
-                                                files</span> from your computer</p>
-                                    </div>
-                                    <p class="text-xs text-[#64748B] mt-2">Supports MP3, WAV, FLAC, OGG up to 100MB</p>
-                                </div>
-                                <div class="w-full mt-8 flex flex-col md:flex-row items-center gap-4">
-                                    <div class="flex-1 w-full">
-                                        <div
-                                            class="flex items-center gap-3 px-4 py-3 bg-[#0D1B2A] border border-[#2A3450] rounded-lg">
-                                            <span class="material-symbols-outlined text-[#64748B]">link</span>
-                                            <input
-                                                class="bg-transparent border-none outline-none text-white text-sm w-full placeholder-[#64748B] focus:ring-0"
-                                                placeholder="Or paste an audio URL here..." type="text" />
-                                        </div>
-                                    </div>
-                                    <button onclick="navigateToResult()"
-                                        class="w-full md:w-auto px-8 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg shadow-glow hover:shadow-glow-hover transition-all flex items-center justify-center gap-2 whitespace-nowrap group/btn">
-                                        <span
-                                            class="material-symbols-outlined group-hover/btn:animate-spin">radar</span>
-                                        Analyze Audio
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Text Upload -->
-                            <div id="text-upload"
-                                class="upload-content hidden p-8 md:p-12 flex flex-col items-center justify-center bg-[#0F121A]/50 relative group">
-                                <div
-                                    class="absolute inset-0 bg-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                </div>
-                                <div
-                                    class="border-2 border-dashed border-[#2A3450] group-hover:border-amber-500/50 transition-all rounded-xl w-full bg-[#0D1B2A] p-6">
-                                    <div class="flex items-center gap-3 mb-4">
-                                        <div
-                                            class="size-10 rounded-full bg-[#1E2338] flex items-center justify-center text-amber-400">
-                                            <span class="material-symbols-outlined">description</span>
-                                        </div>
-                                        <div>
-                                            <p class="text-lg font-medium text-white">Paste or Type Text</p>
-                                            <p class="text-xs text-[#64748B]">Enter text to check for AI-generated
-                                                content</p>
-                                        </div>
-                                    </div>
-                                    <textarea
-                                        class="w-full h-48 bg-[#0F121A] border border-[#2A3450] rounded-lg p-4 text-white text-sm placeholder-[#64748B] focus:outline-none focus:border-amber-500/50 resize-none"
-                                        placeholder="Paste your text here to analyze for AI-generated content..."></textarea>
-                                </div>
-
-                                <!-- Document Upload Section -->
-                                <div class="w-full mt-6">
-                                    <div class="flex items-center gap-3 mb-3">
-                                        <div class="h-px flex-1 bg-[#2A3450]"></div>
-                                        <span class="text-xs text-[#64748B] font-medium uppercase tracking-wider">or
-                                            upload a document</span>
-                                        <div class="h-px flex-1 bg-[#2A3450]"></div>
-                                    </div>
-                                    <div id="docUploadZone"
-                                        class="flex items-center gap-4 px-5 py-4 bg-[#0D1B2A] border border-[#2A3450] hover:border-amber-500/40 rounded-xl transition-all cursor-pointer"
-                                        onclick="document.getElementById('textFileInput').click()">
-                                        <div class="flex gap-2 shrink-0">
-                                            <div class="size-9 rounded-lg bg-red-500/10 flex items-center justify-center"
-                                                title="PDF">
-                                                <span
-                                                    class="material-symbols-outlined text-red-400 !text-[20px]">picture_as_pdf</span>
-                                            </div>
-                                            <div class="size-9 rounded-lg bg-blue-500/10 flex items-center justify-center"
-                                                title="DOCX">
-                                                <span
-                                                    class="material-symbols-outlined text-blue-400 !text-[20px]">description</span>
-                                            </div>
-                                            <div class="size-9 rounded-lg bg-green-500/10 flex items-center justify-center"
-                                                title="TXT">
-                                                <span
-                                                    class="material-symbols-outlined text-green-400 !text-[20px]">text_snippet</span>
-                                            </div>
-                                        </div>
-                                        <div class="flex-1 min-w-0">
-                                            <p id="docUploadLabel" class="text-sm text-white font-medium">Click to
-                                                upload a document</p>
-                                            <p id="docUploadHint" class="text-xs text-[#64748B] mt-0.5">Supports PDF,
-                                                DOCX, DOC, TXT — up to 10MB</p>
-                                        </div>
-                                        <span
-                                            class="material-symbols-outlined text-[#64748B] shrink-0">upload_file</span>
-                                    </div>
-                                    <!-- Uploaded file indicator (hidden by default) -->
-                                    <div id="docFileIndicator"
-                                        class="hidden mt-3 items-center gap-3 px-4 py-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                                        <span class="material-symbols-outlined text-amber-400">check_circle</span>
-                                        <div class="flex-1 min-w-0">
-                                            <p id="docFileNameDisplay" class="text-sm text-white font-medium truncate">
-                                                file.pdf</p>
-                                            <p id="docFileSizeDisplay" class="text-xs text-amber-400/70">Ready for
-                                                analysis</p>
-                                        </div>
-                                        <button id="docRemoveBtn"
-                                            class="text-[#64748B] hover:text-red-400 transition-colors"
-                                            title="Remove file">
-                                            <span class="material-symbols-outlined !text-[20px]">close</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div class="w-full mt-6">
-                                    <button onclick="navigateToResult()"
-                                        class="w-full px-8 py-3.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all flex items-center justify-center gap-2 whitespace-nowrap group/btn">
-                                        <span
-                                            class="material-symbols-outlined group-hover/btn:animate-spin">radar</span>
-                                        Analyze Text
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- URL Input -->
-                            <div id="url-upload"
-                                class="upload-content hidden p-8 md:p-12 flex flex-col items-center justify-center bg-[#0F121A]/50 relative group">
-                                <div
-                                    class="absolute inset-0 bg-red-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                </div>
-                                <div
-                                    class="border-2 border-dashed border-[#2A3450] group-hover:border-red-500/50 transition-all rounded-xl w-full bg-[#0D1B2A] p-8">
-                                    <div class="flex flex-col items-center gap-6">
-                                        <div
-                                            class="size-16 rounded-full bg-[#1E2338] flex items-center justify-center text-red-400 group-hover:text-white group-hover:bg-red-500 transition-all shadow-glow">
-                                            <span class="material-symbols-outlined !text-3xl">link</span>
-                                        </div>
-                                        <div class="text-center">
-                                            <p class="text-lg font-medium text-white mb-1">Enter URL to Fact Check</p>
-                                            <p class="text-sm text-[#94A3B8]">Paste any news article, social media post,
-                                                or website URL</p>
-                                        </div>
-                                        <div class="w-full max-w-xl">
-                                            <div
-                                                class="flex items-center gap-3 px-4 py-4 bg-[#0F121A] border border-[#2A3450] rounded-lg focus-within:border-red-500/50 transition-colors">
-                                                <span class="material-symbols-outlined text-red-400">language</span>
-                                                <input
-                                                    class="bg-transparent border-none outline-none text-white text-sm w-full placeholder-[#64748B] focus:ring-0"
-                                                    placeholder="https://example.com/article..." type="url" />
-                                            </div>
-                                        </div>
-                                        <p class="text-xs text-[#64748B]">We'll analyze the content for misinformation
-                                            and verify claims</p>
-                                    </div>
-                                </div>
-                                <div class="w-full mt-8 flex justify-center">
-                                    <button onclick="navigateToResult()"
-                                        class="w-full md:w-auto px-8 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg shadow-glow hover:shadow-glow-hover transition-all flex items-center justify-center gap-2 whitespace-nowrap group/btn">
-                                        <span
-                                            class="material-symbols-outlined group-hover/btn:animate-spin">fact_check</span>
-                                        Fact Check URL
-                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- VIDEO UPLOAD VIEW (Hidden) -->
+                    <div id="video-upload" class="upload-content hidden w-full flex flex-col md:flex-row border-b border-v-border bg-v-surface/30">
+                        <div class="w-full md:w-64 border-r border-v-border p-6 flex flex-col gap-6 shrink-0">
+                            <div>
+                                <h3 class="data-label mb-2 pb-1 border-b border-v-border">Video Telemetry</h3>
+                                <p class="text-xs text-v-text-muted mt-2">Frame-by-frame deepfake analysis pipeline. Supp: MP4/MOV/AVI < 500MB.</p>
+                            </div>
+                            <div class="mt-auto flex flex-col gap-2">
+                                <label class="data-label">Remote Source Box</label>
+                                <input class="h-9 input-base px-3 font-mono text-xs w-full outline-none focus:ring-0" placeholder="[ INPUT VIDEO URL ]" type="text" />
+                            </div>
+                        </div>
+                        <div class="flex-1 p-6 flex flex-col justify-center items-center relative group min-h-[300px]">
+                            <div class="w-full h-full border border-dashed border-v-border group-hover:border-v-brand flex flex-col items-center justify-center bg-v-bg/50 cursor-pointer overflow-hidden transition-colors">
+                                <span class="material-symbols-outlined text-v-text-muted group-hover:text-v-brand transition-colors !text-3xl mb-3">movie</span>
+                                <p class="text-sm font-medium">Mount Video File</p>
+                                <p class="text-xs text-v-text-muted mt-1 font-mono">Drag & Drop or <span class="text-v-brand hover:underline">Browse</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AUDIO UPLOAD VIEW (Hidden) -->
+                    <div id="audio-upload" class="upload-content hidden w-full flex flex-col md:flex-row border-b border-v-border bg-v-surface/30">
+                        <div class="w-full md:w-64 border-r border-v-border p-6 flex flex-col gap-6 shrink-0">
+                            <div>
+                                <h3 class="data-label mb-2 pb-1 border-b border-v-border">Spectral Intake</h3>
+                                <p class="text-xs text-v-text-muted mt-2">NII AntiDeepfake synthetic voice array detection. Supp: MP3/WAV/FLAC.</p>
+                            </div>
+                            <div class="mt-auto flex flex-col gap-2">
+                                <label class="data-label">Remote Audio URI</label>
+                                <input class="h-9 input-base px-3 font-mono text-xs w-full outline-none focus:ring-0" placeholder="[ AUDIO STREAM URL ]" type="text" />
+                            </div>
+                        </div>
+                        <div class="flex-1 p-6 flex flex-col justify-center items-center relative group min-h-[300px]">
+                            <div class="w-full h-full border border-dashed border-v-border group-hover:border-[#9333EA] flex flex-col items-center justify-center bg-v-bg/50 cursor-pointer overflow-hidden transition-colors">
+                                <span class="material-symbols-outlined text-v-text-muted group-hover:text-[#9333EA] transition-colors !text-3xl mb-3">graphic_eq</span>
+                                <p class="text-sm font-medium">Inject Audio Signal</p>
+                                <p class="text-xs text-v-text-muted mt-1 font-mono">Drag & Drop or <span class="text-[#9333EA] hover:underline">Browse Storage</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TEXT UPLOAD VIEW (Hidden) -->
+                    <div id="text-upload" class="upload-content hidden w-full flex flex-col md:flex-row border-b border-v-border bg-v-surface/30">
+                        <div class="w-full md:w-64 border-r border-v-border p-6 flex flex-col gap-6 shrink-0">
+                            <div>
+                                <h3 class="data-label mb-2 pb-1 border-b border-v-border">Semantic Buffer</h3>
+                                <p class="text-xs text-v-text-muted mt-2">LLM Artifact detection via RoBERTa/DeBERTa ensemble vectors.</p>
+                            </div>
+                            <!-- Document Upload -->
+                            <div class="mt-auto pt-6 border-t border-v-border">
+                                <label class="data-label mb-3 block">Or Mount Document</label>
+                                <div id="docUploadZone" class="flex flex-col items-center justify-center gap-2 p-4 border border-v-border bg-v-surface hover:border-v-suspicious cursor-pointer transition-colors" onclick="document.getElementById('textFileInput').click()">
+                                    <span class="material-symbols-outlined text-v-text-muted text-xl">upload_file</span>
+                                    <span class="font-mono text-[10px] uppercase">PDF/DOCX/TXT [Max 10MB]</span>
+                                </div>
+                                <div id="docFileIndicator" class="hidden mt-2 flex items-center justify-between p-2 border border-v-suspicious/50 bg-v-suspicious/10">
+                                    <span id="docFileNameDisplay" class="font-mono text-[10px] text-v-suspicious truncate">file.pdf</span>
+                                    <span class="material-symbols-outlined text-v-suspicious text-xs cursor-pointer hover:text-red-400" id="docRemoveBtn">close</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-1 p-6 flex flex-col min-h-[300px]">
+                            <textarea class="w-full flex-1 input-base p-4 text-sm resize-none font-mono focus:border-v-suspicious" placeholder="[ BEGIN RAW TEXT INJECTION HERE ]..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- URL / FACT CHECK VIEW (Hidden) -->
+                    <div id="url-upload" class="upload-content hidden w-full flex flex-col md:flex-row border-b border-v-border bg-v-surface/30">
+                        <div class="w-full md:w-64 border-r border-v-border p-6 flex flex-col gap-6 shrink-0">
+                            <div>
+                                <h3 class="data-label mb-2 pb-1 border-b border-v-border">Network Analysis</h3>
+                                <p class="text-xs text-v-text-muted mt-2">Initialize investigative web-scraping and cross-reference reasoning logs.</p>
+                            </div>
+                            <div class="mt-auto text-xs text-v-text-muted font-mono leading-relaxed bg-v-bg p-3 border border-v-border">
+                                > Awaiting coordinate TARGET.<br>
+                                > Protocol: Semantic Web Ping<br>
+                                > Status: STBY
+                            </div>
+                        </div>
+                        <div class="flex-1 p-6 flex items-center justify-center min-h-[300px]">
+                            <div class="w-full max-w-lg flex flex-col gap-4">
+                                <label class="data-label text-center block">Target Uniform Resource Locator</label>
+                                <div class="flex items-center gap-3 h-12 input-base px-4 font-mono text-sm w-full focus-within:border-red-500/50">
+                                    <span class="material-symbols-outlined text-red-500/70">radar</span>
+                                    <input class="bg-transparent border-none w-full outline-none focus:ring-0 p-0 text-sm" placeholder="https://..." type="url" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
-                <!-- Feature Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <!-- Card 1 -->
-                    <a href="VideoResultPage.html"
-                        class="feature-card bg-[#161b2e] border border-[#1E2338] p-6 rounded-2xl flex flex-col gap-4 relative overflow-hidden group">
-                        <div class="absolute top-0 right-0 p-3 opacity-50 group-hover:opacity-100 transition-opacity">
-                            <span class="flex h-2 w-2 rounded-full bg-accent-success"></span>
-                        </div>
-                        <div
-                            class="size-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-2">
-                            <span class="material-symbols-outlined">face</span>
-                        </div>
-                        <div>
-                            <h3 class="text-white font-bold text-lg leading-tight mb-1">Deepfake Detector</h3>
-                            <p class="text-[#94A3B8] text-sm leading-relaxed">Advanced frame-by-frame video analysis to
-                                spot synthetic faces.</p>
-                        </div>
-                    </a>
-                    <!-- Card 2 -->
-                    <a href="AudioResultPage.html"
-                        class="feature-card bg-[#161b2e] border border-[#1E2338] p-6 rounded-2xl flex flex-col gap-4 relative overflow-hidden group">
-                        <div class="absolute top-0 right-0 p-3 opacity-50 group-hover:opacity-100 transition-opacity">
-                            <span class="flex h-2 w-2 rounded-full bg-accent-success"></span>
-                        </div>
-                        <div
-                            class="size-12 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400 mb-2">
-                            <span class="material-symbols-outlined">graphic_eq</span>
-                        </div>
-                        <div>
-                            <h3 class="text-white font-bold text-lg leading-tight mb-1">Voice Clone Scout</h3>
-                            <p class="text-[#94A3B8] text-sm leading-relaxed">Spectral audio analysis to identify
-                                AI-generated voice patterns.</p>
-                        </div>
-                    </a>
-                    <!-- Card 3 -->
-                    <a href="TextResultPage.html"
-                        class="feature-card bg-[#161b2e] border border-[#1E2338] p-6 rounded-2xl flex flex-col gap-4 relative overflow-hidden group">
-                        <div class="absolute top-0 right-0 p-3 opacity-50 group-hover:opacity-100 transition-opacity">
-                            <span class="flex h-2 w-2 rounded-full bg-accent-warning"></span>
-                        </div>
-                        <div
-                            class="size-12 rounded-lg bg-accent-warning/10 flex items-center justify-center text-accent-warning mb-2">
-                            <span class="material-symbols-outlined">psychology</span>
-                        </div>
-                        <div>
-                            <h3 class="text-white font-bold text-lg leading-tight mb-1">AI Text Classifier</h3>
-                            <p class="text-[#94A3B8] text-sm leading-relaxed">Detects LLM-generated text from ChatGPT,
-                                Claude, and others.</p>
-                        </div>
-                    </a>
-                    <!-- Card 4 -->
-                    <a href="FactCheckPage.html"
-                        class="feature-card bg-[#161b2e] border border-[#1E2338] p-6 rounded-2xl flex flex-col gap-4 relative overflow-hidden group">
-                        <div class="absolute top-0 right-0 p-3 opacity-50 group-hover:opacity-100 transition-opacity">
-                            <span class="flex h-2 w-2 rounded-full bg-accent-success"></span>
-                        </div>
-                        <div
-                            class="size-12 rounded-lg bg-accent-danger/10 flex items-center justify-center text-accent-danger mb-2">
-                            <span class="material-symbols-outlined">fact_check</span>
-                        </div>
-                        <div>
-                            <h3 class="text-white font-bold text-lg leading-tight mb-1">Fact Check Radar</h3>
-                            <p class="text-[#94A3B8] text-sm leading-relaxed">Real-time cross-referencing with trusted
-                                global news sources.</p>
-                        </div>
-                    </a>
+
+                <!-- Execution Toolbar -->
+                <div class="flex items-center justify-between p-4 bg-v-bg">
+                    <div class="flex items-center gap-3">
+                        <span class="flex h-1.5 w-1.5 rounded-full bg-v-authentic"></span>
+                        <span class="data-label uppercase">Ensemble Standby</span>
+                    </div>
+                    
+                    <button id="analyzeBtn" onclick="navigateToResult()" class="btn-primary h-10 px-8 flex items-center gap-2 font-mono text-sm font-semibold tracking-wider group relative overflow-hidden">
+                        <span class="absolute inset-0 w-full h-full bg-v-authentic/10 -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out"></span>
+                        <span class="material-symbols-outlined text-lg relative z-10 group-hover:animate-spin">bolt</span>
+                        <span class="relative z-10">EXECUTE SCAN</span>
+                    </button>
                 </div>
             </div>
+
+            <!-- Features Grid (Transformed to Data Blocks) -->
+            <div class="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-4 pb-12">
+                <a href="VideoResultPage.html" class="panel p-4 flex flex-col gap-3 group hover:border-v-brand transition-colors">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-v-text-muted group-hover:text-v-brand transition-colors text-sm">face</span>
+                        <h3 class="data-label !text-[10px] text-v-text-main">Video Frame Filter</h3>
+                    </div>
+                    <p class="text-[11px] text-v-text-muted leading-relaxed font-mono mt-auto">Frame-by-frame synthetics evaluation block.</p>
+                </a>
+                <a href="AudioResultPage.html" class="panel p-4 flex flex-col gap-3 group hover:border-[#9333EA] transition-colors">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-v-text-muted group-hover:text-[#9333EA] transition-colors text-sm">graphic_eq</span>
+                        <h3 class="data-label !text-[10px] text-v-text-main">Acoustic Scout</h3>
+                    </div>
+                    <p class="text-[11px] text-v-text-muted leading-relaxed font-mono mt-auto">Sub-audible frequency disruption capture.</p>
+                </a>
+                <a href="TextResultPage.html" class="panel p-4 flex flex-col gap-3 group hover:border-v-suspicious transition-colors">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-v-text-muted group-hover:text-v-suspicious transition-colors text-sm">psychology</span>
+                        <h3 class="data-label !text-[10px] text-v-text-main">LLM Classifiers</h3>
+                    </div>
+                    <p class="text-[11px] text-v-text-muted leading-relaxed font-mono mt-auto">Token probability mapping across arrays.</p>
+                </a>
+                <a href="FactCheckPage.html" class="panel p-4 flex flex-col gap-3 group hover:border-red-500 transition-colors">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-v-text-muted group-hover:text-red-500 transition-colors text-sm">fact_check</span>
+                        <h3 class="data-label !text-[10px] text-v-text-main">Fact Engine</h3>
+                    </div>
+                    <p class="text-[11px] text-v-text-muted leading-relaxed font-mono mt-auto">Real-time DB query and semantic validation.</p>
+                </a>
+            </div>
+
         </main>
     </div>
 
@@ -501,13 +357,8 @@
 
     <!-- Storage Utilities -->
     <script src="../js/storage-utils.js"></script>
-
-    <!-- Theme Toggle -->
     <script src="../js/theme-toggle.js"></script>
-
-    <!-- Homepage Functionality -->
     <script src="../js/homepage.js"></script>
 
 </body>
-
 </html>
