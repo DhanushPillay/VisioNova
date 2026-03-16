@@ -4,306 +4,467 @@
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>VisioNova — Intelligence Dashboard</title>
-    <meta name="description" content="VisioNova: Multi-modal AI credibility engine for deepfake and misinformation detection." />
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
+    <title>VisioNova — Credibility Engine</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Archivo:wght@400;500;600&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@300,0..1&display=swap"
+        rel="stylesheet" />
+
     <style>
-        /* =============================================
-           VISIONOVA FORENSIC DESIGN SYSTEM — v3.0
-           Self-contained, no external CSS overrides
-        ============================================= */
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        /* ===================================================
+   VISIONOVA — SURVEILLANCE TERMINAL v3.0
+   Typography: Archivo Black + DM Mono + Archivo
+   ================================================= */
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         :root {
-            --bg: #08101E;
-            --surface: #0C1628;
-            --panel: #101D30;
-            --raised: #152238;
-            --border: rgba(255,255,255,0.07);
-            --border-strong: rgba(255,255,255,0.14);
-            --text: #F0F4FA;
-            --muted: #8899B4;
-            --dim: #4A5A72;
-            --authentic: #47E5BC;
-            --suspicious: #FFAA44;
-            --danger: #FF4A5E;
-            --brand: #4B8EF5;
-            --brand-dim: rgba(75,142,245,0.12);
-            --authentic-dim: rgba(71,229,188,0.1);
-            --suspicious-dim: rgba(255,170,68,0.1);
+            /* Core palette — ink + signal */
+            --ink: #0A0B0D;
+            --ink-2: #111318;
+            --ink-3: #181C22;
+            --ink-4: #1F242D;
+            --paper: #F4F2ED;
+            --paper-2: #EBE8E2;
+            --muted: #5C6270;
+            --ghost: #3A3F4A;
+            --signal: #C8FF57;
+            /* acid green — one key accent */
+            --signal-dim: rgba(200, 255, 87, 0.12);
+            --warn: #FF6B35;
+            --danger: #FF3B3B;
+            --border: rgba(255, 255, 255, 0.06);
+            --border-2: rgba(255, 255, 255, 0.11);
+            --scan: rgba(200, 255, 87, 0.04);
+            --font-display: 'Archivo Black', sans-serif;
+            --font-ui: 'Archivo', sans-serif;
+            --font-mono: 'DM Mono', monospace;
         }
 
-        html, body {
+        html,
+        body {
             height: 100%;
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
+            background-color: var(--ink);
+            color: var(--paper);
+            font-family: var(--font-ui);
             overflow: hidden;
+            letter-spacing: -0.01em;
         }
 
-        /* ---- Layout Shell ---- */
-        .app-shell {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            width: 100vw;
+        /* ── Scanline texture overlay ── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 0, 0, 0.08) 2px,
+                    rgba(0, 0, 0, 0.08) 4px);
+            pointer-events: none;
+            z-index: 9999;
         }
 
-        /* ---- Top Nav ---- */
-        .topnav {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            height: 52px;
-            padding: 0 24px;
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
-            position: relative;
-            z-index: 50;
-        }
-
-        .topnav-brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-decoration: none;
-            color: var(--text);
-        }
-
-        .topnav-brand .logo-icon {
-            width: 28px;
-            height: 28px;
-            background: linear-gradient(135deg, var(--brand) 0%, var(--authentic) 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-        }
-
-        .topnav-brand .logo-icon span {
-            font-size: 14px;
-            color: #fff;
-        }
-
-        .topnav-brand .brand-name {
-            font-size: 15px;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            color: var(--text);
-        }
-
-        .topnav-brand .brand-version {
-            font-family: 'Roboto Mono', monospace;
-            font-size: 10px;
-            color: var(--authentic);
-            background: var(--authentic-dim);
-            border: 1px solid rgba(71,229,188,0.2);
-            padding: 1px 6px;
-            margin-left: 4px;
-        }
-
-        .topnav-links {
-            display: flex;
-            align-items: center;
-            gap: 2px;
-        }
-
-        .nav-link {
-            font-family: 'Roboto Mono', monospace;
-            font-size: 11px;
-            font-weight: 500;
-            color: var(--muted);
-            text-decoration: none;
-            padding: 5px 14px;
-            border: 1px solid transparent;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            transition: color 0.15s, border-color 0.15s, background 0.15s;
-        }
-
-        .nav-link:hover {
-            color: var(--text);
-            border-color: var(--border-strong);
-            background: var(--raised);
-        }
-
-        .nav-link.active {
-            color: var(--authentic);
-            border-color: rgba(71,229,188,0.3);
-            background: var(--authentic-dim);
-        }
-
-        .topnav-right {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .status-pill {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-family: 'Roboto Mono', monospace;
-            font-size: 10px;
-            color: var(--authentic);
-            padding: 4px 10px;
-            border: 1px solid rgba(71,229,188,0.2);
-            background: var(--authentic-dim);
-        }
-
-        .status-dot {
-            width: 6px;
-            height: 6px;
-            background: var(--authentic);
-            border-radius: 50%;
-            animation: pulse-dot 2s infinite;
-        }
-
-        @keyframes pulse-dot {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-
-        /* ---- Body Layout ---- */
-        .body-layout {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
-
-        /* ---- Sidebar ---- */
-        .sidebar {
-            width: 56px;
-            background: var(--surface);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px 0;
-            gap: 8px;
-            flex-shrink: 0;
-            transition: width 0.25s ease;
-            overflow: hidden;
-        }
-
-        .sidebar:hover {
-            width: 200px;
-        }
-
-        .sidebar-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            width: 100%;
-            padding: 10px 16px;
-            text-decoration: none;
-            color: var(--muted);
-            font-size: 12px;
-            font-weight: 500;
-            white-space: nowrap;
-            transition: color 0.15s, background 0.15s;
-        }
-
-        .sidebar-item:hover {
-            color: var(--text);
-            background: var(--raised);
-        }
-
-        .sidebar-item.active {
-            color: var(--authentic);
-            background: var(--authentic-dim);
-        }
-
-        .sidebar-item .material-symbols-outlined {
-            font-size: 20px;
-            flex-shrink: 0;
-        }
-
-        .sidebar-divider {
-            width: 70%;
-            height: 1px;
-            background: var(--border);
-            margin: 4px 0;
-        }
-
-        /* ---- Main Stage ---- */
-        .main-stage {
-            flex: 1;
-            overflow-y: auto;
-            padding: 32px 40px;
-            display: flex;
-            flex-direction: column;
-            gap: 28px;
-            background: var(--bg);
-            position: relative;
-        }
-
-        /* Subtle grid texture */
-        .main-stage::before {
+        /* ── Fine grid ── */
+        body::after {
             content: '';
             position: fixed;
             inset: 0;
             background-image:
-                linear-gradient(var(--border) 1px, transparent 1px),
-                linear-gradient(90deg, var(--border) 1px, transparent 1px);
-            background-size: 48px 48px;
+                linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+            background-size: 32px 32px;
             pointer-events: none;
             z-index: 0;
-            opacity: 0.5;
         }
 
-        .main-stage > * { position: relative; z-index: 1; }
+        /* ===================================================
+   APP SHELL
+   ================================================= */
 
-        /* ---- Context Header ---- */
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===================================================
+   TOP BAR
+   ================================================= */
+
+        .topbar {
+            height: 46px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid var(--border-2);
+            background: var(--ink-2);
+            position: relative;
+            z-index: 10;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .brand-mark {
+            width: 22px;
+            height: 22px;
+            border: 1.5px solid var(--signal);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .brand-mark::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--signal);
+            display: block;
+        }
+
+        .brand-name {
+            font-family: var(--font-display);
+            font-size: 13px;
+            color: var(--paper);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .brand-tag {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--signal);
+            border: 1px solid rgba(200, 255, 87, 0.3);
+            padding: 1px 5px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .topnav {
+            display: flex;
+            align-items: center;
+            gap: 0;
+        }
+
+        .topnav a {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            font-weight: 400;
+            color: var(--muted);
+            text-decoration: none;
+            padding: 0 14px;
+            height: 46px;
+            line-height: 46px;
+            border-left: 1px solid var(--border);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            transition: color 0.15s, background 0.15s;
+        }
+
+        .topnav a:hover {
+            color: var(--paper);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .topnav a.active {
+            color: var(--signal);
+            border-bottom: 1px solid var(--signal);
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sys-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--signal);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .sys-dot {
+            width: 5px;
+            height: 5px;
+            background: var(--signal);
+            border-radius: 50%;
+            animation: blink 2.8s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0.25
+            }
+        }
+
+        .btn-sm {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--muted);
+            background: transparent;
+            border: 1px solid var(--border-2);
+            padding: 5px 10px;
+            cursor: pointer;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            transition: all 0.15s;
+        }
+
+        .btn-sm:hover {
+            color: var(--paper);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        /* ===================================================
+   BODY LAYOUT
+   ================================================= */
+
+        .body-row {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ===================================================
+   SIDEBAR
+   ================================================= */
+
+        .sidebar {
+            width: 48px;
+            flex-shrink: 0;
+            border-right: 1px solid var(--border-2);
+            background: var(--ink-2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 0;
+            gap: 4px;
+            overflow: hidden;
+            transition: width 0.22s ease;
+        }
+
+        .sidebar:hover {
+            width: 180px;
+        }
+
+        .sb-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 9px 14px;
+            text-decoration: none;
+            color: var(--ghost);
+            font-family: var(--font-mono);
+            font-size: 10px;
+            white-space: nowrap;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            transition: all 0.15s;
+            border-left: 2px solid transparent;
+        }
+
+        .sb-item:hover {
+            color: var(--paper);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .sb-item.active {
+            color: var(--signal);
+            border-left-color: var(--signal);
+            background: var(--signal-dim);
+        }
+
+        .sb-item .material-symbols-outlined {
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .sb-label {
+            opacity: 0;
+            transition: opacity 0.18s;
+        }
+
+        .sidebar:hover .sb-label {
+            opacity: 1;
+        }
+
+        .sb-divider {
+            width: 28px;
+            height: 1px;
+            background: var(--border-2);
+            margin: 4px auto;
+            transition: width 0.22s ease;
+        }
+
+        .sidebar:hover .sb-divider {
+            width: 148px;
+        }
+
+        /* ===================================================
+   MAIN STAGE
+   ================================================= */
+
+        .stage {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            padding: 28px 32px 32px;
+            gap: 24px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--ghost) var(--ink);
+        }
+
+        /* ===================================================
+   PAGE HEADER
+   ================================================= */
+
         .page-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .page-header-title {
             display: flex;
             flex-direction: column;
             gap: 6px;
         }
 
-        .page-header-eyebrow {
+        .eyebrow {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--signal);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
             display: flex;
             align-items: center;
             gap: 8px;
-            font-family: 'Roboto Mono', monospace;
-            font-size: 11px;
-            color: var(--authentic);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
         }
 
-        .page-header h1 {
-            font-size: clamp(24px, 3.5vw, 40px);
-            font-weight: 700;
+        .eyebrow::before {
+            content: '';
+            display: block;
+            width: 12px;
+            height: 1px;
+            background: var(--signal);
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-size: clamp(22px, 3vw, 36px);
+            font-weight: 400;
+            color: var(--paper);
             letter-spacing: -0.03em;
-            color: var(--text);
             line-height: 1.1;
         }
 
         .page-header p {
-            font-family: 'Roboto Mono', monospace;
-            font-size: 12px;
+            font-family: var(--font-mono);
+            font-size: 11px;
             color: var(--muted);
-            max-width: 560px;
+            max-width: 480px;
+            line-height: 1.7;
         }
 
-        /* ---- Primary Analysis Panel ---- */
+        .header-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .meta-chip {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--ghost);
+            border: 1px solid var(--border-2);
+            padding: 4px 8px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        /* ===================================================
+   ANALYSIS PANEL
+   ================================================= */
+
         .analysis-panel {
-            background: var(--panel);
-            border: 1px solid var(--border-strong);
+            border: 1px solid var(--border-2);
+            background: var(--ink-2);
             display: flex;
             flex-direction: column;
-            max-width: 1000px;
+            flex-shrink: 0;
+            position: relative;
         }
 
-        /* Tab strip */
+        /* Top scan line animation */
+        .analysis-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent 0%, var(--signal) 30%, var(--signal) 70%, transparent 100%);
+            opacity: 0;
+            animation: scan-top 4s ease-in-out infinite;
+        }
+
+        @keyframes scan-top {
+
+            0%,
+            100% {
+                opacity: 0;
+                transform: scaleX(0.2);
+            }
+
+            50% {
+                opacity: 0.6;
+                transform: scaleX(1);
+            }
+        }
+
+        /* ── Tab strip ── */
         .tab-strip {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            border-bottom: 1px solid var(--border);
+            display: flex;
+            border-bottom: 1px solid var(--border-2);
+            background: var(--ink-3);
         }
 
         .tab-btn {
@@ -311,190 +472,229 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 4px;
-            padding: 14px 8px;
-            cursor: pointer;
+            gap: 5px;
+            padding: 12px 16px;
             border: none;
             background: transparent;
-            color: var(--muted);
-            font-family: 'Roboto Mono', monospace;
-            font-size: 10px;
+            color: var(--ghost);
+            font-family: var(--font-mono);
+            font-size: 9px;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
-            letter-spacing: 0.06em;
             border-right: 1px solid var(--border);
-            transition: color 0.15s, background 0.15s;
             border-bottom: 2px solid transparent;
-        }
-
-        .tab-btn:last-child { border-right: none; }
-
-        .tab-btn .material-symbols-outlined {
-            font-size: 18px;
+            cursor: pointer;
+            flex: 1;
+            transition: all 0.15s;
+            min-width: 0;
         }
 
         .tab-btn:hover {
-            color: var(--text);
-            background: var(--raised);
+            color: var(--paper-2);
+            background: rgba(255, 255, 255, 0.02);
         }
 
         .tab-btn.active {
-            color: var(--authentic);
-            border-bottom-color: var(--authentic);
-            background: var(--authentic-dim);
+            color: var(--signal);
+            border-bottom-color: var(--signal);
+            background: var(--signal-dim);
         }
 
-        /* Tab Contents */
-        .tab-contents { min-height: 360px; }
+        .tab-btn .material-symbols-outlined {
+            font-size: 16px;
+        }
 
-        .tab-pane { display: none; }
-        .tab-pane.active { display: flex; }
+        .tab-btn span.label {
+            font-size: 8px;
+        }
+
+        /* ── Tab Content ── */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
 
         .upload-layout {
             display: flex;
             width: 100%;
-            min-height: 360px;
+            min-height: 300px;
         }
 
+        /* ── Upload sidebar ── */
         .upload-sidebar {
-            width: 240px;
+            width: 210px;
             flex-shrink: 0;
-            padding: 20px;
             border-right: 1px solid var(--border);
+            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 14px;
+            background: var(--ink-3);
         }
 
-        .upload-sidebar-label {
-            font-family: 'Roboto Mono', monospace;
-            font-size: 10px;
+        .us-label {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--signal);
+            letter-spacing: 0.1em;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--authentic);
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-2);
         }
 
-        .upload-sidebar p {
-            font-size: 12px;
+        .us-desc {
+            font-family: var(--font-mono);
+            font-size: 10px;
             color: var(--muted);
-            line-height: 1.6;
-            font-family: 'Roboto Mono', monospace;
+            line-height: 1.7;
         }
 
-        .upload-meta {
-            margin-top: auto;
+        .us-field-label {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--ghost);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 5px;
         }
 
-        .input-row {
+        .us-input {
             display: flex;
             align-items: center;
             gap: 6px;
-            height: 36px;
-            background: var(--surface);
-            border: 1px solid var(--border-strong);
+            background: var(--ink-4);
+            border: 1px solid var(--border-2);
             padding: 0 10px;
-            font-family: 'Roboto Mono', monospace;
-            font-size: 11px;
-            color: var(--muted);
+            height: 32px;
         }
 
-        .input-row input {
+        .us-input span {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--ghost);
+        }
+
+        .us-input input {
             background: transparent;
             border: none;
             outline: none;
-            color: var(--text);
-            font-family: 'Roboto Mono', monospace;
-            font-size: 11px;
-            width: 100%;
-        }
-
-        .input-row input::placeholder { color: var(--dim); }
-
-        .meta-label {
-            font-family: 'Roboto Mono', monospace;
+            color: var(--paper);
+            font-family: var(--font-mono);
             font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--dim);
-            margin-bottom: 6px;
+            width: 100%;
+            letter-spacing: 0.02em;
         }
 
-        /* Dropzone */
-        .upload-dropzone {
+        .us-input input::placeholder {
+            color: var(--ghost);
+        }
+
+        .us-input:focus-within {
+            border-color: rgba(200, 255, 87, 0.35);
+        }
+
+        .us-meta {
+            margin-top: auto;
+        }
+
+        /* ── Drop Zone ── */
+        .upload-main {
             flex: 1;
             padding: 20px;
             display: flex;
-            align-items: center;
-            justify-content: center;
+            align-items: stretch;
         }
 
         .dropzone {
-            width: 100%;
-            height: 100%;
-            border: 1px dashed var(--border-strong);
+            flex: 1;
+            border: 1px dashed var(--border-2);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 12px;
+            gap: 10px;
             cursor: pointer;
             position: relative;
             overflow: hidden;
             transition: border-color 0.2s, background 0.2s;
-            min-height: 280px;
+            min-height: 240px;
         }
 
-        .dropzone:hover {
-            border-color: var(--authentic);
-            background: var(--authentic-dim);
+        .dropzone:hover,
+        .dropzone:focus-within {
+            border-color: rgba(200, 255, 87, 0.4);
+            background: var(--signal-dim);
         }
 
-        /* Scan line on hover */
+        /* Animated corner brackets on hover */
+        .dropzone::before,
         .dropzone::after {
             content: '';
             position: absolute;
-            left: 0;
-            top: -100%;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--authentic), transparent);
+            width: 20px;
+            height: 20px;
+            border-color: var(--signal);
+            border-style: solid;
             opacity: 0;
             transition: opacity 0.2s;
         }
 
+        .dropzone::before {
+            top: 10px;
+            left: 10px;
+            border-width: 1px 0 0 1px;
+        }
+
+        .dropzone::after {
+            bottom: 10px;
+            right: 10px;
+            border-width: 0 1px 1px 0;
+        }
+
+        .dropzone:hover::before,
         .dropzone:hover::after {
-            opacity: 0.6;
-            animation: scanline 2s linear infinite;
+            opacity: 1;
         }
 
-        @keyframes scanline {
-            0% { top: -2px; }
-            100% { top: 100%; }
+        .dz-icon {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--ghost);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .dropzone .dz-icon {
-            font-size: 32px;
-            color: var(--dim);
+        .dz-icon .material-symbols-outlined {
+            font-size: 22px;
+            color: var(--ghost);
             transition: color 0.2s;
         }
 
-        .dropzone:hover .dz-icon { color: var(--authentic); }
-
-        .dropzone .dz-title {
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text);
+        .dropzone:hover .dz-icon .material-symbols-outlined {
+            color: var(--signal);
         }
 
-        .dropzone .dz-sub {
-            font-family: 'Roboto Mono', monospace;
-            font-size: 11px;
+        .dz-title {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--paper);
+            letter-spacing: 0.02em;
+        }
+
+        .dz-sub {
+            font-family: var(--font-mono);
+            font-size: 10px;
             color: var(--muted);
         }
 
         .dz-browse {
-            color: var(--authentic);
+            color: var(--signal);
             cursor: pointer;
             text-decoration: underline;
             text-underline-offset: 2px;
@@ -503,147 +703,176 @@
         .dz-paste-btn {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            border: 1px solid var(--border-strong);
-            background: var(--raised);
-            color: var(--muted);
-            font-family: 'Roboto Mono', monospace;
-            font-size: 10px;
-            text-transform: uppercase;
+            gap: 5px;
+            padding: 5px 12px;
+            background: var(--ink-4);
+            border: 1px solid var(--border-2);
+            color: var(--ghost);
+            font-family: var(--font-mono);
+            font-size: 9px;
             letter-spacing: 0.06em;
+            text-transform: uppercase;
             cursor: pointer;
-            transition: color 0.15s, border-color 0.15s;
-            margin-top: 8px;
+            margin-top: 6px;
+            transition: all 0.15s;
         }
 
         .dz-paste-btn:hover {
-            color: var(--text);
-            border-color: var(--authentic);
+            color: var(--paper);
+            border-color: rgba(255, 255, 255, 0.25);
         }
 
-        /* Preview state */
-        .dropzone-preview {
+        .dz-paste-btn .material-symbols-outlined {
+            font-size: 12px;
+        }
+
+        /* Drop zone preview */
+        .dz-preview {
             display: none;
             position: absolute;
             inset: 0;
-            background: var(--panel);
+            background: var(--ink-3);
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 12px;
+            gap: 10px;
         }
 
-        .dropzone-preview.visible { display: flex; }
+        .dz-preview.show {
+            display: flex;
+        }
 
-        .dropzone-preview img {
-            max-height: 200px;
-            max-width: 100%;
+        .dz-preview img {
+            max-height: 160px;
+            max-width: 90%;
             object-fit: contain;
-            border: 1px solid var(--border);
-            opacity: 0.9;
+            border: 1px solid var(--border-2);
+            opacity: 0.92;
         }
 
         .file-chip {
             display: flex;
             align-items: center;
             gap: 10px;
-            background: var(--raised);
-            border: 1px solid var(--border-strong);
-            padding: 6px 12px;
+            background: var(--ink-4);
+            border: 1px solid var(--border-2);
+            padding: 5px 10px;
         }
 
-        .file-name {
-            font-family: 'Roboto Mono', monospace;
-            font-size: 11px;
-            color: var(--text);
-            max-width: 180px;
+        .file-chip-name {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--paper);
+            max-width: 160px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
 
-        .wipe-btn {
-            font-family: 'Roboto Mono', monospace;
-            font-size: 10px;
-            color: var(--suspicious);
-            background: transparent;
+        .file-chip-clear {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--warn);
+            background: none;
             border: none;
             cursor: pointer;
             letter-spacing: 0.06em;
+            text-transform: uppercase;
         }
 
-        /* Text pane */
+        /* ── Text pane ── */
         .text-pane {
             flex: 1;
-            padding: 20px;
-        }
-
-        .text-pane textarea {
-            width: 100%;
-            height: 100%;
-            min-height: 260px;
-            background: var(--surface);
-            border: 1px solid var(--border-strong);
-            color: var(--text);
-            font-family: 'Roboto Mono', monospace;
-            font-size: 12px;
-            padding: 14px;
-            resize: none;
-            outline: none;
-            line-height: 1.7;
-        }
-
-        .text-pane textarea::placeholder { color: var(--dim); }
-        .text-pane textarea:focus { border-color: var(--suspicious); }
-
-        /* Doc upload zone */
-        .doc-upload-zone {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 14px;
-            border: 1px solid var(--border-strong);
-            background: var(--surface);
-            cursor: pointer;
-            font-family: 'Roboto Mono', monospace;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            color: var(--muted);
-            transition: border-color 0.15s, color 0.15s;
-        }
-
-        .doc-upload-zone:hover {
-            border-color: var(--suspicious);
-            color: var(--suspicious);
-        }
-
-        /* URL pane */
-        .url-pane {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .url-input-wrap {
-            width: 100%;
-            max-width: 480px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
             gap: 10px;
         }
 
-        .url-input-label {
-            font-family: 'Roboto Mono', monospace;
+        .text-pane textarea {
+            flex: 1;
+            background: var(--ink-4);
+            border: 1px solid var(--border-2);
+            color: var(--paper);
+            font-family: var(--font-mono);
+            font-size: 11px;
+            padding: 12px 14px;
+            resize: none;
+            outline: none;
+            line-height: 1.7;
+            min-height: 200px;
+            letter-spacing: 0.01em;
+        }
+
+        .text-pane textarea::placeholder {
+            color: var(--ghost);
+        }
+
+        .text-pane textarea:focus {
+            border-color: rgba(200, 255, 87, 0.35);
+        }
+
+        /* Doc upload zone */
+        .doc-zone {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border: 1px solid var(--border-2);
+            background: var(--ink-4);
+            color: var(--ghost);
+            font-family: var(--font-mono);
             font-size: 10px;
+            letter-spacing: 0.04em;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--dim);
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-top: auto;
+        }
+
+        .doc-zone:hover {
+            border-color: rgba(200, 255, 87, 0.4);
+            color: var(--signal);
+        }
+
+        .doc-zone .material-symbols-outlined {
+            font-size: 14px;
+        }
+
+        .doc-indicator {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .doc-indicator.show {
+            display: flex;
+        }
+
+        /* ── URL pane ── */
+        .url-pane {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .url-wrap {
+            width: 100%;
+            max-width: 440px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .url-label {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
             text-align: center;
         }
 
@@ -651,17 +880,20 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            height: 44px;
-            background: var(--surface);
-            border: 1px solid var(--border-strong);
+            height: 42px;
+            background: var(--ink-4);
+            border: 1px solid var(--border-2);
             padding: 0 14px;
+            transition: border-color 0.2s;
         }
 
-        .url-field:focus-within { border-color: rgba(255, 74, 94, 0.5); }
+        .url-field:focus-within {
+            border-color: rgba(255, 107, 53, 0.5);
+        }
 
         .url-field .material-symbols-outlined {
-            font-size: 18px;
-            color: rgba(255, 74, 94, 0.6);
+            font-size: 16px;
+            color: var(--warn);
             flex-shrink: 0;
         }
 
@@ -669,37 +901,49 @@
             background: transparent;
             border: none;
             outline: none;
-            color: var(--text);
-            font-family: 'Roboto Mono', monospace;
-            font-size: 12px;
+            color: var(--paper);
+            font-family: var(--font-mono);
+            font-size: 11px;
             width: 100%;
+            letter-spacing: 0.02em;
         }
 
-        .url-field input::placeholder { color: var(--dim); }
+        .url-field input::placeholder {
+            color: var(--ghost);
+        }
 
-        /* Toolbar */
-        .analysis-toolbar {
+        .url-note {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--ghost);
+            text-align: center;
+            letter-spacing: 0.04em;
+            line-height: 1.8;
+        }
+
+        /* ── Toolbar ── */
+        .toolbar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 12px 20px;
-            background: var(--surface);
-            border-top: 1px solid var(--border);
+            padding: 10px 16px;
+            border-top: 1px solid var(--border-2);
+            background: var(--ink-3);
         }
 
-        .toolbar-status {
+        .toolbar-info {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-family: 'Roboto Mono', monospace;
-            font-size: 11px;
-            color: var(--muted);
+            gap: 10px;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--ghost);
         }
 
-        .toolbar-status .indicator {
-            width: 6px;
-            height: 6px;
-            background: var(--authentic);
+        .toolbar-indicator {
+            width: 5px;
+            height: 5px;
+            background: var(--signal);
             border-radius: 50%;
         }
 
@@ -707,247 +951,314 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            height: 40px;
-            padding: 0 28px;
+            height: 38px;
+            padding: 0 24px;
             background: transparent;
-            border: 1px solid var(--authentic);
-            color: var(--authentic);
-            font-family: 'Roboto Mono', monospace;
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 0.08em;
+            border: 1px solid var(--signal);
+            color: var(--signal);
+            font-family: var(--font-display);
+            font-size: 10px;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
             cursor: pointer;
             position: relative;
             overflow: hidden;
-            transition: color 0.2s, box-shadow 0.2s;
+            transition: box-shadow 0.2s;
         }
 
         .execute-btn::before {
             content: '';
             position: absolute;
-            left: -100%;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--authentic-dim);
-            transition: left 0.3s ease;
+            inset: 0;
+            background: var(--signal-dim);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.25s ease;
         }
 
-        .execute-btn:hover::before { left: 0; }
+        .execute-btn:hover::before {
+            transform: scaleX(1);
+        }
 
         .execute-btn:hover {
-            box-shadow: 0 0 20px rgba(71,229,188,0.2);
+            box-shadow: 0 0 18px rgba(200, 255, 87, 0.15);
         }
 
-        .execute-btn span, .execute-btn .material-symbols-outlined {
+        .execute-btn * {
             position: relative;
             z-index: 1;
         }
 
-        .execute-btn .material-symbols-outlined { font-size: 18px; }
+        .execute-btn .material-symbols-outlined {
+            font-size: 15px;
+        }
 
-        /* ---- Feature Cards Row ---- */
-        .features-row {
+        /* ===================================================
+   FEATURE GRID
+   ================================================= */
+
+        .features {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            max-width: 1000px;
+            gap: 1px;
+            background: var(--border);
+            border: 1px solid var(--border-2);
+            flex-shrink: 0;
         }
 
         .feat-card {
-            background: var(--panel);
-            border: 1px solid var(--border);
+            background: var(--ink-2);
             padding: 16px;
             display: flex;
             flex-direction: column;
             gap: 8px;
             text-decoration: none;
-            transition: border-color 0.2s, background 0.2s;
+            transition: background 0.2s;
+            position: relative;
+            overflow: hidden;
         }
 
-        .feat-card:hover { background: var(--raised); }
+        .feat-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: currentColor;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
 
-        .feat-card-header {
+        .feat-card:hover {
+            background: var(--ink-3);
+        }
+
+        .feat-card:hover::before {
+            opacity: 1;
+        }
+
+        .feat-card.c-video {
+            color: #4E9EFF;
+        }
+
+        .feat-card.c-audio {
+            color: #AA7FFF;
+        }
+
+        .feat-card.c-text {
+            color: #FF9F57;
+        }
+
+        .feat-card.c-fact {
+            color: var(--danger);
+        }
+
+        .feat-header {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 7px;
         }
 
-        .feat-card .material-symbols-outlined {
-            font-size: 16px;
-            color: var(--dim);
-            transition: color 0.2s;
+        .feat-header .material-symbols-outlined {
+            font-size: 14px;
         }
 
-        .feat-card:hover .material-symbols-outlined { color: var(--text); }
-
-        .feat-card-title {
-            font-family: 'Roboto Mono', monospace;
-            font-size: 10px;
+        .feat-title {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: inherit;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--text);
         }
 
-        .feat-card p {
-            font-family: 'Roboto Mono', monospace;
-            font-size: 10px;
+        .feat-desc {
+            font-family: var(--font-mono);
+            font-size: 9px;
             color: var(--muted);
-            line-height: 1.6;
+            line-height: 1.7;
         }
 
-        .feat-card.c-video:hover { border-color: var(--brand); }
-        .feat-card.c-audio:hover { border-color: #9B59B6; }
-        .feat-card.c-text:hover { border-color: var(--suspicious); }
-        .feat-card.c-fact:hover { border-color: var(--danger); }
+        /* ===================================================
+   RESPONSIVE
+   ================================================= */
 
-        .feat-card.c-video:hover .material-symbols-outlined { color: var(--brand); }
-        .feat-card.c-audio:hover .material-symbols-outlined { color: #9B59B6; }
-        .feat-card.c-text:hover .material-symbols-outlined { color: var(--suspicious); }
-        .feat-card.c-fact:hover .material-symbols-outlined { color: var(--danger); }
-
-        /* ---- Scrollbar ---- */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg); }
-        ::-webkit-scrollbar-thumb { background: var(--raised); }
-        ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
-
-        /* ---- Responsive ---- */
         @media (max-width: 768px) {
-            .sidebar { display: none; }
-            .main-stage { padding: 20px 16px; }
-            .features-row { grid-template-columns: repeat(2, 1fr); }
-            .upload-layout { flex-direction: column; }
-            .upload-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
-            .topnav-links { display: none; }
+            .sidebar {
+                display: none;
+            }
+
+            .stage {
+                padding: 16px;
+            }
+
+            .features {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .upload-layout {
+                flex-direction: column;
+            }
+
+            .upload-sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .topnav {
+                display: none;
+            }
+        }
+
+        /* ===================================================
+   SCROLLBAR
+   ================================================= */
+
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--ink);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--ghost);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--muted);
         }
     </style>
 </head>
 
 <body>
-<div class="app-shell">
+    <div class="app">
 
-    <!-- ═══ TOP NAVIGATION ═══ -->
-    <nav class="topnav">
-        <a class="topnav-brand" href="homepage.html">
-            <div class="logo-icon">
-                <span class="material-symbols-outlined" style="font-size:14px;">blur_on</span>
+        <!-- ═══ TOP BAR ═══ -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <a class="brand" href="homepage.html">
+                    <div class="brand-mark"></div>
+                    <span class="brand-name">VisioNova</span>
+                    <span class="brand-tag">v2.1</span>
+                </a>
+                <nav class="topnav">
+                    <a href="homepage.html" class="active">Home</a>
+                    <a href="AnalysisDashboard.html">Analyze</a>
+                    <a href="FactCheckPage.html">Fact Check</a>
+                    <a href="ReportPage.html">Reports</a>
+                </nav>
             </div>
-            <span class="brand-name">VisioNova</span>
-            <span class="brand-version">v2.1</span>
-        </a>
-
-        <div class="topnav-links">
-            <a href="homepage.html" class="nav-link active">Home</a>
-            <a href="AnalysisDashboard.html" class="nav-link">Analyze</a>
-            <a href="FactCheckPage.html" class="nav-link">Fact Check</a>
-            <a href="ReportPage.html" class="nav-link">Reports</a>
-        </div>
-
-        <div class="topnav-right">
-            <div class="status-pill">
-                <div class="status-dot"></div>
-                SYSTEMS ONLINE
-            </div>
-        </div>
-    </nav>
-
-    <div class="body-layout">
-
-        <!-- ═══ SIDEBAR ═══ -->
-        <aside class="sidebar">
-            <a href="homepage.html" class="sidebar-item active">
-                <span class="material-symbols-outlined">add_circle</span>
-                <span>New Scan</span>
-            </a>
-            <div class="sidebar-divider"></div>
-            <a href="AnalysisDashboard.html" class="sidebar-item">
-                <span class="material-symbols-outlined">dashboard</span>
-                <span>Dashboard</span>
-            </a>
-            <a href="FactCheckPage.html" class="sidebar-item">
-                <span class="material-symbols-outlined">shield</span>
-                <span>Fact Check</span>
-            </a>
-            <a href="ReportPage.html" class="sidebar-item">
-                <span class="material-symbols-outlined">description</span>
-                <span>Reports</span>
-            </a>
-        </aside>
-
-        <!-- ═══ MAIN CONTENT ═══ -->
-        <main class="main-stage">
-
-            <!-- Page Header -->
-            <header class="page-header">
-                <div class="page-header-eyebrow">
-                    <div style="width:6px;height:6px;background:var(--authentic);border-radius:50%;animation:pulse-dot 2s infinite;"></div>
-                    System Active // Multi-Modal Credibility Engine
+            <div class="topbar-right">
+                <div class="sys-status">
+                    <div class="sys-dot"></div>
+                    Systems Online
                 </div>
-                <h1>Intelligence Dashboard</h1>
-                <p>Forensic analysis pipeline. Upload media to begin multi-modal deepfake and misinformation verification.</p>
-            </header>
+                <button class="btn-sm" id="themeToggle">Theme</button>
+            </div>
+        </header>
 
-            <!-- Primary Analysis Panel -->
-            <section class="analysis-panel">
+        <div class="body-row">
 
-                <!-- Tabs -->
-                <div class="tab-strip" id="tabStrip">
-                    <button class="tab-btn active" data-tab="image" data-page="ImageResultPage.html">
-                        <span class="material-symbols-outlined">image</span>
-                        Image
-                    </button>
-                    <button class="tab-btn" data-tab="video" data-page="VideoResultPage.html">
-                        <span class="material-symbols-outlined">videocam</span>
-                        Video
-                    </button>
-                    <button class="tab-btn" data-tab="audio" data-page="AudioResultPage.html">
-                        <span class="material-symbols-outlined">graphic_eq</span>
-                        Audio
-                    </button>
-                    <button class="tab-btn" data-tab="text" data-page="TextResultPage.html">
-                        <span class="material-symbols-outlined">description</span>
-                        Text
-                    </button>
-                    <button class="tab-btn" data-tab="url" data-page="FactCheckPage.html">
-                        <span class="material-symbols-outlined">radar</span>
-                        Fact Check
-                    </button>
+            <!-- ═══ SIDEBAR ═══ -->
+            <aside class="sidebar">
+                <a class="sb-item active" href="homepage.html">
+                    <span class="material-symbols-outlined">add_circle</span>
+                    <span class="sb-label">New Scan</span>
+                </a>
+                <div class="sb-divider"></div>
+                <a class="sb-item" href="AnalysisDashboard.html">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    <span class="sb-label">Dashboard</span>
+                </a>
+                <a class="sb-item" href="FactCheckPage.html">
+                    <span class="material-symbols-outlined">shield</span>
+                    <span class="sb-label">Fact Check</span>
+                </a>
+                <a class="sb-item" href="ReportPage.html">
+                    <span class="material-symbols-outlined">description</span>
+                    <span class="sb-label">Reports</span>
+                </a>
+            </aside>
+
+            <!-- ═══ MAIN STAGE ═══ -->
+            <main class="stage">
+
+                <!-- Page Header -->
+                <div class="page-header">
+                    <div class="page-header-title">
+                        <div class="eyebrow">Multi-modal credibility engine</div>
+                        <h1>Intelligence<br>Dashboard</h1>
+                        <p>Forensic analysis pipeline. Upload media to begin multi-modal deepfake and misinformation
+                            verification.</p>
+                    </div>
+                    <div class="header-meta">
+                        <div class="meta-chip">Node 14 online</div>
+                        <div class="meta-chip">Ensemble ready</div>
+                    </div>
                 </div>
 
-                <!-- Tab Contents -->
-                <div class="tab-contents">
+                <!-- Analysis Panel -->
+                <div class="analysis-panel">
 
-                    <!-- IMAGE -->
-                    <div class="tab-pane active" id="tab-image">
+                    <!-- Tab Strip -->
+                    <div class="tab-strip" id="tabStrip">
+                        <button class="tab-btn active" data-tab="image" data-page="ImageResultPage.html">
+                            <span class="material-symbols-outlined">image</span>
+                            <span class="label">Image</span>
+                        </button>
+                        <button class="tab-btn" data-tab="video" data-page="VideoResultPage.html">
+                            <span class="material-symbols-outlined">videocam</span>
+                            <span class="label">Video</span>
+                        </button>
+                        <button class="tab-btn" data-tab="audio" data-page="AudioResultPage.html">
+                            <span class="material-symbols-outlined">graphic_eq</span>
+                            <span class="label">Audio</span>
+                        </button>
+                        <button class="tab-btn" data-tab="text" data-page="TextResultPage.html">
+                            <span class="material-symbols-outlined">description</span>
+                            <span class="label">Text</span>
+                        </button>
+                        <button class="tab-btn" data-tab="url" data-page="FactCheckPage.html">
+                            <span class="material-symbols-outlined">radar</span>
+                            <span class="label">Fact Check</span>
+                        </button>
+                    </div>
+
+                    <!-- IMAGE TAB -->
+                    <div class="tab-content active" id="tab-image">
                         <div class="upload-layout">
                             <div class="upload-sidebar">
-                                <div class="upload-sidebar-label">Target Acquisition</div>
-                                <p>Awaiting image ingestion for Vision Transformer ensemble analysis. JPG, PNG, WEBP — max 50MB.</p>
-                                <div class="upload-meta">
-                                    <div class="meta-label">Remote Source</div>
-                                    <div class="input-row">
+                                <div class="us-label">Target Acquisition</div>
+                                <p class="us-desc">Vision Transformer ensemble analysis. JPG, PNG, WEBP — max 50MB.</p>
+                                <div class="us-meta">
+                                    <div class="us-field-label">Remote source</div>
+                                    <div class="us-input">
                                         <span>&gt;</span>
-                                        <input id="imageUrlInput" type="text" placeholder="[ PASTE IMAGE URL ]" />
+                                        <input id="imageUrlInput" type="text" placeholder="paste image URL" />
                                     </div>
                                 </div>
                             </div>
-                            <div class="upload-dropzone">
+                            <div class="upload-main">
                                 <div class="dropzone" id="imageDropZone" tabindex="0">
-                                    <span class="material-symbols-outlined dz-icon">add_photo_alternate</span>
+                                    <div class="dz-icon">
+                                        <span class="material-symbols-outlined">add_photo_alternate</span>
+                                    </div>
                                     <div class="dz-title">Initialize Media Drop</div>
-                                    <div class="dz-sub">Drag & Drop or <span class="dz-browse" id="imgBrowse">Browse Storage</span></div>
+                                    <div class="dz-sub">Drag & drop or <span class="dz-browse" id="imgBrowse">browse
+                                            storage</span></div>
                                     <button class="dz-paste-btn" id="pasteImageBtn" type="button">
-                                        <span class="material-symbols-outlined" style="font-size:14px;">content_paste</span>
-                                        Clipboard Paste
+                                        <span class="material-symbols-outlined">content_paste</span>
+                                        Clipboard paste
                                     </button>
-                                    <!-- Preview -->
-                                    <div class="dropzone-preview" id="imagePreview">
+                                    <div class="dz-preview" id="imagePreview">
                                         <img id="imagePreviewImg" alt="Preview" />
                                         <div class="file-chip">
-                                            <span class="file-name" id="imageFileName">target.png</span>
-                                            <button class="wipe-btn" id="clearImageBtn">[ WIPE ]</button>
+                                            <span class="file-chip-name" id="imageFileName">target.png</span>
+                                            <button class="file-chip-clear" id="clearImageBtn">wipe</button>
                                         </div>
                                     </div>
                                 </div>
@@ -955,70 +1266,80 @@
                         </div>
                     </div>
 
-                    <!-- VIDEO -->
-                    <div class="tab-pane" id="tab-video">
+                    <!-- VIDEO TAB -->
+                    <div class="tab-content" id="tab-video">
                         <div class="upload-layout">
                             <div class="upload-sidebar">
-                                <div class="upload-sidebar-label">Video Telemetry</div>
-                                <p>Frame-by-frame deepfake analysis pipeline. MP4, MOV, AVI — max 500MB.</p>
-                                <div class="upload-meta">
-                                    <div class="meta-label">Remote Source</div>
-                                    <div class="input-row">
+                                <div class="us-label">Video Telemetry</div>
+                                <p class="us-desc">Frame-by-frame deepfake analysis. MP4, MOV, AVI — max 500MB.</p>
+                                <div class="us-meta">
+                                    <div class="us-field-label">Remote source</div>
+                                    <div class="us-input">
                                         <span>&gt;</span>
-                                        <input type="text" placeholder="[ PASTE VIDEO URL ]" />
+                                        <input type="text" placeholder="paste video URL" />
                                     </div>
                                 </div>
                             </div>
-                            <div class="upload-dropzone">
-                                <div class="dropzone" style="--hover-color: var(--brand);">
-                                    <span class="material-symbols-outlined dz-icon">movie</span>
-                                    <div class="dz-title">Mount Video File</div>
-                                    <div class="dz-sub">Drag & Drop or <span class="dz-browse" style="color:var(--brand);">Browse</span></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- AUDIO -->
-                    <div class="tab-pane" id="tab-audio">
-                        <div class="upload-layout">
-                            <div class="upload-sidebar">
-                                <div class="upload-sidebar-label">Spectral Intake</div>
-                                <p>NII AntiDeepfake synthetic voice array detection. MP3, WAV, FLAC supported.</p>
-                                <div class="upload-meta">
-                                    <div class="meta-label">Remote Audio URI</div>
-                                    <div class="input-row">
-                                        <span>&gt;</span>
-                                        <input type="text" placeholder="[ AUDIO STREAM URL ]" />
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="upload-dropzone">
+                            <div class="upload-main">
                                 <div class="dropzone">
-                                    <span class="material-symbols-outlined dz-icon">mic</span>
-                                    <div class="dz-title">Inject Audio Signal</div>
-                                    <div class="dz-sub">Drag & Drop or <span class="dz-browse" style="color:#9B59B6;">Browse Storage</span></div>
+                                    <div class="dz-icon">
+                                        <span class="material-symbols-outlined">movie</span>
+                                    </div>
+                                    <div class="dz-title">Mount Video File</div>
+                                    <div class="dz-sub">Drag & drop or <span class="dz-browse"
+                                            style="color:#4E9EFF;">browse</span></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- TEXT -->
-                    <div class="tab-pane" id="tab-text">
+                    <!-- AUDIO TAB -->
+                    <div class="tab-content" id="tab-audio">
                         <div class="upload-layout">
                             <div class="upload-sidebar">
-                                <div class="upload-sidebar-label">Semantic Buffer</div>
-                                <p>LLM artifact detection via RoBERTa/DeBERTa ensemble vectors. Binoculars perplexity scoring.</p>
-                                <div class="upload-meta" style="margin-top:auto; padding-top:16px; border-top:1px solid var(--border);">
-                                    <div class="meta-label" style="margin-bottom:8px;">Or Mount Document</div>
-                                    <div class="doc-upload-zone" id="docUploadZone" onclick="document.getElementById('textFileInput').click()">
-                                        <span class="material-symbols-outlined" style="font-size:18px;">upload_file</span>
-                                        PDF / DOCX / TXT — Max 10MB
+                                <div class="us-label">Spectral Intake</div>
+                                <p class="us-desc">Synthetic voice detection via Wav2Vec2. MP3, WAV, FLAC supported.</p>
+                                <div class="us-meta">
+                                    <div class="us-field-label">Remote audio URI</div>
+                                    <div class="us-input">
+                                        <span>&gt;</span>
+                                        <input type="text" placeholder="audio stream URL" />
                                     </div>
-                                    <div id="docFileIndicator" style="display:none;margin-top:8px;">
-                                        <div class="file-chip" style="border-color:rgba(255,170,68,0.4);">
-                                            <span class="file-name" id="docFileNameDisplay" style="color:var(--suspicious);">file.pdf</span>
-                                            <span class="material-symbols-outlined" id="docRemoveBtn" style="font-size:14px;color:var(--suspicious);cursor:pointer;">close</span>
+                                </div>
+                            </div>
+                            <div class="upload-main">
+                                <div class="dropzone">
+                                    <div class="dz-icon">
+                                        <span class="material-symbols-outlined">mic</span>
+                                    </div>
+                                    <div class="dz-title">Inject Audio Signal</div>
+                                    <div class="dz-sub">Drag & drop or <span class="dz-browse"
+                                            style="color:#AA7FFF;">browse storage</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TEXT TAB -->
+                    <div class="tab-content" id="tab-text">
+                        <div class="upload-layout">
+                            <div class="upload-sidebar">
+                                <div class="us-label">Semantic Buffer</div>
+                                <p class="us-desc">LLM artifact detection via RoBERTa/DeBERTa ensemble. Binoculars
+                                    perplexity scoring.</p>
+                                <div class="us-meta">
+                                    <div class="us-field-label">Or mount document</div>
+                                    <div class="doc-zone" id="docUploadZone"
+                                        onclick="document.getElementById('textFileInput').click()">
+                                        <span class="material-symbols-outlined">upload_file</span>
+                                        PDF / DOCX / TXT — 10MB max
+                                    </div>
+                                    <div class="doc-indicator" id="docFileIndicator">
+                                        <div class="file-chip" style="border-color: rgba(255,159,87,0.4);">
+                                            <span class="file-chip-name" id="docFileNameDisplay"
+                                                style="color: #FF9F57;"></span>
+                                            <span class="material-symbols-outlined" id="docRemoveBtn"
+                                                style="font-size:13px;color:#FF9F57;cursor:pointer;">close</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1029,207 +1350,215 @@
                         </div>
                     </div>
 
-                    <!-- URL / FACT CHECK -->
-                    <div class="tab-pane" id="tab-url">
+                    <!-- URL / FACT CHECK TAB -->
+                    <div class="tab-content" id="tab-url">
                         <div class="upload-layout">
                             <div class="upload-sidebar">
-                                <div class="upload-sidebar-label">Network Analysis</div>
-                                <p>Web-scraping and cross-reference reasoning. Verifies factual claims against real-time knowledge bases.</p>
-                                <div class="upload-meta" style="margin-top:auto;">
-                                    <div style="font-family:'Roboto Mono',monospace;font-size:11px;color:var(--dim);line-height:1.8;padding:10px;background:var(--surface);border:1px solid var(--border);">
+                                <div class="us-label">Network Analysis</div>
+                                <p class="us-desc">Web-scraping and cross-reference reasoning. Verifies claims against
+                                    real-time knowledge bases.</p>
+                                <div class="us-meta">
+                                    <div
+                                        style="font-family: var(--font-mono); font-size: 10px; color: var(--ghost); line-height: 1.9; padding: 10px; background: var(--ink-4); border: 1px solid var(--border);">
                                         &gt; Awaiting TARGET coordinate.<br>
                                         &gt; Protocol: Semantic Web Ping<br>
-                                        &gt; Status: STANDBY
+                                        &gt; Status: <span style="color: var(--signal);">STANDBY</span>
                                     </div>
                                 </div>
                             </div>
                             <div class="url-pane">
-                                <div class="url-input-wrap">
-                                    <div class="url-input-label">Target Uniform Resource Locator</div>
+                                <div class="url-wrap">
+                                    <div class="url-label">Target Uniform Resource Locator</div>
                                     <div class="url-field">
                                         <span class="material-symbols-outlined">radar</span>
                                         <input type="url" id="urlInput" placeholder="https://..." />
+                                    </div>
+                                    <div class="url-note">
+                                        Accepts: article URLs, direct claims, factual questions.<br>
+                                        Cross-referenced against 40+ trusted source domains.
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Toolbar -->
+                    <div class="toolbar">
+                        <div class="toolbar-info">
+                            <div class="toolbar-indicator"></div>
+                            Ensemble Engine — Standby
+                        </div>
+                        <button class="execute-btn" id="analyzeBtn" onclick="navigateToResult()">
+                            <span class="material-symbols-outlined">bolt</span>
+                            Execute Scan
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Toolbar -->
-                <div class="analysis-toolbar">
-                    <div class="toolbar-status">
-                        <div class="indicator"></div>
-                        Ensemble Engine — Standby
-                    </div>
-                    <button class="execute-btn" id="analyzeBtn" onclick="navigateToResult()">
-                        <span class="material-symbols-outlined">bolt</span>
-                        Execute Scan
-                    </button>
+                <!-- Feature Grid -->
+                <div class="features">
+                    <a href="VideoResultPage.html" class="feat-card c-video">
+                        <div class="feat-header">
+                            <span class="material-symbols-outlined">face</span>
+                            <span class="feat-title">Video Frame Filter</span>
+                        </div>
+                        <p class="feat-desc">Frame-by-frame synthetic face evaluation using FaceForensics++ models.</p>
+                    </a>
+                    <a href="AudioResultPage.html" class="feat-card c-audio">
+                        <div class="feat-header">
+                            <span class="material-symbols-outlined">graphic_eq</span>
+                            <span class="feat-title">Acoustic Scout</span>
+                        </div>
+                        <p class="feat-desc">Sub-audible frequency disruption capture via Wav2Vec2 anti-deepfake models.
+                        </p>
+                    </a>
+                    <a href="TextResultPage.html" class="feat-card c-text">
+                        <div class="feat-header">
+                            <span class="material-symbols-outlined">psychology</span>
+                            <span class="feat-title">LLM Classifiers</span>
+                        </div>
+                        <p class="feat-desc">Token probability mapping via Binoculars perplexity and RoBERTa ensemble.
+                        </p>
+                    </a>
+                    <a href="FactCheckPage.html" class="feat-card c-fact">
+                        <div class="feat-header">
+                            <span class="material-symbols-outlined">fact_check</span>
+                            <span class="feat-title">Fact Engine</span>
+                        </div>
+                        <p class="feat-desc">Real-time DB semantic query, cross-source validation and verdicts.</p>
+                    </a>
                 </div>
 
-            </section>
-
-            <!-- Features Grid -->
-            <div class="features-row">
-                <a href="VideoResultPage.html" class="feat-card c-video">
-                    <div class="feat-card-header">
-                        <span class="material-symbols-outlined">face</span>
-                        <span class="feat-card-title">Video Frame Filter</span>
-                    </div>
-                    <p>Frame-by-frame synthetic face evaluation pipeline using FaceForensics++ models.</p>
-                </a>
-                <a href="AudioResultPage.html" class="feat-card c-audio">
-                    <div class="feat-card-header">
-                        <span class="material-symbols-outlined">graphic_eq</span>
-                        <span class="feat-card-title">Acoustic Scout</span>
-                    </div>
-                    <p>Sub-audible frequency disruption capture via Wav2Vec2 and anti-deepfake models.</p>
-                </a>
-                <a href="TextResultPage.html" class="feat-card c-text">
-                    <div class="feat-card-header">
-                        <span class="material-symbols-outlined">psychology</span>
-                        <span class="feat-card-title">LLM Classifiers</span>
-                    </div>
-                    <p>Token probability mapping via Binoculars perplexity and RoBERTa ensemble.</p>
-                </a>
-                <a href="FactCheckPage.html" class="feat-card c-fact">
-                    <div class="feat-card-header">
-                        <span class="material-symbols-outlined">fact_check</span>
-                        <span class="feat-card-title">Fact Engine</span>
-                    </div>
-                    <p>Real-time DB semantic query, cross-source validation and verdicts.</p>
-                </a>
-            </div>
-
-        </main>
+            </main>
+        </div>
     </div>
-</div>
 
-<!-- Hidden File Inputs -->
-<input type="file" id="imageFileInput" accept="image/*" style="display:none" />
-<input type="file" id="videoFileInput" accept="video/*" style="display:none" />
-<input type="file" id="audioFileInput" accept="audio/*" style="display:none" />
-<input type="file" id="textFileInput" accept=".txt,.doc,.docx,.pdf" style="display:none" />
+    <!-- Hidden file inputs -->
+    <input type="file" id="imageFileInput" accept="image/*" style="display:none" />
+    <input type="file" id="videoFileInput" accept="video/*" style="display:none" />
+    <input type="file" id="audioFileInput" accept="audio/*" style="display:none" />
+    <input type="file" id="textFileInput" accept=".txt,.doc,.docx,.pdf" style="display:none" />
 
-<script src="../js/storage-utils.js"></script>
-<script src="../js/theme-toggle.js"></script>
+    <script src="../js/storage-utils.js"></script>
 
-<script>
-    // ────────────────────────────────────────────
-    // TAB SWITCHING
-    // ────────────────────────────────────────────
-    let activeTab = 'image';
-    let activeResultPage = 'ImageResultPage.html';
+    <script>
+        // ── Tab switching ──
+        let activeTab = 'image';
+        let activeResultPage = 'ImageResultPage.html';
 
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-            btn.classList.add('active');
-            activeTab = btn.dataset.tab;
-            activeResultPage = btn.dataset.page;
-            document.getElementById('tab-' + activeTab).classList.add('active');
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                activeTab = btn.dataset.tab;
+                activeResultPage = btn.dataset.page;
+                document.getElementById('tab-' + activeTab).classList.add('active');
+            });
         });
-    });
 
-    // ────────────────────────────────────────────
-    // NAVIGATE TO RESULT
-    // ────────────────────────────────────────────
-    function navigateToResult() {
-        window.location.href = activeResultPage;
-    }
+        // ── Navigate to result ──
+        function navigateToResult() {
+            window.location.href = activeResultPage;
+        }
 
-    // ────────────────────────────────────────────
-    // IMAGE: Browse + Preview
-    // ────────────────────────────────────────────
-    const imgBrowse = document.getElementById('imgBrowse');
-    const imageFileInput = document.getElementById('imageFileInput');
-    const imageDropZone = document.getElementById('imageDropZone');
-    const imagePreview = document.getElementById('imagePreview');
-    const imagePreviewImg = document.getElementById('imagePreviewImg');
-    const imageFileName = document.getElementById('imageFileName');
-    const clearImageBtn = document.getElementById('clearImageBtn');
+        // ── Image preview ──
+        const imgBrowse = document.getElementById('imgBrowse');
+        const imageFileInput = document.getElementById('imageFileInput');
+        const imageDropZone = document.getElementById('imageDropZone');
+        const imagePreview = document.getElementById('imagePreview');
+        const imagePreviewImg = document.getElementById('imagePreviewImg');
+        const imageFileName = document.getElementById('imageFileName');
+        const clearImageBtn = document.getElementById('clearImageBtn');
 
-    if (imgBrowse) imgBrowse.addEventListener('click', () => imageFileInput.click());
+        if (imgBrowse) imgBrowse.addEventListener('click', () => imageFileInput.click());
 
-    imageFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        showImagePreview(file);
-        saveToStorage(file);
-    });
+        imageFileInput.addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            showImagePreview(file);
+            saveToStorage(file);
+        });
 
-    imageDropZone.addEventListener('dragover', e => { e.preventDefault(); imageDropZone.style.borderColor = 'var(--authentic)'; });
-    imageDropZone.addEventListener('dragleave', () => { imageDropZone.style.borderColor = ''; });
-    imageDropZone.addEventListener('drop', e => {
-        e.preventDefault();
-        imageDropZone.style.borderColor = '';
-        const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('image/')) { showImagePreview(file); saveToStorage(file); }
-    });
+        imageDropZone.addEventListener('dragover', e => {
+            e.preventDefault();
+            imageDropZone.style.borderColor = 'rgba(200,255,87,0.5)';
+        });
+        imageDropZone.addEventListener('dragleave', () => {
+            imageDropZone.style.borderColor = '';
+        });
+        imageDropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            imageDropZone.style.borderColor = '';
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                showImagePreview(file);
+                saveToStorage(file);
+            }
+        });
 
-    function showImagePreview(file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            imagePreviewImg.src = e.target.result;
-            imageFileName.textContent = file.name;
-            imagePreview.classList.add('visible');
-        };
-        reader.readAsDataURL(file);
-    }
+        function showImagePreview(file) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                imagePreviewImg.src = e.target.result;
+                imageFileName.textContent = file.name;
+                imagePreview.classList.add('show');
+            };
+            reader.readAsDataURL(file);
+        }
 
-    if (clearImageBtn) clearImageBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        imagePreview.classList.remove('visible');
-        imageFileInput.value = '';
-    });
+        if (clearImageBtn) clearImageBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            imagePreview.classList.remove('show');
+            imageFileInput.value = '';
+        });
 
-    // Paste
-    const pasteBtn = document.getElementById('pasteImageBtn');
-    if (pasteBtn) pasteBtn.addEventListener('click', async () => {
-        try {
-            const items = await navigator.clipboard.read();
-            for (const item of items) {
-                for (const type of item.types) {
-                    if (type.startsWith('image/')) {
-                        const blob = await item.getType(type);
-                        const file = new File([blob], 'pasted_image.png', { type });
-                        showImagePreview(file);
-                        saveToStorage(file);
+        // ── Paste from clipboard ──
+        const pasteBtn = document.getElementById('pasteImageBtn');
+        if (pasteBtn) pasteBtn.addEventListener('click', async () => {
+            try {
+                const items = await navigator.clipboard.read();
+                for (const item of items) {
+                    for (const type of item.types) {
+                        if (type.startsWith('image/')) {
+                            const blob = await item.getType(type);
+                            const file = new File([blob], 'pasted_image.png', { type });
+                            showImagePreview(file);
+                            saveToStorage(file);
+                        }
                     }
                 }
+            } catch (e) { console.warn('Clipboard read failed:', e); }
+        });
+
+        function saveToStorage(file) {
+            if (typeof VisioNovaStorage !== 'undefined') {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    VisioNovaStorage.saveFile('image', e.target.result, file.name, file.type);
+                };
+                reader.readAsDataURL(file);
             }
-        } catch(e) { console.warn('Clipboard read failed:', e); }
-    });
-
-    function saveToStorage(file) {
-        if (typeof StorageUtils !== 'undefined') {
-            StorageUtils.saveFile(file);
         }
-    }
 
-    // ────────────────────────────────────────────
-    // TEXT: Doc upload
-    // ────────────────────────────────────────────
-    const textFileInput = document.getElementById('textFileInput');
-    const docFileIndicator = document.getElementById('docFileIndicator');
-    const docFileNameDisplay = document.getElementById('docFileNameDisplay');
-    const docRemoveBtn = document.getElementById('docRemoveBtn');
+        // ── Text / Doc upload ──
+        const textFileInput = document.getElementById('textFileInput');
+        const docFileIndicator = document.getElementById('docFileIndicator');
+        const docFileNameDisplay = document.getElementById('docFileNameDisplay');
+        const docRemoveBtn = document.getElementById('docRemoveBtn');
 
-    if (textFileInput) textFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        docFileNameDisplay.textContent = file.name;
-        docFileIndicator.style.display = 'block';
-    });
+        if (textFileInput) textFileInput.addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            docFileNameDisplay.textContent = file.name;
+            docFileIndicator.classList.add('show');
+        });
 
-    if (docRemoveBtn) docRemoveBtn.addEventListener('click', () => {
-        textFileInput.value = '';
-        docFileIndicator.style.display = 'none';
-    });
-</script>
-
+        if (docRemoveBtn) docRemoveBtn.addEventListener('click', () => {
+            textFileInput.value = '';
+            docFileIndicator.classList.remove('show');
+        });
+    </script>
 </body>
+
 </html>
