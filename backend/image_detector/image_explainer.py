@@ -201,21 +201,12 @@ Be thorough but honest - only flag issues you actually observe."""
             }
     
     def _generate_explanation(self, detection_result: Dict, visual_analysis: Dict) -> Dict[str, Any]:
-        """
-        Generate a human-readable explanation combining ML and visual analysis.
-        
-        Args:
-            detection_result: ML detection results
-            visual_analysis: Visual analysis from vision model
-            
-        Returns:
-            dict with explanation details
-        """
+        """Generate a human-readable explanation combining ML and visual analysis."""
+
         if not self.client:
             return self._fallback_explanation(detection_result, visual_analysis)
-        
+
         try:
-            # Build context from both analyses
             context = f"""
 ML DETECTION RESULTS:
 - AI Probability: {detection_result.get('ai_probability', 'N/A')}%
@@ -228,42 +219,44 @@ VISUAL ANALYSIS (AI Vision):
 - Visual Confidence: {visual_analysis.get('confidence', 'N/A')}%
 - Artifacts Found: {json.dumps(visual_analysis.get('visual_artifacts_found', []), indent=2)}
 - Areas of Concern: {visual_analysis.get('areas_of_concern', [])}
-- Authentic Indicators: {visual_analysis.get('authentic_indicators', [])}
-
-ADDITIONAL CONTEXT:
-- Metadata AI Indicators: {detection_result.get('metadata', {}).get('ai_indicators', [])}
 - Watermark Detected: {detection_result.get('watermark', {}).get('watermark_detected', False)}
 - C2PA/Content Credentials: {detection_result.get('content_credentials', {}).get('has_content_credentials', False)}
 """
 
-            prompt = f"""Based on the following image analysis results, provide a clear, helpful explanation for the user.
+            verdict = (detection_result.get('verdict') or detection_result.get('ensemble_verdict') or 'UNCERTAIN').lower()
+
+            prompt = f"""
+You are explaining an image AI-detection result to a user. Use both the ML detector signals and the vision analysis. Be concise and specific to THIS image.
 
 {context}
 
-Provide your response in this exact JSON format:
+Respond with valid JSON ONLY in this structure:
 {{
-    "summary": "<2-3 sentence plain-language summary explaining whether the image appears AI-generated and why>",
+    "summary": "<one-sentence verdict in plain language>",
+    "objects_caption": "<describe main objects/scenes plainly>",
     "key_findings": [
-        "<finding 1 with explanation>",
+        "<finding 1 with short rationale>",
         "<finding 2>",
-        "<finding 3>"
+        "<optional finding 3>"
     ],
-    "visual_evidence": "<Describe the visual clues that support the verdict, if any>",
-    "technical_notes": "<Brief explanation of what the ML scores mean>",
-    "confidence_explanation": "<What the confidence level means and any caveats>",
+    "visual_evidence": [
+        "<visual clue 1 (or empty if none)>",
+        "<visual clue 2>"
+    ],
+    "provenance": "<watermark/C2PA status or 'No verifiable provenance signals'>",
+    "confidence_explanation": "<what the confidence means and any caveats>",
     "recommendations": [
-        "<what the user should consider or do next>",
-        "<additional recommendation>"
+        "<actionable recommendation>",
+        "<optional second recommendation>"
     ]
 }}
 
-Guidelines:
-- Be factual and objective
-- Explain technical terms simply
-- Acknowledge uncertainty where it exists
-- Be helpful, not alarmist
-
-Respond ONLY with valid JSON."""
+Rules:
+- If the verdict indicates a human/real photo, set "recommendations": [] and keep tone calm.
+- If no visual artifacts are present, set "visual_evidence": [].
+- Keep findings concrete and tied to the provided context; avoid speculation.
+- Keep everything concise (single sentences), no markdown.
+"""
 
             response = self.client.chat.completions.create(
                 model=self.text_model,
@@ -278,55 +271,47 @@ Respond ONLY with valid JSON."""
                 max_completion_tokens=1024,
                 top_p=1
             )
-            
+
             content = response.choices[0].message.content.strip()
-            
-            # Parse JSON response
+
             try:
                 if '```json' in content:
                     content = content.split('```json')[1].split('```')[0]
                 elif '```' in content:
                     content = content.split('```')[1].split('```')[0]
-                
-                return json.loads(content)
+
+                parsed = json.loads(content)
+
+                if isinstance(parsed, dict) and verdict in ('human', 'real'):
+                    parsed['recommendations'] = []
+
+                return parsed
             except json.JSONDecodeError:
                 return {
                     'summary': content,
                     'parse_error': True
                 }
-                
+
         except Exception as e:
             logger.error(f"Explanation generation error: {e}")
             return self._fallback_explanation(detection_result, visual_analysis)
-    
+
     def _combine_verdicts(self, detection_result: Dict, visual_analysis: Dict) -> Dict[str, Any]:
-        """
-        Combine ML detection and visual analysis into a final verdict.
-        
-        Args:
-            detection_result: ML detection results
-            visual_analysis: Visual analysis from vision model
-            
-        Returns:
-            dict with combined verdict and confidence
-        """
+        """Combine ML detection and visual analysis into a final verdict."""
+
         ml_prob = detection_result.get('ai_probability', 50)
         visual_prob = visual_analysis.get('confidence', 50)
         visual_ai = visual_analysis.get('is_likely_ai_generated')
-        
-        # Weight the scores (visual analysis is valuable but ML is more consistent)
+
         if visual_ai is True:
             combined_prob = (ml_prob * 0.6) + (visual_prob * 0.4)
         elif visual_ai is False:
-            # Visual says not AI, reduce probability
             combined_prob = (ml_prob * 0.6) + ((100 - visual_prob) * 0.4)
         else:
-            # Visual analysis inconclusive, rely more on ML
             combined_prob = ml_prob
-        
+
         combined_prob = round(combined_prob, 2)
-        
-        # Determine final verdict
+
         if combined_prob >= 80:
             verdict = 'AI_GENERATED'
             description = 'High confidence: This image appears to be AI-generated'
@@ -342,7 +327,7 @@ Respond ONLY with valid JSON."""
         else:
             verdict = 'REAL'
             description = 'High confidence: This image appears to be a real photograph'
-        
+
         return {
             'combined_probability': combined_prob,
             'ml_probability': ml_prob,
@@ -386,34 +371,57 @@ Respond ONLY with valid JSON."""
         }
     
     def _fallback_explanation(self, detection_result: Dict, visual_analysis: Dict = None) -> Dict[str, Any]:
-        """Generate a basic explanation without API."""
+        """Generate a basic explanation without API (no suggestions when human)."""
         ai_prob = detection_result.get('ai_probability', 50)
-        verdict = detection_result.get('verdict', 'UNCERTAIN')
+        verdict = (detection_result.get('verdict') or detection_result.get('ensemble_verdict') or 'UNCERTAIN').lower()
         scores = detection_result.get('analysis_scores', {})
-        
+
         findings = []
         if scores.get('frequency_anomaly', 0) > 60:
-            findings.append("Frequency domain analysis detected patterns typical of AI-generated images")
+            findings.append("Frequency analysis shows AI-like patterns")
         if scores.get('noise_consistency', 0) > 60:
-            findings.append("Noise patterns appear artificially uniform")
+            findings.append("Noise patterns look artificially uniform")
         if scores.get('texture_quality', 0) > 60:
-            findings.append("Texture analysis shows signs of AI generation")
-        if detection_result.get('watermark', {}).get('watermark_detected'):
-            findings.append(f"AI watermark detected: {detection_result.get('watermark', {}).get('watermark_type', 'Unknown')}")
-        
+            findings.append("Texture looks overly smooth/regular")
+        wm = detection_result.get('watermark', {})
+        if wm.get('watermark_detected'):
+            findings.append(f"Watermark detected: {wm.get('watermark_type', 'unknown')}")
+        c2pa = detection_result.get('content_credentials', {})
+        if c2pa.get('has_content_credentials'):
+            findings.append("Content credentials present")
+
         if not findings:
-            findings.append("Statistical analysis completed with no strong indicators")
-        
-        return {
-            'summary': f"Based on statistical analysis, this image has a {ai_prob}% probability of being AI-generated. Verdict: {verdict}",
-            'key_findings': findings,
-            'visual_evidence': 'Visual AI analysis not available',
-            'technical_notes': 'Analysis based on frequency domain, noise patterns, and texture analysis',
-            'confidence_explanation': f"The {ai_prob}% confidence is derived from statistical methods. Results may vary.",
-            'recommendations': [
-                "For more accurate results, consider using multiple detection tools",
-                "Look for visual artifacts like distorted hands, text, or impossible geometry"
+            findings.append("No strong forensic indicators detected")
+
+        artifacts = []
+        va_artifacts = visual_analysis.get('visual_artifacts_found', []) if visual_analysis else []
+        for a in va_artifacts[:3]:
+            desc = a.get('description') or a.get('type')
+            if desc:
+                artifacts.append(desc)
+
+        provenance_text = (
+            f"Watermark detected ({wm.get('watermark_type', 'unknown')})" if wm.get('watermark_detected') else
+            "Content credentials present" if c2pa.get('has_content_credentials') else
+            "No verifiable provenance signals"
+        )
+
+        recommendations = []
+        if verdict not in ('human', 'real'):
+            recommendations = [
+                "Review the highlighted artifacts and provenance before trusting the image",
+                "If available, check source or capture context for authenticity"
             ]
+
+        return {
+            'summary': f"Image assessed as {verdict} with AI probability {ai_prob}%.",
+            'objects_caption': visual_analysis.get('overall_assessment', '') if visual_analysis else '',
+            'key_findings': findings[:3],
+            'visual_evidence': artifacts[:3] if artifacts else [],
+            'provenance': provenance_text,
+            'confidence_explanation': f"Confidence is based on ensemble scores and forensic cues (AI {ai_prob}%).",
+            'recommendations': recommendations,
+            'ai_explained': False
         }
 
 

@@ -6,6 +6,7 @@ Models:
 1. NYUAD ViT Detector - Vision Transformer (97.36% accuracy)
 2. UniversalFakeDetect - CLIP-based detector (generalizes across generators)
 3. Deepfake Detector - Face manipulation detection
+4. Custom HF detector (env-configurable)
 """
 
 import io
@@ -221,16 +222,10 @@ class UniversalFakeDetector:
         except Exception as e:
             self.load_error = f"Failed to load Universal AI Image Detector: {e}"
             logger.warning(self.load_error)
-    
+
     def predict(self, image: Image.Image) -> Dict[str, Any]:
         """
-        Predict whether an image is AI-generated.
-        
-        Args:
-            image: PIL Image object
-            
-        Returns:
-            dict with prediction and confidence
+        Predict if an image is AI-generated using SwinV2.
         """
         if not self.model_loaded:
             return {
@@ -239,58 +234,58 @@ class UniversalFakeDetector:
                 'ai_probability': 50.0,
                 'prediction': 'unknown'
             }
-        
+
         try:
             import torch
-            
+            import numpy as np
+
             # Ensure RGB
             if image.mode != 'RGB':
                 image = image.convert('RGB')
-            
+
+            # Process image
             inputs = self.processor(images=image, return_tensors="pt")
             inputs = {k: v.to(self.device) for k, v in inputs.items()}
-            
+
+            # Inference
             with torch.no_grad():
                 outputs = self.model(**inputs)
                 probs = torch.nn.functional.softmax(outputs.logits, dim=-1)
-            
-            probs_np = probs[0].cpu().numpy()
-            predicted_idx = int(np.argmax(probs_np))
+
+            probs = probs[0].cpu().numpy()
+            predicted_idx = int(np.argmax(probs))
             predicted_label = self.id2label[predicted_idx]
-            
-            # Determine AI probability based on label keywords
-            ai_prob = self._get_ai_probability(probs_np, predicted_label)
-            
-            prediction = 'ai_generated' if ai_prob >= 50 else 'real'
-            confidence = ai_prob if ai_prob >= 50 else (100 - ai_prob)
-            
+
+            # Determine AI probability based on label
+            ai_prob = self._get_ai_probability(probs)
+
             return {
                 'success': True,
-                'prediction': prediction,
-                'confidence': confidence,
+                'prediction': predicted_label,
+                'predicted_index': predicted_idx,
+                'confidence': float(probs[predicted_idx] * 100),
                 'ai_probability': ai_prob,
                 'all_probabilities': {
-                    self.id2label[i]: float(p * 100) for i, p in enumerate(probs_np)
+                    self.id2label[i]: float(p * 100) for i, p in enumerate(probs)
                 },
-                'model': 'SwinV2-AI-Detector'
+                'model': 'Universal-SwinV2'
             }
-            
+
         except Exception as e:
-            logger.error(f"Universal AI Image Detector error: {e}")
+            logger.error(f"Universal model prediction error: {e}")
             return {
                 'success': False,
                 'error': str(e),
                 'ai_probability': 50.0,
                 'prediction': 'error'
             }
-    
-    def _get_ai_probability(self, probs: np.ndarray, predicted_label: str) -> float:
+
+    def _get_ai_probability(self, probs: np.ndarray) -> float:
         """Extract AI probability from model output."""
+        ai_prob = 50.0
         ai_keywords = ['ai', 'fake', 'generated', 'synthetic', 'artificial']
         real_keywords = ['real', 'authentic', 'human', 'natural', 'genuine']
-        
-        ai_prob = 50.0
-        
+
         for idx, label in self.id2label.items():
             label_lower = label.lower()
             if any(kw in label_lower for kw in ai_keywords):
@@ -299,9 +294,112 @@ class UniversalFakeDetector:
             elif any(kw in label_lower for kw in real_keywords):
                 ai_prob = float((1 - probs[idx]) * 100)
                 break
-        
         return ai_prob
 
+
+class CustomHFImageDetector:
+    """Load a user-specified HF image classifier for AI vs real detection."""
+
+    def __init__(self, model_id: str, device: str = "auto"):
+        self.model_id = model_id
+        self.model = None
+        self.processor = None
+        self.device = device
+        self.model_loaded = False
+        self.load_error = None
+        self.id2label = None
+        self._load_model()
+
+    def _load_model(self):
+        try:
+            import torch
+            from transformers import AutoImageProcessor, AutoModelForImageClassification
+
+            if self.device == "auto":
+                self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
+            logger.info(f"Loading custom image detector {self.model_id} on {self.device}...")
+            self.processor = AutoImageProcessor.from_pretrained(self.model_id, trust_remote_code=True)
+            self.model = AutoModelForImageClassification.from_pretrained(self.model_id, trust_remote_code=True)
+            self.model.to(self.device)
+            self.model.eval()
+            self.id2label = self.model.config.id2label
+            self.model_loaded = True
+            logger.info(f"Custom detector loaded: {self.model_id} (labels: {self.id2label})")
+
+        except ImportError as e:
+            self.load_error = f"Missing dependencies: {e}. Install with: pip install torch transformers"
+            logger.warning(self.load_error)
+        except Exception as e:
+            self.load_error = f"Failed to load custom image detector {self.model_id}: {e}"
+            logger.warning(self.load_error)
+
+    def predict(self, image: Image.Image) -> Dict[str, Any]:
+        if not self.model_loaded:
+            return {
+                'success': False,
+                'error': self.load_error or "Model not loaded",
+                'ai_probability': 50.0,
+                'prediction': 'unknown'
+            }
+
+        try:
+            import torch
+
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+
+            inputs = self.processor(images=image, return_tensors="pt")
+            inputs = {k: v.to(self.device) for k, v in inputs.items()}
+
+            with torch.no_grad():
+                outputs = self.model(**inputs)
+                probs = torch.nn.functional.softmax(outputs.logits, dim=-1)
+
+            probs = probs[0].cpu().numpy()
+            predicted_idx = int(np.argmax(probs))
+            predicted_label = self.id2label[predicted_idx]
+
+            ai_prob = self._get_ai_probability(probs)
+
+            return {
+                'success': True,
+                'prediction': predicted_label,
+                'predicted_index': predicted_idx,
+                'confidence': float(probs[predicted_idx] * 100),
+                'ai_probability': ai_prob,
+                'all_probabilities': {
+                    self.id2label[i]: float(p * 100) for i, p in enumerate(probs)
+                },
+                'model': self.model_id
+            }
+
+        except Exception as e:
+            logger.error(f"Custom detector prediction error: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'ai_probability': 50.0,
+                'prediction': 'error'
+            }
+
+    def _get_ai_probability(self, probs: np.ndarray) -> float:
+        ai_keywords = ['ai', 'fake', 'generated', 'synthetic', 'artificial']
+        real_keywords = ['real', 'authentic', 'human', 'natural', 'genuine']
+
+        ai_prob = 50.0
+
+        for idx, label in self.id2label.items():
+            label_lower = label.lower()
+            if any(kw in label_lower for kw in ai_keywords):
+                ai_prob = float(probs[idx] * 100)
+                break
+            elif any(kw in label_lower for kw in real_keywords):
+                ai_prob = float((1 - probs[idx]) * 100)
+                break
+
+        return ai_prob
+    
 
 class SDXLDetector:
     """
@@ -763,113 +861,80 @@ class FrequencyAnalyzer:
         }
 
 
-def create_ml_detectors(device: str = "auto", load_all: bool = False) -> Dict[str, Any]:
-    """
-    Factory function to create ML detector instances.
-    
-    Args:
-        device: Device to use ("auto", "cpu", "cuda")
-        load_all: If True, load all detectors including heavy ones
-        
-    Returns:
-        dict with detector instances
-    """
+def create_ml_detectors(
+    device: str = "auto",
+    load_all: bool = False,
+    custom_model_id: Optional[str] = None,
+    models_to_load: Optional[list] = None
+) -> Dict[str, Any]:
     detectors = {
         'frequency_analyzer': FrequencyAnalyzer()
     }
+    def should_load(name):
+        return models_to_load is None or name in models_to_load
     
-    # DIRE is the primary detector for latest generators (2024-2026)
-    try:
-        detectors['dire'] = DIREDetector(device=device)
-    except Exception as e:
-        logger.warning(f"Could not load DIRE detector: {e}")
-        detectors['dire'] = None
-    
-    # NYUAD is backup (best accuracy/speed tradeoff)
-    try:
-        detectors['nyuad'] = NYUADDetector(device=device)
-    except Exception as e:
-        logger.warning(f"Could not load NYUAD detector: {e}")
-        detectors['nyuad'] = None
-    
-    # SMOGY - specialized for 2024 AI generators (DALL-E 3, SD XL, Flux)
-    try:
-        detectors['smogy'] = SMOGYDetector(device=device)
-    except Exception as e:
-        logger.warning(f"Could not load SMOGY detector: {e}")
-        detectors['smogy'] = None
-    
-    # SigLIP - human vs AI classification
-    try:
-        detectors['siglip'] = SigLIPDetector(device=device)
-    except Exception as e:
-        logger.warning(f"Could not load SigLIP detector: {e}")
-        detectors['siglip'] = None
-    
+    if custom_model_id and should_load('custom'):
+        try:
+            detectors['custom'] = CustomHFImageDetector(custom_model_id, device=device)
+        except Exception as e:
+            logger.warning(f"Could not load custom detector: {e}")
+            
+    if should_load('dire'):
+        try: detectors['dire'] = DIREDetector(device=device)
+        except Exception: detectors['dire'] = None
+            
+    if should_load('nyuad'):
+        try: detectors['nyuad'] = NYUADDetector(device=device)
+        except Exception: detectors['nyuad'] = None
+            
+    if should_load('smogy'):
+        try: detectors['smogy'] = SMOGYDetector(device=device)
+        except Exception: detectors['smogy'] = None
+            
+    if should_load('siglip'):
+        try: detectors['siglip'] = SigLIPDetector(device=device)
+        except Exception: detectors['siglip'] = None
+            
     if load_all:
-        # Load heavier models
-        try:
-            detectors['universal_fake'] = UniversalFakeDetector(device=device)
-        except Exception as e:
-            logger.warning(f"Could not load UniversalFakeDetect: {e}")
-            detectors['universal_fake'] = None
-        
-        try:
-            detectors['deepfake'] = DeepfakeDetector(device=device)
-        except Exception as e:
-            logger.warning(f"Could not load Deepfake detector: {e}")
-            detectors['deepfake'] = None
-        
-        # EnsembleDetector - weighted combination of all models for best accuracy
-        try:
-            detectors['ensemble'] = EnsembleDetector(device=device, load_all=False)  # Uses already loaded models
-        except Exception as e:
-            logger.warning(f"Could not load Ensemble detector: {e}")
-            detectors['ensemble'] = None
-    
-    # Flux Detector (new for 2025)
-    try:
-        detectors['flux'] = FluxDetector(device=device)
-    except Exception as e:
-        logger.warning(f"Could not load Flux detector: {e}")
-        detectors['flux'] = None
-    
-    # SDXL Detector - specialized for modern diffusion models (SDXL, SD3, Flux)
-    try:
-        detectors['sdxl'] = SDXLDetector(device=device)
-    except Exception as e:
-        logger.warning(f"Could not load SDXL detector: {e}")
-        detectors['sdxl'] = None
-    
-    # NEW 2026: Bombek1 SigLIP2+DINOv2 (best overall, 0.9997 AUC, 25+ generators)
-    try:
-        detectors['bombek1'] = Bombek1SigLIPDINOv2Detector(device=device)
-    except Exception as e:
-        logger.warning(f"Could not load Bombek1 SigLIP2+DINOv2 detector: {e}")
-        detectors['bombek1'] = None
-    
-    # NEW 2026: Deepfake SigLIP2 binary detector
-    try:
-        detectors['siglip2_deepfake'] = DeepfakeSigLIP2Detector(device=device)
-    except Exception as e:
-        logger.warning(f"Could not load Deepfake SigLIP2 detector: {e}")
-        detectors['siglip2_deepfake'] = None
-    
-    # NEW 2026: 3-Class SigLIP2 (AI-Generated vs Deepfake vs Real)
-    try:
-        detectors['three_class'] = ThreeClassSigLIP2Detector(device=device)
-    except Exception as e:
-        logger.warning(f"Could not load 3-Class SigLIP2 detector: {e}")
-        detectors['three_class'] = None
-    
-    # NEW 2026: DINOv2 deepfake detector (degradation-resilient)
-    try:
-        detectors['dinov2'] = DINOv2DeepfakeDetector(device=device)
-    except Exception as e:
-        logger.warning(f"Could not load DINOv2 deepfake detector: {e}")
-        detectors['dinov2'] = None
-    
+        if should_load('universal_fake'):
+            try: detectors['universal_fake'] = UniversalFakeDetector(device=device)
+            except Exception: detectors['universal_fake'] = None
+                
+        if should_load('deepfake'):
+            try: detectors['deepfake'] = DeepfakeDetector(device=device)
+            except Exception: detectors['deepfake'] = None
+                
+        if should_load('ensemble'):
+            try: detectors['ensemble'] = EnsembleDetector(device=device, load_all=False)
+            except Exception: detectors['ensemble'] = None
+
+    if should_load('flux'):
+        try: detectors['flux'] = FluxDetector(device=device)
+        except Exception: detectors['flux'] = None
+
+    if should_load('sdxl'):
+        try: detectors['sdxl'] = SDXLDetector(device=device)
+        except Exception: detectors['sdxl'] = None
+
+    if should_load('bombek1'):
+        try: detectors['bombek1'] = Bombek1SigLIPDINOv2Detector(device=device)
+        except Exception: detectors['bombek1'] = None
+
+    if should_load('siglip2_deepfake'):
+        try: detectors['siglip2_deepfake'] = DeepfakeSigLIP2Detector(device=device)
+        except Exception: detectors['siglip2_deepfake'] = None
+
+    if should_load('three_class'):
+        try: detectors['three_class'] = ThreeClassSigLIP2Detector(device=device)
+        except Exception: detectors['three_class'] = None
+
+    if should_load('dinov2'):
+        try: detectors['dinov2'] = DINOv2DeepfakeDetector(device=device)
+        except Exception: detectors['dinov2'] = None
+
     return detectors
+
+
 
 
 

@@ -139,10 +139,16 @@ Respond ONLY with valid JSON, no other text."""
                 content = content.strip()
             
             result = json.loads(content)
-            
+            if not self._validate_ai_result(result):
+                raise ValueError("AI result failed schema validation")
+            confidence_value = result.get('confidence', 50)
+            try:
+                confidence_value = int(confidence_value)
+            except (TypeError, ValueError):
+                confidence_value = 50
             return {
                 'verdict': result.get('verdict', 'UNVERIFIABLE'),
-                'confidence': min(100, max(0, int(result.get('confidence', 50)))),
+                'confidence': min(100, max(0, confidence_value)),
                 'confidence_breakdown': result.get('confidence_breakdown', {
                     'source_quality': 0,
                     'source_quantity': 0,
@@ -175,6 +181,19 @@ Respond ONLY with valid JSON, no other text."""
             print(f"AI analysis error: {e}")
             print(f"Error type: {type(e).__name__}")
             return self._fallback_analysis(sources)
+
+    def _validate_ai_result(self, result: dict) -> bool:
+        """Check that essential fields exist and are well-formed."""
+        required_verdicts = {"TRUE", "FALSE", "PARTIALLY TRUE", "MISLEADING", "UNVERIFIABLE"}
+        verdict = result.get('verdict')
+        if verdict not in required_verdicts:
+            return False
+        if 'confidence' not in result:
+            return False
+        summary = result.get('summary', {})
+        if not isinstance(summary, dict) or 'one_liner' not in summary:
+            return False
+        return True
     
     def identify_knowledge_gaps(self, claim: str, sources: list) -> list:
         """
