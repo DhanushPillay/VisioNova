@@ -396,11 +396,11 @@ class AIContentDetector:
             "note": "RoBERTa-base, 97.3% accuracy, 0.9972 AUROC, 2.27% FPR",
         },
         {
-            "id": "fakespot-ai/roberta-base-ai-text-detection-v1",
+            "id": "openai-community/roberta-large-openai-detector",
             "weight": 0.20,
             "type": "standard",
-            "params": "125M",
-            "note": "RoBERTa-base, 9.5K downloads/month, robust general detector",
+            "params": "356M",
+            "note": "RoBERTa-large OpenAI detector (offline, MIT license)",
         },
         {
             "id": "MayZhou/e5-small-lora-ai-generated-detector",
@@ -447,12 +447,44 @@ class AIContentDetector:
         self._active_model_id = None
         self._ensemble_loaded = False
         self._ensemble_total_weight = 0.0  # Sum of loaded model weights (for renormalization)
+        self._last_ensemble_details: List[Tuple[str, float, float]] = []  # (model_id, ai_prob, weight)
         self.lm_perplexity = LMPerplexityCalculator.get_instance()
         self.model_path = model_path if model_path else os.path.join(os.path.dirname(os.path.abspath(__file__)), self.MODEL_DIR)
+        self._maybe_add_custom_model()
         
         # Lazy loading: Do NOT load models in __init__
         # They will be loaded on the first call to predict() if needed
         logger.info(f"AIContentDetector initialized in {self.detection_mode.upper()} mode (Lazy loading enabled)")
+
+    def _maybe_add_custom_model(self):
+        """Optionally append a user-provided HF detector via env vars.
+
+        Set TEXT_DETECTOR_EXTRA_MODEL_ID to any HF text-classification checkpoint
+        (binary real-vs-ai). Optional: TEXT_DETECTOR_EXTRA_MODEL_WEIGHT (float),
+        TEXT_DETECTOR_EXTRA_MODEL_TYPE ("standard"|"desklib_custom"),
+        TEXT_DETECTOR_EXTRA_MODEL_PARAMS (string for logging)."""
+
+        custom_id = os.getenv("TEXT_DETECTOR_EXTRA_MODEL_ID")
+        if not custom_id:
+            return
+
+        try:
+            custom_weight = float(os.getenv("TEXT_DETECTOR_EXTRA_MODEL_WEIGHT", "0.20"))
+        except ValueError:
+            custom_weight = 0.20
+
+        custom_type = os.getenv("TEXT_DETECTOR_EXTRA_MODEL_TYPE", "standard")
+        custom_params = os.getenv("TEXT_DETECTOR_EXTRA_MODEL_PARAMS", "custom")
+
+        # Work on a copy so class-level default stays intact across instances
+        self.ENSEMBLE_MODELS = list(self.ENSEMBLE_MODELS) + [{
+            "id": custom_id,
+            "weight": custom_weight,
+            "type": custom_type,
+            "params": custom_params,
+            "note": "User-specified HF detector via TEXT_DETECTOR_EXTRA_MODEL_* env vars",
+        }]
+        logger.info(f"Custom text detector added to ensemble: {custom_id} (w={custom_weight}, type={custom_type})")
         
     def _load_binoculars(self):
         """Load Binoculars zero-shot detector (GPU required)."""
@@ -692,6 +724,8 @@ class AIContentDetector:
                 logger.warning(f"Ensemble inference failed for {model_id}: {e}")
                 continue
         
+        # Persist model-level details for downstream explanation (non-blocking)
+        self._last_ensemble_details = model_results
         if total_weight == 0:
             logger.error("All ensemble models failed inference")
             return (0.5, 0.5)  # Uncertain fallback
@@ -1241,7 +1275,7 @@ class AIContentDetector:
             "human_baseline": human_baseline[:len(doc_bars)]
         }
     
-    def predict(self, text: str, detailed: bool = True) -> Dict:
+    def predict(self, text: str, detailed: bool = True, detail_level: str = "basic") -> Dict:
         """
         Full text analysis with all features.
         
@@ -1256,6 +1290,9 @@ class AIContentDetector:
             return {"error": "Empty text provided"}
         
         text = text.strip()
+        detail_level = (detail_level or "basic").lower().strip()
+        if detail_level not in {"basic", "technical", "both"}:
+            detail_level = "basic"
         
         # ===== LAZY LOAD: Trigger model loading on first predict call =====
         self._ensure_model_loaded()
@@ -1289,6 +1326,14 @@ class AIContentDetector:
         
         # Detect patterns in full text (needed for both ML and offline modes)
         all_patterns = self._detect_patterns_in_text(text)
+
+        # Reset ensemble diagnostics each run
+        self._last_ensemble_details = []
+
+        # Diagnostics placeholders for explanations
+        ml_ai = ml_human = None
+        off_ai = off_human = None
+        binoculars_packet = None
         
         # ===== DETECTION ROUTING: Choose method based on mode =====
         
@@ -1308,7 +1353,15 @@ class AIContentDetector:
                 else:
                     human_prob = binoculars_result["confidence"]
                     ai_prob = 1.0 - human_prob
-                
+
+                binoculars_packet = {
+                    "prediction": binoculars_result["prediction"].lower(),
+                    "score": binoculars_result.get("score"),
+                    "threshold": binoculars_result.get("threshold"),
+                    "confidence": binoculars_result.get("confidence"),
+                    "model": binoculars_result.get("model"),
+                }
+
                 detection_method = "binoculars_zero_shot"
                 logger.info(f"Binoculars: {binoculars_result['prediction']} (score={binoculars_result['score']:.4f})")
         
@@ -1425,6 +1478,16 @@ class AIContentDetector:
             if len(pattern_summary[cat]["examples"]) < 3:
                 pattern_summary[cat]["examples"].append(p["pattern"])
         
+        # Helper: confidence band
+        def _band_from_score(score: float) -> str:
+            if score is None:
+                return "low"
+            if score >= 0.75:
+                return "high"
+            if score >= 0.55:
+                return "medium"
+            return "low"
+
         result = {
             "prediction": prediction,
             "confidence": round(confidence, 2),
@@ -1452,6 +1515,127 @@ class AIContentDetector:
         # Add decision reasoning and uncertainty metadata to help frontend and debugging
         result["decision"] = decision_reason
         result["uncertainty_threshold"] = uncertainty_threshold
+
+        # ===== EVIDENCE PACKET (dual-view ready) =====
+        confidence_score = round(max_prob, 3)
+        confidence_band = _band_from_score(max_prob)
+
+        perplexity_value = None
+        perplexity_band = None
+        ppl_metrics = metrics.get("perplexity", {}) if metrics else {}
+        if isinstance(ppl_metrics, dict):
+            perplexity_value = ppl_metrics.get("real_lm") or ppl_metrics.get("average")
+            if perplexity_value is not None:
+                if perplexity_value <= 40:
+                    perplexity_band = "low"
+                elif perplexity_value <= 70:
+                    perplexity_band = "medium"
+                else:
+                    perplexity_band = "high"
+
+        pattern_flags = []
+        if pattern_summary:
+            # Sort patterns by count desc and grab top 3 labels
+            pattern_flags = [cat for cat, info in sorted(pattern_summary.items(), key=lambda kv: kv[1]["count"], reverse=True)][:3]
+
+        model_scores = []
+        if getattr(self, "_last_ensemble_details", None):
+            for mid, ai_p, wt in self._last_ensemble_details:
+                model_scores.append({
+                    "id": mid,
+                    "ai_probability": round(ai_p, 3),
+                    "weight": round(wt, 3)
+                })
+
+        disagreement = False
+        if model_scores:
+            ai_vals = [m["ai_probability"] for m in model_scores]
+            if ai_vals:
+                disagreement = (max(ai_vals) - min(ai_vals)) > 0.25
+
+        signals = []
+        if model_scores:
+            signals.append({
+                "type": "model_ensemble",
+                "weighted_ai": round(ml_ai, 3) if ml_ai is not None else None,
+                "weighted_human": round(ml_human, 3) if ml_human is not None else None,
+                "models": model_scores
+            })
+        if binoculars_packet:
+            signals.append({"type": "binoculars", **{k: v for k, v in binoculars_packet.items() if v is not None}})
+        if perplexity_value is not None:
+            signals.append({
+                "type": "perplexity",
+                "value": round(perplexity_value, 2),
+                "band": perplexity_band
+            })
+        if pattern_flags:
+            signals.append({
+                "type": "patterns",
+                "top_categories": pattern_flags,
+                "total": len(all_patterns)
+            })
+
+        basic_bullets = [
+            f"Verdict: {prediction.replace('_', ' ')} with {confidence_band} confidence.",
+        ]
+        if perplexity_band:
+            perp_display = f"{perplexity_value:.1f}" if isinstance(perplexity_value, (int, float)) else "n/a"
+            basic_bullets.append(f"Perplexity is {perplexity_band} ({perp_display}).")
+        if pattern_flags:
+            basic_bullets.append(f"Detected AI-style patterns: {', '.join(pattern_flags)}.")
+        if detection_method:
+            if detection_method.startswith("binoculars"):
+                basic_bullets.append("Zero-shot detector flagged AI-like predictability.")
+            elif detection_method.startswith("ensemble") and model_scores:
+                basic_bullets.append("Ensemble detectors leaned toward this verdict.")
+
+        technical_bullets = []
+        if model_scores:
+            top_model = max(model_scores, key=lambda m: m["ai_probability"])
+            technical_bullets.append(
+                f"Ensemble weighted AI={round(ml_ai,3) if ml_ai is not None else 'n/a'}; top model {top_model['id']} AI={top_model['ai_probability']}."
+            )
+        if binoculars_packet:
+            technical_bullets.append(
+                f"Binoculars score={binoculars_packet.get('score')}, threshold={binoculars_packet.get('threshold')}, prediction={binoculars_packet.get('prediction')}"
+            )
+        if perplexity_band:
+            technical_bullets.append(f"Perplexity={round(perplexity_value,2) if isinstance(perplexity_value, (int, float)) else 'n/a'} ({perplexity_band}).")
+        if pattern_flags:
+            technical_bullets.append(f"Pattern categories detected: {', '.join(pattern_flags)} (total {len(all_patterns)} matches).")
+        if disagreement:
+            technical_bullets.append("Model disagreement detected (spread > 0.25).")
+
+        evidence_packet = {
+            "verdict": prediction,
+            "confidence_score": confidence_score,
+            "confidence_band": confidence_band,
+            "detail_level": detail_level,
+            "disagreement": disagreement,
+            "perplexity_band": perplexity_band,
+            "pattern_flags": pattern_flags,
+            "signals": signals
+        }
+
+        result["detail_level"] = detail_level
+        result["evidence"] = evidence_packet
+        result["explanation_views"] = {
+            "basic": {
+                "verdict": prediction,
+                "confidence_band": confidence_band,
+                "confidence_score": confidence_score,
+                "bullets": basic_bullets[:3]
+            },
+            "technical": {
+                "verdict": prediction,
+                "confidence_band": confidence_band,
+                "confidence_score": confidence_score,
+                "bullets": technical_bullets,
+                "signals": signals,
+                "disagreement": disagreement
+            }
+        }
         
         # Sentence-level analysis (if detailed and text not too long)
         # OPTIMIZATION: Skip detailed analysis for texts > 3000 chars to avoid slowdown
@@ -1472,7 +1656,7 @@ class AIContentDetector:
         
         return result
     
-    def analyze_chunks(self, chunks: List[Dict], include_per_chunk: bool = True) -> Dict:
+    def analyze_chunks(self, chunks: List[Dict], include_per_chunk: bool = True, detail_level: str = "basic") -> Dict:
         """
         Analyze multiple text chunks and aggregate results.
         Used for large documents that are split into chunks.
@@ -1501,7 +1685,7 @@ class AIContentDetector:
                 continue
             
             # Analyze this chunk
-            result = self.predict(chunk_text, detailed=False)
+            result = self.predict(chunk_text, detailed=False, detail_level=detail_level)
             
             if "error" in result:
                 continue
@@ -1596,7 +1780,8 @@ class AIContentDetector:
             "detected_patterns": {
                 "total_count": len(all_patterns),
                 "patterns": all_patterns[:20]  # Limit to 20
-            }
+            },
+            "detail_level": detail_level
         }
         
         # Aggregate REAL metrics from chunks (weighted average)

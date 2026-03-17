@@ -103,8 +103,29 @@ VisioNova uses a **Weighted Ensemble** of 4 diverse models:
 |----------|--------|--------------|-----------|
 | **desklib/ai-text-detector-v1.01** | **35%** | DeBERTa-v3-large | #1 on RAID benchmark |
 | **Oxidane/tmr-ai-text-detector** | **30%** | RoBERTa-base | Low false positive rate (0.2%), AUROC 0.99 |
-| **fakespot-ai/roberta-base** | **20%** | RoBERTa-base | Robust general-purpose detector |
+| **openai-community/roberta-large-openai-detector** | **20%** | RoBERTa-large | OpenAI detector, MIT license, offline-capable |
 | **MayZhou/e5-small-lora** | **15%** | E5-small + LoRA | Lightweight, fast |
+
+### Swapping in a Higher-Accuracy HF Model (CPU-first)
+- Set env vars before running the backend to append a custom HF detector:
+   - `TEXT_DETECTOR_EXTRA_MODEL_ID` (required) — HF text-classification checkpoint (real vs AI)
+   - `TEXT_DETECTOR_EXTRA_MODEL_WEIGHT` (optional, default 0.20)
+   - `TEXT_DETECTOR_EXTRA_MODEL_TYPE` (optional, default `standard`, use `desklib_custom` only if the head is a single-logit sigmoid)
+   - `TEXT_DETECTOR_EXTRA_MODEL_PARAMS` (optional, for logging)
+- On load, the ensemble renormalizes weights if some models fail; the custom model is treated like any other member.
+- Recommended CPU-friendly candidates to trial (downloadable, quant-friendly):
+   - `microsoft/Phi-3.5-mini-instruct` (gguf/onnx) — strong small-model accuracy, fast on i7-14700HX
+   - `meta-llama/Llama-3.2-3B-Instruct` (gguf) — better reasoning than legacy RoBERTa, still CPU-viable
+   - `mistralai/Mistral-7B-Instruct-v0.3` (int4/int8 gguf) — balanced accuracy/latency
+   - `meta-llama/Llama-3.2-11B-Instruct` (int4 gguf) — higher accuracy ceiling; slower but viable on a high-core CPU
+   - Any DeBERTa-v3-large RAID finetune (binary classifier) — easy drop-in, improves low-FPR performance
+
+**Usage example (PowerShell):**
+```
+$env:TEXT_DETECTOR_EXTRA_MODEL_ID="mistralai/Mistral-7B-Instruct-v0.3"
+$env:TEXT_DETECTOR_EXTRA_MODEL_WEIGHT="0.30"
+& "e:/Personal Projects/VisioNova/.venv/Scripts/python.exe" backend/app.py
+```
 
 ### Watermark Signal Detection
 LLM providers embed statistical watermarks using "green/red token lists":
