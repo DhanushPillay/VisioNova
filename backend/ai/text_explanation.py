@@ -50,38 +50,30 @@ class TextExplainer:
         try:
             # Build context from detection result
             context = self._build_context(detection_result, original_text)
-            
-            prompt = f"""You are an AI writing analysis expert. Based on the following detection results, provide a clear, helpful explanation for the user.
+
+            prompt = f"""You are an AI writing analysis expert. Based on the detection results, produce a concise, tailored explanation.
 
 DETECTION RESULTS:
 {context}
 
-Provide your response in this exact JSON format:
+Return ONLY valid JSON in this exact structure:
 {{
-    "summary": "<2-3 sentence plain-language summary of what was detected and why>",
-    "verdict_explanation": "<1 sentence explaining what the verdict means>",
-    "key_indicators": [
-        "<indicator 1 that led to this conclusion>",
-        "<indicator 2>",
-        "<indicator 3>"
-    ],
-    "pattern_breakdown": "<If AI patterns were detected, explain what they are and why they matter>",
-    "suggestions": [
-        "<actionable suggestion 1 for the writer>",
-        "<suggestion 2>",
-        "<suggestion 3>"
-    ],
-    "confidence_note": "<Explain what the confidence score means and any caveats>"
+    "summary": "<2-3 sentences on what was detected and why>",
+    "verdict_explanation": "<1 sentence explaining the verdict>",
+    "key_indicators": ["<top signals>", "<...>", "<...>"],
+    "pattern_breakdown": "<brief patterns note or 'No notable AI patterns detected'>",
+    "suggestions": ["<only if verdict is AI/mixed/uncertain; empty if human>", "<...>", "<...>"],
+    "confidence_note": "<what the confidence means and caveats>",
+    "ai_explained": true
 }}
 
-Guidelines:
-- Be helpful and educational, not accusatory
-- Explain technical terms in simple language
-- Focus on patterns, not judgment
-- Provide actionable writing tips
-- Keep language friendly and supportive
-
-Respond ONLY with valid JSON."""
+Rules:
+- Use the provided signals (models, perplexity, patterns, disagreement) to justify the verdict.
+- Keep it short and specific to this text; no boilerplate.
+- If verdict is human, suggestions MUST be an empty array.
+- If verdict is AI/mixed/uncertain, suggestions should help make text more human/varied.
+- Avoid model IDs/logits in user-facing text; use plain language.
+- Do not add extra fields or prose outside the JSON."""
 
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -124,12 +116,33 @@ Respond ONLY with valid JSON."""
         pred = result.get('prediction', 'unknown')
         conf = result.get('confidence', 0)
         lines.append(f"Prediction: {pred.upper()} ({conf}% confidence)")
-        
+
         # Scores
         scores = result.get('scores', {})
         lines.append(f"Human probability: {scores.get('human', 0)}%")
         lines.append(f"AI probability: {scores.get('ai_generated', 0)}%")
-        
+
+        # Evidence packet (signals, bands)
+        evidence = result.get('evidence', {}) or {}
+        band = evidence.get('confidence_band')
+        if band:
+            lines.append(f"Confidence band: {band}")
+        signals = evidence.get('signals', []) or []
+        if signals:
+            lines.append("Signals:")
+            for sig in signals:
+                stype = sig.get("type")
+                if stype == "model_ensemble":
+                    weighted_ai = sig.get("weighted_ai")
+                    lines.append(f"- Ensemble weighted AI: {weighted_ai}")
+                elif stype == "binoculars":
+                    lines.append(f"- Binoculars: score={sig.get('score')} pred={sig.get('prediction')}")
+                elif stype == "perplexity":
+                    lines.append(f"- Perplexity: {sig.get('value')} ({sig.get('band')})")
+                elif stype == "patterns":
+                    tops = sig.get('top_categories') or []
+                    lines.append(f"- Patterns: {', '.join(tops)} (total {sig.get('total')})")
+
         # Metrics
         metrics = result.get('metrics', {})
         if metrics:
@@ -145,7 +158,7 @@ Respond ONLY with valid JSON."""
             burstiness = metrics.get('burstiness', {})
             if burstiness:
                 lines.append(f"- Burstiness score: {burstiness.get('score', 0)} (higher = more natural)")
-        
+
         # Patterns
         patterns = result.get('detected_patterns', {})
         if patterns:
@@ -158,14 +171,14 @@ Respond ONLY with valid JSON."""
                 lines.append(f"- {info.get('type', cat)}: {info.get('count', 0)} occurrences")
                 if examples:
                     lines.append(f"  Examples: {', '.join(examples)}")
-        
+
         # Flagged sentences
         flagged = result.get('flagged_sentences', [])
         if flagged:
             lines.append(f"\nFlagged sentences: {len(flagged)}")
             for i, s in enumerate(flagged[:3], 1):
                 lines.append(f"{i}. \"{s.get('text', '')[:80]}...\" ({s.get('ai_score', 0)}% AI)")
-        
+
         # Text sample
         if text:
             lines.append(f"\nText sample (first 200 chars): \"{text[:200]}...\"")
@@ -179,46 +192,43 @@ Respond ONLY with valid JSON."""
         patterns = result.get('detected_patterns', {})
         pattern_count = patterns.get('total_count', 0)
         
-        if pred == 'ai_generated':
-            summary = f"This text has characteristics commonly associated with AI-generated content ({conf:.0f}% confidence)."
+        verdict = pred.replace('_', ' ')
+
+        if pred == 'ai_generated' or pred == 'mixed' or pred == 'uncertain':
+            summary = f"This text shows signals associated with AI-generated content ({conf:.0f}% confidence)."
             indicators = []
-            
+
             if pattern_count > 0:
-                indicators.append(f"Found {pattern_count} common AI writing patterns")
-            
+                indicators.append(f"Found {pattern_count} common AI-style patterns")
+
             metrics = result.get('metrics', {})
             rhythm = metrics.get('rhythm', {})
             if rhythm.get('status') == 'Uniform':
-                indicators.append("Sentence structure is very uniform")
-            
+                indicators.append("Sentence rhythm is very uniform")
+
             burstiness = metrics.get('burstiness', {})
             if burstiness.get('score', 0) < 0.3:
                 indicators.append("Low variation in sentence length")
-            
+
             if not indicators:
-                indicators = ["Overall text patterns match AI-generated content"]
-            
+                indicators = ["Overall patterns lean AI-like"]
+
             suggestions = [
-                "Try varying your sentence lengths more",
-                "Use more conversational language",
-                "Add personal anecdotes or specific details"
+                "Vary sentence lengths and pacing to add human-like rhythm",
+                "Add specific, personal details or context",
+                "Use more conversational wording instead of formal transitions"
             ]
         else:
-            summary = f"This text appears to be human-written ({conf:.0f}% confidence)."
+            summary = f"This text appears human-written ({conf:.0f}% confidence)."
             indicators = [
                 "Natural variation in writing style",
-                "Diverse vocabulary usage",
-                "Organic sentence structure"
+                "Vocabulary and structure look human",
             ]
-            suggestions = [
-                "Your writing appears natural",
-                "Continue using varied sentence structures",
-                "Personal voice is coming through"
-            ]
+            suggestions = []  # Do not show improvement tips when classified human
         
         return {
             "summary": summary,
-            "verdict_explanation": f"The text was classified as {pred.replace('_', ' ')}.",
+            "verdict_explanation": f"The text was classified as {verdict}.",
             "key_indicators": indicators[:3],
             "pattern_breakdown": f"Detected {pattern_count} AI writing patterns." if pattern_count else "No significant AI patterns detected.",
             "suggestions": suggestions[:3],

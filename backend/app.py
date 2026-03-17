@@ -4,6 +4,8 @@ Flask application providing fact-checking and AI detection API endpoints.
 """
 import re
 import base64
+import time
+import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -63,14 +65,37 @@ image_explainer = ImageExplainer()  # XAI explainer (Ensemble Analysis + Grad-CA
 # Ensemble detector (advanced, loads ML models on demand)
 # Set load_ml_models=False initially for faster startup, models load on first use
 ensemble_detector = None
+# Fast cascade detector (speed-optimized, 3-5x faster for clear cases)
+fast_detector = None
+
+# Detector reset policy (to avoid stale state/OOM)
+_IMAGE_DETECTOR_RESET_SECONDS = 300  # 5 minutes
+_last_detector_reset = time.time()
+
+
+def _maybe_reset_image_detectors():
+    """Reset ensemble/fast detectors if they have been warm for too long."""
+    global ensemble_detector, fast_detector, _last_detector_reset
+    now = time.time()
+    if now - _last_detector_reset < _IMAGE_DETECTOR_RESET_SECONDS:
+        return
+    ensemble_detector = None
+    fast_detector = None
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:
+        pass
+    _last_detector_reset = now
+
+
 try:
     ensemble_detector = EnsembleDetector(use_gpu=False, load_ml_models=False)
     print(f"[OK] Ensemble detector initialized (ML models available: {ML_DETECTORS_AVAILABLE})")
 except Exception as e:
     print(f"[WARN] Ensemble detector not available: {e}")
 
-# Fast cascade detector (speed-optimized, 3-5x faster for clear cases)
-fast_detector = None
 try:
     fast_detector = FastCascadeDetector(use_gpu=False, enable_fp16=False)
     print("[OK] Fast cascade detector initialized (3-5x speedup for clear cases)")
@@ -429,7 +454,8 @@ def detect_ai_content():
     Request body:
         {
             "text": "The text to analyze",
-            "explain": true/false (optional, default false)
+            "explain": true/false (optional, default false),
+            "detail_level": "basic" | "technical" | "both" (optional, default "basic")
         }
     
     Response:
@@ -456,6 +482,7 @@ def detect_ai_content():
         
         text = data['text']
         explain = data.get('explain', False)
+        detail_level = data.get('detail_level', 'basic')
         
         # Validate input (increase limit for text detection)
         if not text or not text.strip():
@@ -473,7 +500,7 @@ def detect_ai_content():
             }), 400
         
         # Run detection
-        result = ai_detector.predict(text.strip(), detailed=True)
+        result = ai_detector.predict(text.strip(), detailed=True, detail_level=detail_level)
         
         if "error" in result:
             return jsonify({
@@ -486,6 +513,8 @@ def detect_ai_content():
         if explain:
             explanation = text_explainer.explain(result, text[:500])
             result['explanation'] = explanation
+
+        result['detail_level'] = detail_level
         
         result['success'] = True
         return jsonify(result)
@@ -567,13 +596,16 @@ def detect_ai_file_upload():
         
         # Decide processing method based on text length
         explain = request.form.get('explain', 'false').lower() == 'true'
+        detail_level = request.form.get('detail_level', 'basic').strip().lower()
+        if detail_level not in {"basic", "technical", "both"}:
+            detail_level = "basic"
         
         if len(text) <= 5000:
             # Small document - analyze as single text
-            result = ai_detector.predict(text, detailed=True)
+            result = ai_detector.predict(text, detailed=True, detail_level=detail_level)
         else:
             # Large document - use chunked analysis
-            result = ai_detector.analyze_chunks(chunks, include_per_chunk=True)
+            result = ai_detector.analyze_chunks(chunks, include_per_chunk=True, detail_level=detail_level)
         
         if 'error' in result:
             return jsonify({
@@ -620,6 +652,8 @@ def detect_ai_file_upload():
         if explain:
             explanation = text_explainer.explain(result, text[:500])
             result['explanation'] = explanation
+
+        result['detail_level'] = detail_level
         
         result['success'] = True
         return jsonify(result)
@@ -764,13 +798,6 @@ def detect_ai_image():
         if include_ai_analysis:
             ai_analysis = image_explainer.analyze_image(image_bytes, detection_result)
             detection_result['ai_analysis'] = ai_analysis
-        
-        # Force the final probability to 100 or 0 based on the 50% threshold
-        ai_prob = detection_result.get('ai_probability', 50.0)
-        if ai_prob > 50.0:
-            detection_result['ai_probability'] = 100.0
-        else:
-            detection_result['ai_probability'] = 0.0
             
         return jsonify(detection_result)
     
@@ -863,6 +890,9 @@ def detect_ai_image_ensemble():
                 'error_code': 'IMAGE_TOO_LARGE'
             }), 400
 
+        # Reset detectors if they have been warm too long (prevents stale state)
+        _maybe_reset_image_detectors()
+
         # Initialize ensemble detector with ML models if requested
         if ensemble_detector is None or (load_ml_models and not hasattr(ensemble_detector, '_ml_loaded')):
             try:
@@ -879,17 +909,15 @@ def detect_ai_image_ensemble():
         
         # Run ensemble detection
         result = ensemble_detector.detect(image_bytes, filename)
-        
+
+        if result.get("ai_probability", 50) > 50.0:
+            result["ai_probability"] = 100.0
+        else:
+            result["ai_probability"] = 0.0
+
         # Add XAI explanation (Ensemble Disagreement Analysis + Grad-CAM, fully offline)
         ai_analysis = image_explainer.analyze_image(image_bytes, result)
         result['ai_analysis'] = ai_analysis
-        
-        # Force the final probability to 100 or 0 based on the 50% threshold
-        ai_prob = result.get('ai_probability', 50.0)
-        if ai_prob > 50.0:
-            result['ai_probability'] = 100.0
-        else:
-            result['ai_probability'] = 0.0
             
         return jsonify(result)
     
@@ -967,6 +995,9 @@ def detect_ai_image_fast():
                 'error_code': 'IMAGE_TOO_LARGE'
             }), 400
 
+        # Reset detectors if they have been warm too long (prevents stale state)
+        _maybe_reset_image_detectors()
+
         # Initialize fast detector if needed
         if fast_detector is None:
             from image_detector import FastCascadeDetector
@@ -974,13 +1005,6 @@ def detect_ai_image_fast():
         
         # Run fast cascading detection
         result = fast_detector.detect(image_bytes, filename)
-        
-        # Force the final probability to 100 or 0 based on the 50% threshold
-        ai_prob = result.get('ai_probability', 50.0)
-        if ai_prob > 50.0:
-            result['ai_probability'] = 100.0
-        else:
-            result['ai_probability'] = 0.0
             
         return jsonify(result)
     
@@ -1326,6 +1350,8 @@ def detect_audio_deepfake():
                     }), 400
                 
                 result = audio_detector.predict(audio_bytes, filename)
+                if not result.get('success'):
+                    return jsonify(result), 400
                 return jsonify(result)
             
             return jsonify({
@@ -1363,6 +1389,8 @@ def detect_audio_deepfake():
 
         # Run detection
         result = audio_detector.predict(audio_bytes, file.filename)
+        if not result.get('success'):
+            return jsonify(result), 400
         return jsonify(result)
 
     except Exception as e:
