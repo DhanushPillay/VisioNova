@@ -177,21 +177,29 @@ async function processImageAnalysis(imgData) {
 function updateUI(result) {
     console.log('[ImageResult] Updating UI with result:', result);
 
-    const aiProb = result.ai_probability || 0;
+    // Snapping Logic
+    let aiProb = result.ai_probability || 0;
+    if (aiProb > 50) {
+        aiProb = 100;
+    } else {
+        aiProb = 0;
+    }
+    
+    // Update the result object so other components see the snapped probability
+    result.ai_probability = aiProb;
+    
+    // Also snap the XAI combined probability if it exists
+    if (result.ai_analysis && result.ai_analysis.combined_verdict) {
+        if (result.ai_analysis.combined_verdict.combined_probability !== undefined) {
+             result.ai_analysis.combined_verdict.combined_probability = result.ai_analysis.combined_verdict.combined_probability > 50 ? 100 : 0;
+        }
+    }
+
     const humanProb = Math.max(0, 100 - aiProb);
 
-    // --- 1. Probability Card (restored) ---
-    // Strict "Winner takes all" logic at 50% threshold:
-    let displayAI = aiProb;
-    let displayHuman = humanProb;
-
-    if (aiProb > 50) {
-        displayAI = 100;
-        displayHuman = 0;
-    } else {
-        displayHuman = 100;
-        displayAI = 0;
-    }
+    // --- 1. Probability Card (keep granular) ---
+    const displayAI = aiProb;
+    const displayHuman = humanProb;
 
     // Update Analysis Date (kept from header)
     updateElement('analysisDate', `Analyzed ${formatAnalysisDate(new Date())}`);
@@ -209,16 +217,21 @@ function updateUI(result) {
     let probText = '';
     let probClass = '';
 
-    if (displayAI === 100) {
+    if (aiProb >= 80) {
         probText = 'AI-Generated Content Detected';
         probClass = 'text-xs text-accent-danger mt-2 font-medium flex items-center gap-1';
-    } else if (displayHuman === 100) {
-        probText = 'Human-Created Content Detected';
+    } else if (aiProb >= 60) {
+        probText = 'Likely AI — review recommended';
+        probClass = 'text-xs text-accent-warning mt-2 font-medium flex items-center gap-1';
+    } else if (aiProb >= 45) {
+        probText = 'Uncertain: mixed signals';
+        probClass = 'text-xs text-accent-warning mt-2 font-medium flex items-center gap-1';
+    } else if (aiProb >= 20) {
+        probText = 'Likely human-created';
         probClass = 'text-xs text-accent-success mt-2 font-medium flex items-center gap-1';
     } else {
-        // Uncertain / Mixed
-        probText = 'Inconclusive: Mixed patterns detected';
-        probClass = 'text-xs text-accent-warning mt-2 font-medium flex items-center gap-1';
+        probText = 'Authentic signal detected';
+        probClass = 'text-xs text-accent-success mt-2 font-medium flex items-center gap-1';
     }
 
     updateElement('probabilityText', probText);
@@ -231,7 +244,7 @@ function updateUI(result) {
 
     // --- 3. Analysis Mode Card ---
     const analysisMode = result.analysis_mode || 'Statistical Analysis';
-    updateElement('analysisMode', analysisMode.includes('ML') ? 'ML Ensemble' : 'Statistical');
+    updateElement('analysisMode', analysisMode.includes('Ensemble') ? 'ML Ensemble' : 'Statistical');
     updateElement('analysisModeInfo', analysisMode);
 
     // Models used tags
