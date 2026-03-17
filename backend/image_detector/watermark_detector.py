@@ -135,7 +135,7 @@ class WatermarkDetector:
             model_path = os.path.join(model_dir, 'stable_signature_decoder.pt')
             
             if os.path.exists(model_path):
-                self.stable_signature_decoder = torch.jit.load(model_path)
+                self.stable_signature_decoder = torch.jit.load(model_path, map_location='cpu')
                 self.stable_signature_decoder.eval()
                 self.stable_signature_available = True
                 logger.info("Meta Stable Signature decoder loaded")
@@ -647,15 +647,23 @@ class WatermarkDetector:
             # Look for symmetric peaks (common in watermarks)
             # Check 4 quadrants for symmetry
             h, w = log_magnitude.shape
-            q1 = log_magnitude[:h//2, :w//2]
-            q2 = log_magnitude[:h//2, w//2:]
-            q3 = log_magnitude[h//2:, :w//2]
-            q4 = log_magnitude[h//2:, w//2:]
+            h2, w2 = h // 2, w // 2
+            # Use symmetric cropping so all quadrants have identical shapes even when dimensions are odd
+            q1 = log_magnitude[:h2, :w2]
+            q2 = log_magnitude[:h2, -w2:]
+            q3 = log_magnitude[-h2:, :w2]
+            q4 = log_magnitude[-h2:, -w2:]
             
             # Watermarks often create symmetric patterns
-            sym_score_h = np.corrcoef(q1.flatten(), np.fliplr(q2).flatten())[0, 1]
-            sym_score_v = np.corrcoef(q1.flatten(), np.flipud(q3).flatten())[0, 1]
-            sym_score_d = np.corrcoef(q1.flatten(), np.flipud(np.fliplr(q4)).flatten())[0, 1]
+            # Safe reshape to 1D arrays with identical length
+            a1 = q1.reshape(-1)
+            a2 = np.fliplr(q2).reshape(-1)
+            a3 = np.flipud(q3).reshape(-1)
+            a4 = np.flipud(np.fliplr(q4)).reshape(-1)
+
+            sym_score_h = np.corrcoef(a1, a2)[0, 1]
+            sym_score_v = np.corrcoef(a1, a3)[0, 1]
+            sym_score_d = np.corrcoef(a1, a4)[0, 1]
             
             avg_symmetry = (abs(sym_score_h) + abs(sym_score_v) + abs(sym_score_d)) / 3
             

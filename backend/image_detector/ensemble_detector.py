@@ -41,6 +41,7 @@ Architecture:
 
 import io
 import logging
+import os
 from typing import Dict, Any, Optional, List
 from PIL import Image
 import numpy as np
@@ -72,18 +73,12 @@ class EnsembleDetector:
     # Only models trained on 2024-2026 generators (Flux, DALL-E 3, MJ v6,
     # GPT-Image-1, SDXL) are given weight. Outdated and broken models zeroed.
     DEFAULT_WEIGHTS: Dict[str, float] = {
-        # ═══ Tier 1: Best recent models (2025-2026, verified accuracy) ═══
-        'ateeqq': 0.31,             # Ateeqq SigLIP2 (99.23% acc, 46K downloads, Dec 2025)
-        'siglip_dinov2': 0.31,      # Bombek1 SigLIP2+DINOv2 (99.97% AUC, 25+ generators, Jan 2026)
-        
-        # ═══ Tier 2: Strong recent models ═══
-        'deepfake': 0.19,           # dima806 ViT (98.25% acc, 50K downloads, Jan 2025)
-        'sdxl': 0.19,               # Organika/sdxl-detector (98.1% acc, SDXL/Flux specialist)
-        
-        # REMOVED: dinov2 (0.10) — redundant with siglip_dinov2 which uses DINOv2 backbone
-        # REMOVED: frequency (0.04) — FFT heuristic, only detects old GAN artifacts, not modern diffusion
+        # Top 3 High-Accuracy Generic Models
+        'nyuad': 0.34,            # NYUAD ViT (97.36%) - Strong general baseline
+        'universal_fake': 0.33,   # SwinV2 (98.1%) - High accuracy across models
+        'siglip': 0.33            # SigLIP (92%) - Strong human vs AI semantic understanding
     }
-    
+
     # Override weights when certain signals are strong
     WATERMARK_OVERRIDE_THRESHOLD = 80  # If watermark confidence > 80%, use it
     C2PA_AI_CONFIDENCE = 100           # C2PA declares AI → 100% confidence
@@ -104,20 +99,57 @@ class EnsembleDetector:
         """
         self.use_gpu = use_gpu
         self.weights: Dict[str, float] = weights or self.DEFAULT_WEIGHTS.copy()
-        self.device = "cuda" if use_gpu else "cpu"
+        if use_gpu:
+            self.device = "cuda"
+        else:
+            try:
+                import torch
+                self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            except Exception:
+                self.device = "cpu"
         
         # Pretrained HuggingFace detectors
-        self.deepfake_detector = None     # dima806 ViT (98.25% accuracy)
-        self.sdxl_detector = None         # Organika/sdxl-detector (98.1% for modern diffusion)
-        
-        # 2025-2026 high-accuracy detectors
-        self.ateeqq_detector = None        # Ateeqq SigLIP2 (99.23% acc, Dec 2025)
-        self.siglip_dinov2_detector = None  # Bombek1 SigLIP2+DINOv2 (97.15% cross-dataset)
+        self.deepfake_detector = None      # dima806 ViT (98.25% accuracy)
+        self.sdxl_detector = None          # Organika/sdxl-detector (98.1% for modern diffusion)
+        self.universal_detector = None     # SwinV2 (98.1% accuracy)
+        self.nyuad_detector = None         # NYUAD General Detector
+        self.siglip_detector = None        # SigLIP Human vs AI
+        self.bombek1_detector = None       # Bombek1 SigLIP2+DINOv2
+        self.three_class_detector = None   # 3-Class SigLIP2 (AI vs Deepfake vs Real)
+        self.custom_detector = None        # User-supplied HF detector via env
+        self.custom_detector_id = None
         
         # Load detectors
         self._initialize_detectors(load_ml_models)
         
         logger.info(f"EnsembleDetector initialized (GPU: {use_gpu}, ML models: {load_ml_models})")
+
+    def _maybe_add_custom_model(self):
+        """Optionally append a user-provided HF detector via env vars.
+
+        Env vars:
+        - IMAGE_DETECTOR_EXTRA_MODEL_ID (required): HF image classifier (binary real vs AI)
+        - IMAGE_DETECTOR_EXTRA_MODEL_WEIGHT (optional, default 0.20)
+        - IMAGE_DETECTOR_EXTRA_MODEL_PARAMS (optional, for logging)
+        """
+
+        custom_id = os.getenv("IMAGE_DETECTOR_EXTRA_MODEL_ID")
+        if not custom_id:
+            return
+
+        try:
+            custom_weight = float(os.getenv("IMAGE_DETECTOR_EXTRA_MODEL_WEIGHT", "0.20"))
+        except ValueError:
+            custom_weight = 0.20
+
+        custom_params = os.getenv("IMAGE_DETECTOR_EXTRA_MODEL_PARAMS", "custom")
+
+        # Work on a copy so class-level default stays intact across instances
+        self.weights = self.weights.copy()
+        # Add a weight key for fusion
+        self.weights["custom"] = custom_weight
+        self.custom_detector_id = custom_id
+        logger.info(f"Custom image detector requested: {custom_id} (w={custom_weight}, params={custom_params})")
     
     def _initialize_detectors(self, load_ml_models: bool):
         """Initialize all component detectors.
@@ -176,18 +208,41 @@ class EnsembleDetector:
         if load_ml_models:
             try:
                 from .ml_detector import create_ml_detectors
-                ml_models = create_ml_detectors(device=self.device, load_all=True)
+
+                # Custom detector (if requested via env)
+                self._maybe_add_custom_model()
+
+                # Extract the models we actually want based on weights > 0
+                active_models = [k for k, w in self.weights.items() if w > 0]
+
+                ml_models = create_ml_detectors(
+                    device=self.device,
+                    load_all=True,
+                    custom_model_id=self.custom_detector_id,
+                    models_to_load=active_models
+                )
+
+                if getattr(self, "custom_detector_id", None):
+                    if _should_load('custom'):
+                        custom = ml_models.get('custom')
+                        if custom and getattr(custom, 'model_loaded', False):
+                            self.custom_detector = custom
+                            logger.info(f"Custom image detector loaded: {self.custom_detector_id}")
+                        else:
+                            logger.warning(f"Custom detector not available/loaded: {self.custom_detector_id}")
+                            # Zero weight if it fails to load
+                            self.weights['custom'] = 0.0
                 
                 # ── Tier 1: Best recent detectors (2025-2026) ──
-                if _should_load('ateeqq'):
-                    self.ateeqq_detector = ml_models.get('ateeqq')
-                    if self.ateeqq_detector and getattr(self.ateeqq_detector, 'model_loaded', False):
-                        logger.info("Ateeqq SigLIP2 detector loaded (99.23% acc, Dec 2025)")
+                if _should_load('bombek1'):
+                    self.bombek1_detector = ml_models.get('bombek1')
+                    if self.bombek1_detector and getattr(self.bombek1_detector, 'model_loaded', False):
+                        logger.info("Bombek1 SigLIP2+DINOv2 detector loaded (0.9997 AUC)")
                         
-                if _should_load('siglip_dinov2'):
-                    self.siglip_dinov2_detector = ml_models.get('siglip_dinov2')
-                    if self.siglip_dinov2_detector and getattr(self.siglip_dinov2_detector, 'model_loaded', False):
-                        logger.info("SigLIP2+DINOv2 detector loaded (97.15% cross-dataset)")
+                if _should_load('three_class'):
+                    self.three_class_detector = ml_models.get('three_class')
+                    if self.three_class_detector and getattr(self.three_class_detector, 'model_loaded', False):
+                        logger.info("3-Class SigLIP2 detector loaded (AI vs Deepfake vs Real)")
                         
                 # ── Tier 2: Strong recent models ──
                 if _should_load('deepfake'):
@@ -195,11 +250,21 @@ class EnsembleDetector:
                     if self.deepfake_detector and getattr(self.deepfake_detector, 'model_loaded', False):
                         logger.info("Deepfake detector loaded (dima806, 98.25%)")
                         
-                if _should_load('sdxl'):
-                    self.sdxl_detector = ml_models.get('sdxl')
-                    if self.sdxl_detector and getattr(self.sdxl_detector, 'model_loaded', False):
-                        logger.info("SDXL detector loaded (Organika/sdxl-detector)")
-                        
+                if _should_load('universal_fake'):
+                    self.universal_detector = ml_models.get('universal_fake')
+                    if self.universal_detector and getattr(self.universal_detector, 'model_loaded', False):
+                        logger.info("Universal SwinV2 detector loaded (98.1%)")
+
+                if _should_load('nyuad'):
+                    self.nyuad_detector = ml_models.get('nyuad')
+                    if self.nyuad_detector and getattr(self.nyuad_detector, 'model_loaded', False):
+                        logger.info("NYUAD detector loaded (97.36%)")
+
+                if _should_load('siglip'):
+                    self.siglip_detector = ml_models.get('siglip')
+                    if self.siglip_detector and getattr(self.siglip_detector, 'model_loaded', False):
+                        logger.info("SigLIP detector loaded (92%)")
+
             except ImportError as e:
                 logger.warning(f"ML detectors not available: {e}")
             except Exception as e:
@@ -235,10 +300,15 @@ class EnsembleDetector:
             Comprehensive detection result with combined verdict
         """
         # Check if any ML models are active for analysis mode reporting
-        ml_active = (getattr(self, 'ateeqq_detector', None) and self.ateeqq_detector.model_loaded) or \
-                    (getattr(self, 'deepfake_detector', None) and self.deepfake_detector.model_loaded) or \
-                    (getattr(self, 'sdxl_detector', None) and self.sdxl_detector.model_loaded) or \
-                    (getattr(self, 'siglip_dinov2_detector', None) and self.siglip_dinov2_detector.model_loaded)
+        ml_active = (
+            (getattr(self, 'bombek1_detector', None) and self.bombek1_detector.model_loaded) or
+            (getattr(self, 'three_class_detector', None) and self.three_class_detector.model_loaded) or
+            (getattr(self, 'universal_detector', None) and self.universal_detector.model_loaded) or
+            (getattr(self, 'nyuad_detector', None) and self.nyuad_detector.model_loaded) or
+            (getattr(self, 'siglip_detector', None) and self.siglip_detector.model_loaded) or
+            (getattr(self, 'deepfake_detector', None) and self.deepfake_detector.model_loaded) or
+            (getattr(self, 'sdxl_detector', None) and self.sdxl_detector.model_loaded)
+        )
 
         result: Dict[str, Any] = {
             'success': True,
@@ -285,21 +355,49 @@ class EnsembleDetector:
                 if df_result.get('success', False):
                     scores['deepfake'] = df_result.get('ai_probability', 50)
             
-            # 3. Ateeqq SigLIP2 detector (99.23% accuracy, incredibly low FPR)
-            if self.ateeqq_detector and self.ateeqq_detector.model_loaded:
-                ateeqq_result = self.ateeqq_detector.predict(image)
-                result['individual_results']['ateeqq'] = ateeqq_result
-                if ateeqq_result.get('success', False):
-                    scores['ateeqq'] = ateeqq_result.get('ai_probability', 50)
+            # 3. Bombek1 SigLIP2+DINOv2 (primary modern detector)
+            if self.bombek1_detector and self.bombek1_detector.model_loaded:
+                bombek1_result = self.bombek1_detector.predict(image)
+                result['individual_results']['bombek1'] = bombek1_result
+                if bombek1_result.get('success', False):
+                    scores['bombek1'] = bombek1_result.get('ai_probability', 50)
+
+            # 4. 3-Class SigLIP2 (AI vs Deepfake vs Real)
+            if self.three_class_detector and self.three_class_detector.model_loaded:
+                three_class_result = self.three_class_detector.predict(image)
+                result['individual_results']['three_class'] = three_class_result
+                if three_class_result.get('success', False):
+                    scores['three_class'] = three_class_result.get('ai_probability', 50)
             
-            # 4. SDXL Detector (Organika/sdxl-detector - modern diffusion specialist)
+            # 5. SDXL Detector (Organika/sdxl-detector - modern diffusion specialist)
             if self.sdxl_detector and self.sdxl_detector.model_loaded:
                 sdxl_result = self.sdxl_detector.predict(image)
                 result['individual_results']['sdxl'] = sdxl_result
                 if sdxl_result.get('success', False):
                     scores['sdxl'] = sdxl_result.get('ai_probability', 50)
-            
-            # 5. Watermark detection
+
+            # 5.5 Universal SwinV2 Detector
+            if self.universal_detector and self.universal_detector.model_loaded:
+                uni_result = self.universal_detector.predict(image)
+                result['individual_results']['universal_fake'] = uni_result
+                if uni_result.get('success', False):
+                    scores['universal_fake'] = uni_result.get('ai_probability', 50)
+
+            # 5.6 NYUAD Detector
+            if getattr(self, 'nyuad_detector', None) and self.nyuad_detector.model_loaded:
+                nyuad_result = self.nyuad_detector.predict(image)
+                result['individual_results']['nyuad'] = nyuad_result
+                if nyuad_result.get('success', False):
+                    scores['nyuad'] = nyuad_result.get('ai_probability', 50)
+
+            # 5.7 SigLIP Detector
+            if getattr(self, 'siglip_detector', None) and self.siglip_detector.model_loaded:
+                siglip_result = self.siglip_detector.predict(image)
+                result['individual_results']['siglip'] = siglip_result
+                if siglip_result.get('success', False):
+                    scores['siglip'] = siglip_result.get('ai_probability', 50)
+
+            # 6. Watermark detection
             watermark_boost = 0
             if getattr(self, 'watermark_detector', None):
                 wm_result = self.watermark_detector.analyze(image_data)
@@ -311,6 +409,8 @@ class EnsembleDetector:
                         f"AI watermark detected ({wm_result.get('watermark_type')})"
                     )
                 scores['watermark'] = watermark_boost
+            else:
+                result['overrides_applied'].append("Watermark scan skipped (detector unavailable)")
             
             # 7. Metadata analysis
             if getattr(self, 'metadata_analyzer', None):
@@ -341,14 +441,14 @@ class EnsembleDetector:
                 result['individual_results']['ela'] = ela_result
             
             # 14. Bombek1 SigLIP2+DINOv2 (best overall - 99.97% AUC, 25+ generators)
-            if self.siglip_dinov2_detector and self.siglip_dinov2_detector.model_loaded:
+            if self.bombek1_detector and self.bombek1_detector.model_loaded:
                 try:
-                    siglip_dinov2_result = self.siglip_dinov2_detector.predict(image)
-                    result['individual_results']['siglip_dinov2'] = siglip_dinov2_result
-                    if siglip_dinov2_result.get('success', False):
-                        scores['siglip_dinov2'] = siglip_dinov2_result.get('ai_probability', 50)
+                    bombek1_result = self.bombek1_detector.predict(image)
+                    result['individual_results']['bombek1'] = bombek1_result
+                    if bombek1_result.get('success', False):
+                        scores['bombek1'] = bombek1_result.get('ai_probability', 50)
                 except Exception as e:
-                    logger.warning(f"SigLIP2+DINOv2 detector error: {e}")
+                    logger.warning(f"Bombek1 detector error: {e}")
             
 
             
@@ -394,28 +494,24 @@ class EnsembleDetector:
                         f"(score raised from {old_score:.1f}% to {final_score:.1f}%)"
                     )
             
-            # Apply overrides
+            # Apply overrides (softened to avoid hard 100% flips)
             if c2pa_override:
-                final_score = 100.0
-                result['overrides_applied'].append("C2PA override: AI generation declared")
-            
+                final_score = max(final_score, 90.0)
+                result['overrides_applied'].append("C2PA declared AI (soft override to 90%)")
+        
             # FIXED: Only apply watermark override if it's a known AI signature
             # Generic watermarks (DWT-DCT with low confidence) should not override
             if watermark_boost > self.WATERMARK_OVERRIDE_THRESHOLD:
                 # Check if it was a specific AI signature match
                 watermark_result = result['individual_results'].get('watermark', {})
                 if watermark_result.get('ai_generator_signature'):
-                    final_score = max(final_score, 99.0)
-                    result['overrides_applied'].append(f"AI Signature override: {watermark_result.get('ai_generator_signature')}")
+                    final_score = max(final_score, 95.0)
+                    result['overrides_applied'].append(f"AI Signature override (soft to 95%): {watermark_result.get('ai_generator_signature')}")
                 else:
                     # Generic watermark - boost score but don't fully override unless very high confidence
                     if watermark_boost >= 90:
                         final_score = max(final_score, 90.0)
-                        result['overrides_applied'].append(f"High-confidence watermark override ({watermark_boost}%)")
-                    else:
-                        # Just a slight boost for generic watermarks
-                        # Don't let it override a low AI score from other detectors
-                        pass
+                        result['overrides_applied'].append(f"High-confidence watermark boost to 90% ({watermark_boost}%)")
             
             # Calculate detection agreement
             agreement_result = self._calculate_agreement(scores)
@@ -430,15 +526,7 @@ class EnsembleDetector:
                 # Low agreement → reduce confidence slightly
                 final_score = final_score * 0.95
             
-            # Snap final score to 100% AI or 100% Human (0% AI probability)
-            if final_score > 50.0:
-                final_score = 100.0
-                result['overrides_applied'].append("Forced output: Leans AI, so set to 100% AI")
-            else:
-                final_score = 0.0
-                result['overrides_applied'].append("Forced output: Leans Human, so set to 100% Human")
-
-            # Determine final verdict
+            # Determine final verdict without binary snapping
             result['ai_probability'] = round(final_score, 2)
             result['confidence'] = self._calculate_confidence(scores, agreement)
             result['ensemble_verdict'], result['verdict_description'] = self._determine_verdict(final_score)

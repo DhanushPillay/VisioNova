@@ -151,7 +151,11 @@ class AudioEnsembleDetector:
             return {"success": False, "error": "Invalid input format"}
 
         if audio is None:
-            return {"success": False, "error": "Could not process audio data"}
+            return {
+                "success": False,
+                "error": "Audio preprocessing failed. Ensure dependencies librosa and soundfile are installed.",
+                "error_code": "AUDIO_PREPROCESS_FAILED"
+            }
 
         # 2. Inference Loop
         model_results = []
