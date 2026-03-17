@@ -3,6 +3,7 @@ Fact Checker - Main Pipeline
 Orchestrates the fact-checking process with AI-powered analysis.
 """
 import hashlib
+import re
 from datetime import datetime
 from functools import lru_cache
 from .input_classifier import InputClassifier
@@ -17,7 +18,7 @@ import concurrent.futures
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ai import AIAnalyzer
+from AI import AIAnalyzer
 
 
 # Module-level cache for fact-check results with TTL support
@@ -197,8 +198,11 @@ class FactChecker:
         # We pick up to 3 high-trust sources to read fully
         self._enrich_sources_with_full_text(sources)
         
+        # Temporal context for calibration and filtering
+        temporal_context = self.temporal_analyzer.extract_temporal_context(claim)
+        
         # Step 5: Analyze sources and determine verdict using AI
-        ai_result = self._analyze_sources(claim, sources)
+        ai_result = self._analyze_sources(claim, sources, temporal_context)
         
         # Step 6: Build response with all AI analysis data
         result = self._build_response(
@@ -395,7 +399,7 @@ class FactChecker:
                  print("Round 2 found no new unique sources.")
 
         # Step 5: Enhanced AI analysis with combined sources
-        ai_result = self._analyze_sources(claim, unique_sources)
+        ai_result = self._analyze_sources(claim, unique_sources, temporal_context)
         
         # Step 6: Build response with deep scan metadata
         result = self._build_response(
@@ -420,8 +424,6 @@ class FactChecker:
         result['cached'] = False
         
         return result
-    
-        return queries[:7]  # Limit to 7 queries to balance coverage and rate limiting
     
     def _generate_search_queries(self, claim: str, temporal_context: dict = None) -> list:
         """
@@ -477,13 +479,16 @@ class FactChecker:
             
         return queries[:7]
     
-    def _analyze_sources(self, claim: str, sources: list) -> dict:
+    def _analyze_sources(self, claim: str, sources: list, temporal_context: dict = None) -> dict:
         """
         Analyze sources using AI with fallback to heuristic analysis.
         
         Returns:
             dict with verdict, confidence, summary, detailed_analysis, claims
         """
+        # Tag stance and temporal alignment before AI so both AI and fallback can use it
+        sources = self._apply_stance_tags(claim, sources)
+        sources = self._apply_temporal_filter(sources, temporal_context)
         # Try AI-powered analysis first
         try:
             ai_result = self.ai_analyzer.analyze_claim(claim, sources)
@@ -509,6 +514,8 @@ class FactChecker:
         high_trust = []
         medium_trust = []
         low_trust = []
+        support_sources = []
+        refute_sources = []
         
         total_trust_score = 0
         valid_sources_count = 0
@@ -532,6 +539,11 @@ class FactChecker:
                 medium_trust.append(source)
             else:
                 low_trust.append(source)
+            stance = source.get('stance', 'neutral')
+            if stance == 'supports':
+                support_sources.append(source)
+            elif stance == 'refutes':
+                refute_sources.append(source)
             
             total_trust_score += trust_score
             valid_sources_count += 1
@@ -539,33 +551,46 @@ class FactChecker:
         avg_trust = total_trust_score / max(1, valid_sources_count)
         total_trusted = len(factcheck_sites) + len(high_trust)
         
-        # Determine verdict based on source quality
-        if factcheck_sites:
-            # We have fact-check sources - give them high weight
-            confidence = min(95, 75 + len(factcheck_sites) * 10)
+        # Determine verdict based on source quality and stance consensus
+        support_high = sum(1 for s in support_sources if s.get('trust_score', 0) >= 70)
+        refute_high = sum(1 for s in refute_sources if s.get('trust_score', 0) >= 70)
+        factcheck_support = sum(1 for s in support_sources if s.get('category') == 'factcheck')
+        factcheck_refute = sum(1 for s in refute_sources if s.get('category') == 'factcheck')
+
+        if factcheck_refute >= 1 and (refute_high + factcheck_refute) >= 2:
+            verdict = Verdict.FALSE
+            confidence = min(95, 70 + 10 * (refute_high + factcheck_refute))
+            explanation = (
+                f"Found {refute_high + factcheck_refute} high-trust/refuting sources including "
+                f"{factcheck_refute} fact-check site(s). (Heuristic analysis)"
+            )
+        elif factcheck_support >= 1 and (support_high + factcheck_support) >= 2:
+            verdict = Verdict.TRUE
+            confidence = min(95, 70 + 10 * (support_high + factcheck_support))
+            explanation = (
+                f"Found {support_high + factcheck_support} high-trust/supporting sources including "
+                f"{factcheck_support} fact-check site(s). (Heuristic analysis)"
+            )
+        elif factcheck_sites:
+            confidence = min(90, 70 + len(factcheck_sites) * 5)
             verdict = self._extract_verdict_from_snippets(factcheck_sites)
             explanation = (
-                f"Found {len(factcheck_sites)} high-trust/fact-check source(s) addressing this claim. "
+                f"Fact-check sources found but stance consensus is weak. "
                 f"Average source trust score: {avg_trust:.1f}/100. (Heuristic analysis)"
             )
         elif total_trusted >= 3:
-            # Multiple trusted sources
-            confidence = min(85, 50 + total_trusted * 10)
-            verdict = Verdict.TRUE
-            explanation = (
-                f"Found {total_trusted} trusted sources discussing this topic. "
-                f"No explicit fact-checks found, but sources appear credible (Trust > 70). (Heuristic analysis)"
-            )
-        elif total_trusted >= 1:
-            # Some trusted sources
-            confidence = 50
+            confidence = min(80, 50 + total_trusted * 8)
             verdict = Verdict.PARTIALLY_TRUE
             explanation = (
-                f"Found {total_trusted} trusted source(s). "
-                f"Limited evidence available for full verification. (Heuristic analysis)"
+                f"Found {total_trusted} trusted sources but stance signals are mixed/insufficient. (Heuristic analysis)"
+            )
+        elif total_trusted >= 1:
+            confidence = 45
+            verdict = Verdict.UNVERIFIABLE
+            explanation = (
+                f"Found {total_trusted} trusted source(s) but not enough agreement to verify. (Heuristic analysis)"
             )
         else:
-            # Only unknown sources
             confidence = 30
             verdict = Verdict.UNVERIFIABLE
             explanation = (
@@ -658,6 +683,49 @@ class FactChecker:
                 print(f"Failed to enrich source {url}: {e}")
             return idx, None
 
+    def _apply_stance_tags(self, claim: str, sources: list) -> list:
+        """Lightweight stance tagging based on snippet/title keywords."""
+        if not sources:
+            return sources
+        claim_lower = claim.lower()
+        positive = ['true', 'correct', 'confirmed', 'verified', 'authentic', 'real', 'accurate']
+        negative = ['false', 'fake', 'hoax', 'debunked', 'misleading', 'incorrect', 'untrue']
+
+        for src in sources:
+            text = f"{src.get('title','')} {src.get('snippet','')}".lower()
+            stance = 'neutral'
+            if any(k in text for k in negative):
+                stance = 'refutes'
+            elif any(k in text for k in positive):
+                stance = 'supports'
+            # If the claim itself is echoed, lean supports
+            if stance == 'neutral' and claim_lower[:40] in text:
+                stance = 'supports'
+            src['stance'] = stance
+        return sources
+
+    def _apply_temporal_filter(self, sources: list, temporal_context: dict = None) -> list:
+        """Tag sources with temporal match and drop ones clearly outside the claim window."""
+        if not sources or not temporal_context or not temporal_context.get('search_year_from'):
+            return sources
+        year_floor = temporal_context['search_year_from']
+        filtered = []
+        year_pattern = re.compile(r"\b(19\d{2}|20\d{2})\b")
+
+        for src in sources:
+            text = f"{src.get('title','')} {src.get('snippet','')}"
+            years = [int(y) for y in year_pattern.findall(text)]
+            if not years:
+                src['temporal_match'] = True
+                filtered.append(src)
+                continue
+            latest = max(years)
+            src['temporal_year'] = latest
+            src['temporal_match'] = latest >= year_floor
+            if src['temporal_match']:
+                filtered.append(src)
+        return filtered
+
         # Fetch in parallel
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             futures = [executor.submit(fetch_text, idx, src) for idx, src, _ in top_candidates]
@@ -713,7 +781,9 @@ class FactChecker:
                 'snippet': source.get('snippet', '')[:200],
                 'domain': source.get('domain', ''),
                 'trust_level': source.get('trust_level', 'unknown'),
-                'is_factcheck': source.get('is_factcheck_site', False)
+                'is_factcheck': source.get('is_factcheck_site', False),
+                'stance': source.get('stance', 'neutral'),
+                'temporal_match': source.get('temporal_match', True)
             })
         
         return {
