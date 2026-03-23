@@ -518,7 +518,7 @@
 
                                 try {
                                     const controller = new AbortController();
-                                    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s for large docs
+                                    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 mins for large docs and model downloads
 
                                     let response;
 
