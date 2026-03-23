@@ -211,52 +211,64 @@
                             </div>
 
         <!-- VIDEO TAB -->
-        <div class="tab-content" id="tab-video">
-          <div class="upload-layout">
-            <div class="upload-sidebar">
-              <div class="us-label">Video Telemetry</div>
-              <p class="us-desc">Frame-by-frame deepfake analysis. MP4, MOV, AVI — max 500MB.</p>
+        <div class="upload-content hidden relative" id="video-upload">
+          <div class="upload-layout w-full flex flex-col md:flex-row gap-6 p-6">
+            <div class="upload-sidebar w-full md:w-1/3">
+              <div class="us-label font-bold text-white text-lg mb-2">Video Telemetry</div>
+              <p class="us-desc text-sm text-[#94A3B8] mb-4">Frame-by-frame deepfake analysis. MP4, MOV, AVI — max 500MB.</p>
               <div class="us-meta">
-                <div class="us-field-label">Remote source</div>
-                <div class="us-input">
-                  <span>&gt;</span>
-                  <input type="text" placeholder="paste video URL" />
+                <div class="us-field-label text-xs text-[#64748B] mb-1 uppercase tracking-wider">Remote source</div>
+                <div class="us-input flex items-center bg-[#0D1B2A] border border-[#2A3450] rounded-xl px-4 py-2">
+                  <span class="text-[#64748B] mr-2">&gt;</span>
+                  <input type="text" placeholder="paste video URL" class="bg-transparent border-none outline-none text-white text-sm w-full placeholder-[#64748B] focus:ring-0" />
                 </div>
               </div>
             </div>
-            <div class="upload-main">
-              <div class="dropzone">
-                <div class="dz-icon">
-                  <span class="material-symbols-outlined">movie</span>
+            <div class="upload-main flex flex-col gap-4 flex-1">
+              <div class="dropzone border-2 border-dashed border-[#2A3450] hover:border-purple-500/50 transition-all duration-300 rounded-2xl w-full min-h-[300px] flex flex-col items-center justify-center bg-[#0D1B2A]/80 cursor-pointer">
+                <div class="dz-icon size-16 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center text-purple-400 border border-purple-500/20 mb-4">
+                  <span class="material-symbols-outlined !text-4xl text-purple-400">movie</span>
                 </div>
-                <div class="dz-title">Mount Video File</div>
-                <div class="dz-sub">Drag & drop or <span class="dz-browse" style="color:#4E9EFF;">browse</span></div>
+                <div class="dz-title text-xl font-semibold text-white mb-2">Mount Video File</div>
+                <div class="dz-sub text-sm text-[#94A3B8]">Drag & drop or <span class="dz-browse text-purple-400 cursor-pointer hover:underline font-medium" id="videoBrowseLink">browse</span></div>
+              </div>
+              <div class="w-full flex justify-end">
+                <button onclick="navigateToResult()" class="w-full md:w-auto px-7 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-glow transition-all duration-200 flex items-center justify-center gap-2 whitespace-nowrap group/btn">
+                  <span class="material-symbols-outlined group-hover/btn:animate-spin">radar</span>
+                  Analyze Video
+                </button>
               </div>
             </div>
           </div>
         </div>
 
         <!-- AUDIO TAB -->
-        <div class="tab-content" id="tab-audio">
-          <div class="upload-layout">
-            <div class="upload-sidebar">
-              <div class="us-label">Spectral Intake</div>
-              <p class="us-desc">Synthetic voice detection via Wav2Vec2. MP3, WAV, FLAC supported.</p>
+        <div class="upload-content hidden relative" id="audio-upload">
+          <div class="upload-layout w-full flex flex-col md:flex-row gap-6 p-6">
+            <div class="upload-sidebar w-full md:w-1/3">
+              <div class="us-label font-bold text-white text-lg mb-2">Spectral Intake</div>
+              <p class="us-desc text-sm text-[#94A3B8] mb-4">Synthetic voice detection via Wav2Vec2. MP3, WAV, FLAC supported.</p>
               <div class="us-meta">
-                <div class="us-field-label">Remote audio URI</div>
-                <div class="us-input">
-                  <span>&gt;</span>
-                  <input type="text" placeholder="audio stream URL" />
+                <div class="us-field-label text-xs text-[#64748B] mb-1 uppercase tracking-wider">Remote audio URI</div>
+                <div class="us-input flex items-center bg-[#0D1B2A] border border-[#2A3450] rounded-xl px-4 py-2">
+                  <span class="text-[#64748B] mr-2">&gt;</span>
+                  <input type="text" placeholder="audio stream URL" class="bg-transparent border-none outline-none text-white text-sm w-full placeholder-[#64748B] focus:ring-0" />
                 </div>
               </div>
             </div>
-            <div class="upload-main">
-              <div class="dropzone">
-                <div class="dz-icon">
-                  <span class="material-symbols-outlined">mic</span>
+            <div class="upload-main flex flex-col gap-4 flex-1">
+              <div class="dropzone border-2 border-dashed border-[#2A3450] hover:border-green-500/50 transition-all duration-300 rounded-2xl w-full min-h-[300px] flex flex-col items-center justify-center bg-[#0D1B2A]/80 cursor-pointer">
+                <div class="dz-icon size-16 rounded-2xl bg-gradient-to-br from-green-500/20 to-teal-500/20 flex items-center justify-center text-green-400 border border-green-500/20 mb-4">
+                  <span class="material-symbols-outlined !text-4xl text-green-400">mic</span>
                 </div>
-                <div class="dz-title">Inject Audio Signal</div>
-                <div class="dz-sub">Drag & drop or <span class="dz-browse" style="color:#AA7FFF;">browse storage</span></div>
+                <div class="dz-title text-xl font-semibold text-white mb-2">Inject Audio Signal</div>
+                <div class="dz-sub text-sm text-[#94A3B8]">Drag & drop or <span class="dz-browse text-green-400 cursor-pointer hover:underline font-medium" id="audioBrowseLink">browse storage</span></div>
+              </div>
+              <div class="w-full flex justify-end">
+                <button onclick="navigateToResult()" class="w-full md:w-auto px-7 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-glow transition-all duration-200 flex items-center justify-center gap-2 whitespace-nowrap group/btn">
+                  <span class="material-symbols-outlined group-hover/btn:animate-spin">radar</span>
+                  Analyze Audio
+                </button>
               </div>
             </div>
           </div>
@@ -472,124 +484,6 @@
 <input type="file" id="textFileInput" accept=".txt,.doc,.docx,.pdf" style="display:none" />
 
 <script src="../js/storage-utils.js"></script>
-
-<script>
-// ── Tab switching ──
-let activeTab = 'image';
-let activeResultPage = 'ImageResultPage.html';
-
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    activeTab = btn.dataset.tab;
-    activeResultPage = btn.dataset.page;
-    document.getElementById('tab-' + activeTab).classList.add('active');
-  });
-});
-
-// ── Navigate to result ──
-function navigateToResult() {
-  window.location.href = activeResultPage;
-}
-
-// ── Image preview ──
-const imgBrowse = document.getElementById('imgBrowse');
-const imageFileInput = document.getElementById('imageFileInput');
-const imageDropZone = document.getElementById('imageDropZone');
-const imagePreview = document.getElementById('imagePreview');
-const imagePreviewImg = document.getElementById('imagePreviewImg');
-const imageFileName = document.getElementById('imageFileName');
-const clearImageBtn = document.getElementById('clearImageBtn');
-
-if (imgBrowse) imgBrowse.addEventListener('click', () => imageFileInput.click());
-
-imageFileInput.addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  showImagePreview(file);
-  saveToStorage(file);
-});
-
-imageDropZone.addEventListener('dragover', e => {
-  e.preventDefault();
-  imageDropZone.style.borderColor = 'rgba(200,255,87,0.5)';
-});
-imageDropZone.addEventListener('dragleave', () => {
-  imageDropZone.style.borderColor = '';
-});
-imageDropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  imageDropZone.style.borderColor = '';
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) {
-    showImagePreview(file);
-    saveToStorage(file);
-  }
-});
-
-function showImagePreview(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    imagePreviewImg.src = e.target.result;
-    imageFileName.textContent = file.name;
-    imagePreview.classList.add('show');
-  };
-  reader.readAsDataURL(file);
-}
-
-if (clearImageBtn) clearImageBtn.addEventListener('click', e => {
-  e.stopPropagation();
-  imagePreview.classList.remove('show');
-  imageFileInput.value = '';
-});
-
-// ── Paste from clipboard ──
-const pasteBtn = document.getElementById('pasteImageBtn');
-if (pasteBtn) pasteBtn.addEventListener('click', async () => {
-  try {
-    const items = await navigator.clipboard.read();
-    for (const item of items) {
-      for (const type of item.types) {
-        if (type.startsWith('image/')) {
-          const blob = await item.getType(type);
-          const file = new File([blob], 'pasted_image.png', { type });
-          showImagePreview(file);
-          saveToStorage(file);
-        }
-      }
-    }
-  } catch(e) { console.warn('Clipboard read failed:', e); }
-});
-
-function saveToStorage(file) {
-  if (typeof VisioNovaStorage !== 'undefined') {
-    const reader = new FileReader();
-    reader.onload = e => {
-      VisioNovaStorage.saveFile('image', e.target.result, file.name, file.type);
-    };
-    reader.readAsDataURL(file);
-  }
-}
-
-// ── Text / Doc upload ──
-const textFileInput = document.getElementById('textFileInput');
-const docFileIndicator = document.getElementById('docFileIndicator');
-const docFileNameDisplay = document.getElementById('docFileNameDisplay');
-const docRemoveBtn = document.getElementById('docRemoveBtn');
-
-if (textFileInput) textFileInput.addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  docFileNameDisplay.textContent = file.name;
-  docFileIndicator.classList.add('show');
-});
-
-if (docRemoveBtn) docRemoveBtn.addEventListener('click', () => {
-  textFileInput.value = '';
-  docFileIndicator.classList.remove('show');
-});
-</script>
+<script src="../js/homepage.js"></script>
 </body>
 </html>

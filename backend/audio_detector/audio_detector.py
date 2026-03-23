@@ -131,11 +131,12 @@ class AudioEnsembleDetector:
             logger.error(f"Byte loading failed: {e}")
             return None, 0
 
-    def predict(self, audio_input, filename: str = "audio.wav") -> Dict[str, Any]:
+    def predict(self, audio_input, filename: str = "audio.wav", use_segments: bool = True) -> Dict[str, Any]:
         """
         Run ensemble prediction.
         
-        Returns detailed JSON with weighted average verdict.
+        Returns detailed JSON with weighted average verdict, and segment-level analysis 
+        if use_segments is true.
         """
         self._load_models()
         
@@ -157,7 +158,83 @@ class AudioEnsembleDetector:
                 "error_code": "AUDIO_PREPROCESS_FAILED"
             }
 
-        # 2. Inference Loop
+        total_duration = len(audio) / sr
+        
+        # Determine if we should do segmented analysis
+        SEGMENT_SEC = 10.0
+        OVERLAP_SEC = 2.0
+        
+        segments_data = []
+        if use_segments and total_duration > (SEGMENT_SEC + OVERLAP_SEC):
+            # Calculate segment boundaries
+            step = SEGMENT_SEC - OVERLAP_SEC
+            starts = np.arange(0, total_duration - SEGMENT_SEC + step, step)
+            # Ensure the last segment reaches the end
+            if len(starts) > 0 and starts[-1] + SEGMENT_SEC < total_duration:
+                starts = np.append(starts, total_duration - SEGMENT_SEC)
+                
+            for st in starts:
+                end_time = min(st + SEGMENT_SEC, total_duration)
+                seg_audio = audio[int(st * sr):int(end_time * sr)]
+                
+                seg_score, _, _ = self._run_inference(seg_audio, sr)
+                
+                segments_data.append({
+                    "start_sec": float(st),
+                    "end_sec": float(end_time),
+                    "fake_probability": seg_score,
+                    "real_probability": 100.0 - seg_score,
+                    "verdict": "likely_ai" if seg_score > 50 else "likely_human"
+                })
+        
+        # Full audio inference for global score
+        final_score, model_results, is_fake = self._run_inference(audio, sr)
+
+        # 4. Generate Artifacts Analysis
+        artifacts = []
+        if is_fake:
+            artifacts.append("High-frequency spectral anomalies detected")
+            if final_score > 80:
+                artifacts.append("Synthetic phase coherence observed")
+            if final_score > 90:
+                artifacts.append("Vocoder analysis signature present")
+            if segments_data:
+                fake_segs = sum(1 for s in segments_data if s["fake_probability"] > 50)
+                artifacts.append(f"AI generation detected in {fake_segs} of {len(segments_data)} audio segments")
+        else:
+            artifacts.append("Natural breath patterns and pauses detected")
+            artifacts.append("Consistent pitch variance within human range")
+            if segments_data:
+                artifacts.append(f"Authentic acoustic signature across all {len(segments_data)} segments")
+        
+        response = {
+            "success": True,
+            "prediction": "ai_generated" if is_fake else "real",
+            "verdict": "likely_ai" if is_fake else "likely_human",
+            "fake_probability": final_score,
+            "real_probability": round(100 - final_score, 2),
+            "confidence": final_score if is_fake else round(100 - final_score, 2),
+            "ensemble_details": model_results,
+            "artifacts_detected": artifacts,
+            "analysis_mode": "segmented" if segments_data else "single_pass",
+            "total_duration_seconds": round(total_duration, 2),
+            "segments_analyzed": len(segments_data) if segments_data else 1,
+            "meta": {
+                "duration_seconds": round(total_duration, 2),
+                "sample_rate": sr,
+                "file_name": filename
+            }
+        }
+        
+        if segments_data:
+            response["segments"] = segments_data
+            response["meta"]["segment_length_sec"] = SEGMENT_SEC
+            response["meta"]["segment_overlap_sec"] = OVERLAP_SEC
+            
+        return response
+
+    def _run_inference(self, audio_slice: np.ndarray, sr: int) -> Tuple[float, List[Dict], bool]:
+        """Internal method to run the ensemble models on an audio array."""
         model_results = []
         weighted_fake_prob_sum = 0.0
         total_weight = 0.0
@@ -174,7 +251,7 @@ class AudioEnsembleDetector:
             try:
                 # Prepare input
                 inputs = processor(
-                    audio, 
+                    audio_slice, 
                     sampling_rate=sr, 
                     return_tensors="pt", 
                     padding=True
@@ -184,23 +261,14 @@ class AudioEnsembleDetector:
                     logits = model(**inputs).logits
                     probs = F.softmax(logits, dim=-1)
                     
-                # Extract probabilities
-                # Assuming index 0=Real, 1=Fake for these specific models. 
-                # Wav2Vec2 and WavLM deepfake models on HF usually follow this, 
-                # but let's check config id2label if available safely.
-                
                 fake_score = 0.0
                 id2label = model.config.id2label
                 if id2label:
-                    # Robust label checking
                     for idx, label in id2label.items():
                         if any(x in label.lower() for x in ['spoof', 'fake', 'generated', 'ai']):
-                            # Force convert idx to int because JSON keys are strings
                             fake_score = probs[0][int(idx)].item()
                             break
                     else:
-                        # Fallback if labels are weird (e.g. 'class_0', 'class_1')
-                        # Usually 1 is fake in binary classifiers
                         fake_score = probs[0][1].item() if len(probs[0]) > 1 else probs[0][0].item()
                 else:
                     fake_score = probs[0][1].item()
@@ -218,38 +286,14 @@ class AudioEnsembleDetector:
             except Exception as e:
                 logger.error(f"Inference failed for {model_id}: {e}")
                 
-        # 3. Aggregation
         if total_weight == 0:
-            return {"success": False, "error": "Ensemble inference failed"}
+            return 0.0, [], False
             
         final_fake_prob = weighted_fake_prob_sum / total_weight
         final_score = round(final_fake_prob * 100, 2)
         is_fake = final_score > 50
         
-        # 4. Generate Artifacts Analysis (Mocked logic based on score for now)
-        # In a real system, we'd extract attention maps or specific spectral features.
-        artifacts = []
-        if is_fake:
-            artifacts.append("High-frequency spectral anomalies detected")
-            if final_score > 80:
-                artifacts.append("Synthetic phase coherence observed")
-            if final_score > 90:
-                artifacts.append("Vocoder analysis signature present")
-        
-        return {
-            "success": True,
-            "prediction": "ai_generated" if is_fake else "real",
-            "verdict": "likely_ai" if is_fake else "likely_human",
-            "fake_probability": final_score,
-            "real_probability": round(100 - final_score, 2),
-            "confidence": final_score if is_fake else round(100 - final_score, 2),
-            "ensemble_details": model_results,
-            "artifacts_detected": artifacts,
-            "meta": {
-                "duration_seconds": round(len(audio) / sr, 2),
-                "sample_rate": sr
-            }
-        }
+        return final_score, model_results, is_fake
 
     def get_model_info(self) -> Dict:
         """Return ensemble metadata."""

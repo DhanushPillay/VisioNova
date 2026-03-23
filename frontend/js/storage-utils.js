@@ -335,6 +335,68 @@ const VisioNovaStorage = {
      * @param {string} mimeType - MIME type
      * @returns {Promise<boolean>}
      */
+    
+    /**
+     * Save a video file to IndexedDB
+     */
+    saveVideoFile: async function (dataURL, fileName, mimeType) {
+        try {
+            const db = await this._initDB();
+            const transaction = db.transaction(['files'], 'readwrite');
+            const store = transaction.objectStore('files');
+            
+            const fileData = {
+                id: 'currentVideo',
+                data: dataURL,
+                fileName: fileName || 'video.mp4',
+                mimeType: mimeType || 'video/mp4',
+                timestamp: new Date().toISOString()
+            };
+            
+            await new Promise((resolve, reject) => {
+                const request = store.put(fileData);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+            
+            sessionStorage.setItem('visioNova_videoFile_meta', JSON.stringify({
+                fileName: fileData.fileName,
+                mimeType: fileData.mimeType,
+                timestamp: fileData.timestamp
+            }));
+            
+            console.log('[Storage] Video file saved to IndexedDB:', fileName);
+            db.close();
+            return true;
+        } catch (error) {
+            console.error('[Storage] Error saving video file:', error);
+            return false;
+        }
+    },
+
+    /**
+     * Retrieve the current video file from IndexedDB
+     */
+    getVideoFile: async function () {
+        try {
+            const db = await this._initDB();
+            const transaction = db.transaction(['files'], 'readonly');
+            const store = transaction.objectStore('files');
+            
+            const fileData = await new Promise((resolve, reject) => {
+                const request = store.get('currentVideo');
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+            
+            db.close();
+            return fileData;
+        } catch (error) {
+            console.error('[Storage] Error retrieving video file:', error);
+            return null;
+        }
+    },
+
     saveAudioFile: async function (dataURL, fileName, mimeType) {
         try {
             const db = await this._initDB();

@@ -50,15 +50,21 @@ function setupBrowseLinks() {
     }
 
     // Video browse
-    const videoBrowse = document.querySelector('#video-upload .text-purple-400.cursor-pointer');
+    const videoBrowse = document.getElementById('videoBrowseLink');
     if (videoBrowse) {
-        videoBrowse.addEventListener('click', () => document.getElementById('videoFileInput').click());
+        videoBrowse.addEventListener('click', (e) => {
+            e.stopPropagation(); // prevent parent dropzone from taking over click inconsistently
+            document.getElementById('videoFileInput').click();
+        });
     }
 
     // Audio browse
-    const audioBrowse = document.querySelector('#audio-upload .text-green-400.cursor-pointer');
+    const audioBrowse = document.getElementById('audioBrowseLink');
     if (audioBrowse) {
-        audioBrowse.addEventListener('click', () => document.getElementById('audioFileInput').click());
+        audioBrowse.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('audioFileInput').click();
+        });
     }
 
     // Text file browse button
@@ -193,7 +199,7 @@ async function handleFileUpload(type, file) {
             mimeType: file.type
         };
 
-        // For audio & images, use IndexedDB exclusively (sessionStorage has ~5MB limit)
+        // For audio, video, & images, use IndexedDB exclusively (sessionStorage has ~5MB limit)
         if (type === 'audio') {
             const saved = await VisioNovaStorage.saveAudioFile(dataURL, file.name, file.type);
             if (!saved) {
@@ -206,6 +212,13 @@ async function handleFileUpload(type, file) {
             if (!saved) {
                 console.error('[Homepage] Failed to save image to IndexedDB');
                 alert('Failed to store image file. Please try again or use a smaller file.');
+                return;
+            }
+        } else if (type === 'video') {
+            const saved = await VisioNovaStorage.saveVideoFile(dataURL, file.name, file.type);
+            if (!saved) {
+                console.error('[Homepage] Failed to save video to IndexedDB');
+                alert('Failed to store video file. Please try again or use a smaller file.');
                 return;
             }
         }
@@ -615,7 +628,7 @@ function navigateToResult() {
         }
     } else if (activeTab === 'video') {
         if (uploadedFiles.video) {
-            VisioNovaStorage.saveFile('video', uploadedFiles.video.data, uploadedFiles.video.fileName, uploadedFiles.video.mimeType);
+            // Video is already saved to IndexedDB 
         } else {
             const urlInput = document.querySelector('#video-upload input[type="text"]');
             if (urlInput && urlInput.value.trim()) {
