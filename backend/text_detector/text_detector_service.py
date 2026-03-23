@@ -381,30 +381,30 @@ class AIContentDetector:
     # Multiple diverse models combined via weighted average for robust detection.
     # Weights reflect model quality (RAID benchmark, AUROC, architecture diversity).
     ENSEMBLE_MODELS = [
-        {
-            "id": "desklib/ai-text-detector-v1.01",
-            "weight": 0.35,
-            "type": "desklib_custom",  # Custom architecture: DeBERTa-v3-large + mean pool + sigmoid
-            "params": "400M",
-            "note": "#1 RAID leaderboard, DeBERTa-v3-large, custom single-logit sigmoid output",
-        },
+        # {
+        #     "id": "desklib/ai-text-detector-v1.01",
+        #     "weight": 0.35,
+        #     "type": "desklib_custom",  # Custom architecture: DeBERTa-v3-large + mean pool + sigmoid
+        #     "params": "400M",
+        #     "note": "#1 RAID leaderboard, DeBERTa-v3-large, custom single-logit sigmoid output",
+        # },
         {
             "id": "Oxidane/tmr-ai-text-detector",
-            "weight": 0.30,
+            "weight": 0.50,
             "type": "standard",  # Standard AutoModelForSequenceClassification
             "params": "125M",
             "note": "RoBERTa-base, 97.3% accuracy, 0.9972 AUROC, 2.27% FPR",
         },
-        {
-            "id": "openai-community/roberta-large-openai-detector",
-            "weight": 0.20,
-            "type": "standard",
-            "params": "356M",
-            "note": "RoBERTa-large OpenAI detector (offline, MIT license)",
-        },
+        # {
+        #     "id": "openai-community/roberta-large-openai-detector",
+        #     "weight": 0.20,
+        #     "type": "standard",
+        #     "params": "356M",
+        #     "note": "RoBERTa-large OpenAI detector (offline, MIT license)",
+        # },
         {
             "id": "MayZhou/e5-small-lora-ai-generated-detector",
-            "weight": 0.15,
+            "weight": 0.50,
             "type": "standard",
             "params": "33M",
             "note": "E5-small + LoRA, 93.9% RAID, lightweight fast model",
@@ -654,10 +654,10 @@ class AIContentDetector:
                 return logits
         
         config = AutoConfig.from_pretrained(model_id)
-        
-        # Load backbone with from_pretrained (fast from cache, creates correct model structure)
-        backbone = DebertaV2Model.from_pretrained(model_id)
-        
+
+        # Initialize backbone structure (without pre-loading weights to save memory)
+        backbone = DebertaV2Model(config)
+
         # Load full state dict from safetensors
         weights_path = hf_hub_download(repo_id=model_id, filename="model.safetensors")
         state_dict = load_file(weights_path)
