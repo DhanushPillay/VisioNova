@@ -6,6 +6,7 @@ import re
 import base64
 import time
 import os
+import threading
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -102,14 +103,34 @@ try:
 except Exception as e:
     print(f"[WARN] Fast cascade detector not available: {e}")
 
-# Audio deepfake detector (lazy-loaded, models downloaded on first use)
+# Audio deepfake detector (speech models can be warmed in background)
 audio_detector = None
 if AUDIO_DETECTOR_AVAILABLE:
     try:
         audio_detector = AudioDeepfakeDetector(use_gpu=True)
-        print("[OK] Audio deepfake detector initialized (model loads on first use)")
+        print("[OK] Audio deepfake detector initialized")
     except Exception as e:
         print(f"[WARN] Audio detector not available: {e}")
+
+
+def _warmup_audio_models_async():
+    """Warm speech models in background so first request does not time out."""
+    if audio_detector is None:
+        return
+    try:
+        if hasattr(audio_detector, "preload"):
+            print("[Audio] Background warmup started...")
+            audio_detector.preload()
+            print("[Audio] Background warmup completed.")
+    except Exception as e:
+        print(f"[WARN] Audio background warmup failed: {e}")
+
+
+if audio_detector is not None:
+    try:
+        threading.Thread(target=_warmup_audio_models_async, daemon=True).start()
+    except Exception as e:
+        print(f"[WARN] Could not start audio warmup thread: {e}")
 
 # Video deepfake detector (lazy-loaded, models downloaded on first use)
 video_detector = None
@@ -1290,16 +1311,17 @@ def detect_audio_deepfake():
     """
     Detect AI-generated or deepfake audio.
     
-    Uses a 5-model weighted ensemble:
-    - XLS-R 300M (cross-lingual, 30% weight)
-    - WavLM-base (denoising, 20% weight)
-    - Wav2Vec2 Forensic (bonafide/spoof, 20% weight)
-    - Community Detector V2 (15% weight)
-    - Diversity Detector (different training split, 15% weight)
+        Uses a domain-aware 4-model stack:
+        - Speech domain: 3-model weighted ensemble
+            - Gustking/wav2vec2-large-xlsr-deepfake-audio-classification
+            - DavidCombei/wavLM-base-Deepfake_V2
+            - garystafford/wav2vec2-deepfake-voice-detector
+        - Music domain: dedicated AST music classifier
+            - AI-Music-Detection/ai_music_detection_large_10.24s
     
     Request: multipart/form-data with 'audio' file field
     Supported formats: wav, mp3, flac, ogg, m4a, webm, aac, wma
-    Max file size: 25MB
+    Max file size: 200MB
     
     Response:
         {
