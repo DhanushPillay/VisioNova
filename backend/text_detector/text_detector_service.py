@@ -4,16 +4,7 @@ AI-generated text detection with sentence-level analysis, pattern detection, and
 
 Architecture:
 - ML Model (DeBERTa-v3): Transformer-based detection (Microsoft/DeBERTa-v3-base)
-- Binoculars: Zero-shot detection with dual Falcon-7B (GPU-only, no training)
 - Linguistic Analysis: Real LM perplexity, burstiness, patterns
-- Adversarial Defense: Homoglyph normalization, paraphraser shield
-- ESL De-biasing: Reduced false positives for non-native English writers
-- Caching: LRU cache for repeated texts
-
-Detection Modes:
-- 'offline': Statistical + pattern analysis only (CPU-friendly, default)
-- 'ml': DeBERTa-v3 + statistical hybrid (requires model)
-- 'binoculars': Dual Falcon-7B zero-shot (requires GPU, best accuracy)
 """
 import os
 import re
