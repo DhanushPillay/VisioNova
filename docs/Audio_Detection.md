@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-VisioNova employs an **Omni-Audio Router Pipeline** that intelligently classifies the audio domain before applying specialized detection models. By differentiating between Speech and Music/Ambient audio, we eliminate hallucinated false positives. For speech, we utilize a **4-model Vanguard ensemble** combining XLS-R, WavLM, and Wav2Vec2 architectures. For music, we apply heuristic spectral analysis.
+VisioNova employs an **Omni-Audio Router Pipeline** that intelligently classifies the audio domain before applying specialized detection models. By differentiating between Speech and Music/Ambient audio, we eliminate hallucinated false positives. For speech, we utilize a **3-model Vanguard ensemble** combining XLS-R, WavLM, and Wav2Vec2 architectures. For music, we apply a dedicated **AST Music Detector** model (`AI-Music-Detection/ai_music_detection_large_10.24s`), supplemented by heuristic fallbacks.
 
 ---
 
@@ -49,9 +49,9 @@ Audio Input (.wav/.mp3/.flac)
     Yes│           │No (Music)
        ▼           ▼
 ┌──────────────┐ ┌──────────────┐
-│ Vanguard     │ │ Music        │
-│ Speech       │ │ Heuristics   │
-│ Ensemble     │ │ Detector     │
+│ Vanguard     │ │ AST Music    │
+│ Speech       │ │ Detector     │
+│ Ensemble     │ │              │
 └───────┬──────┘ └───────┬──────┘
         │                │
         ▼                ▼
@@ -63,8 +63,8 @@ Audio Input (.wav/.mp3/.flac)
 | Feature | Benefit |
 |---------|---------|
 | **Domain Routing** | Prevents speech models from evaluating polyphonic music and hallucinating "AI" verdicts. |
-| **Vanguard Models** | 4-Model setup optimized specifically against top-tier modern TTS (e.g., ElevenLabs). |
-| **Spectral Heuristics**| Catches diffusion-based music generation markers (e.g., 14kHz cutoffs). |
+| **Vanguard Models** | 3-Model setup optimized specifically against top-tier modern TTS (e.g., ElevenLabs). |
+| **AST Music Detection**| Evaluates generative AI music artifacts directly via a robust Audio Spectrogram Transformer. |
 | **Confidence Calibration**| Pulls speech scores toward 50% if the ensemble members strongly disagree. |
 
 ---
@@ -75,13 +75,13 @@ Audio Input (.wav/.mp3/.flac)
 
 | # | Model | Architecture | Weight | Strength |
 |---|-------|-------------|--------|----------|
-| 1 | `Gustking/wav2vec2-large...` | XLS-R 300M | 35% | Cross-lingual, ASVspoof-validated |
-| 2 | `DavidCombei/wavLM-base...` | WavLM-base | 25% | Denoising pre-training |
-| 3 | `Vansh180/deepfake...` | Wav2Vec2-base | 20% | Explicit bonafide/spoof labels |
-| 4 | `Mihaiii/wav2vec2-base...` | Wav2Vec2-base | 20% | Fine-tuned for modern AI TTS |
+| 1 | `Gustking/wav2vec2-large...` | XLS-R 300M | 40% | Cross-lingual, ASVspoof-validated |
+| 2 | `DavidCombei/wavLM-base...` | WavLM-base | 30% | Denoising pre-training |
+| 3 | `garystafford/wav2vec2-deepfake...` | Wav2Vec2-xlsr | 30% | Fine-tuned for modern AI Voice/TTS Detection |
 
-### Music Heuristics (For Music/Ambient)
-- **Feature Analytics**: Evaluates `spectral_flatness` and `spectral_rolloff` to identify the "digital haze" typical of generative AI music platforms.
+### AST Music Detector (For Music/Ambient)
+- **Primary Mechanism**: Analyzes spectrogram segments across a 10.24s window using the `AI-Music-Detection/ai_music_detection_large_10.24s` model.
+- **Heuristic Fallback**: Evaluates `spectral_flatness` and `spectral_rolloff` if the primary model fails or environment prevents loading.
 
 ### Aggregate Performance
 
@@ -172,7 +172,7 @@ Returns model availability and ensemble metadata, including the status of the Au
 
 1. **AudioSeal integration**: Meta's sample-level watermark detection.
 2. **Larger backbone**: Upgrade anchor model to XLS-R-1B.
-3. **Advanced AI Music Models**: Replace current music heuristics with a zero-shot binary classifier once openly available.
+3. **Fine-Tuned Music Models**: Continuously train the AST structure against newer versions of Udio and Suno.
 4. **Speaker verification**: Cross-reference with known voice samples.
 
 ---

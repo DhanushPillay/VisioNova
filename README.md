@@ -28,8 +28,8 @@ A multi-modal forensic engine that doesn't just detect AI media—it *explains* 
 
 ### Audio Forensics
 *   **Omni-Audio Routing:** Intelligently classifies content as Speech or Music/Ambient to eliminate false positives on musical tracks.
-*   **Voice Deepfake Detection:** Highlights synthetic vocal patterns and indicators of text-to-speech generation using a 4-Model Vanguard ensemble.
-*   **Music Generation Detection:** Analyzes spectral cutoffs and phase coherence to flag synthetic AI music.
+*   **Voice Deepfake Detection:** Highlights synthetic vocal patterns and indicators of text-to-speech generation using a 3-Model Vanguard ensemble.
+*   **Music Generation Detection:** Utilizes a dedicated AST (Audio Spectrogram Transformer) Music Detector to flag synthetic AI music.
 *   See [Audio Detection](docs/Audio_Detection.md) for technical details.
 
 ### Text Analysis
@@ -50,7 +50,7 @@ A multi-modal forensic engine that doesn't just detect AI media—it *explains* 
 ## Technology Stack
 
 *   **Backend:** Python 3.10+, Flask
-*   **AI/ML:** PyTorch, Transformers (Binoculars/Falcon-7B, Wav2Vec2, WavLM, ViT), Groq API (Llama 4 Scout)
+*   **AI/ML:** PyTorch, Transformers (Binoculars/Falcon-7B, Wav2Vec2, WavLM, AST, ViT), Groq API (Llama 4 Scout)
 *   **Document Parsing:** PyMuPDF (PDF), python-docx (DOCX), pytesseract (OCR)
 *   **Frontend:** HTML5, Tailwind CSS, JavaScript
 *   **Analysis:** OpenCV, Librosa, Scikit-learn
