@@ -699,7 +699,7 @@
 
                                 try {
                                     const controller = new AbortController();
-                                    const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 min for audio
+                                    const timeoutId = setTimeout(() => controller.abort(), 420000); // 7 min for first-run model downloads on audio
 
                                     const response = await fetch(`${API_BASE_URL}/api/detect-audio`, {
                                         method: 'POST',

@@ -55,7 +55,8 @@ peft>=0.7.0  # LoRA adapter support (Bombek1 SigLIP2+DINOv2 model)
 # Audio Detection Dependencies
 soundfile>=0.12.0  # Audio file reading (wav, flac, ogg)
 librosa>=0.10.0  # Audio resampling and processing
-# Model: MelodyMachine/Deepfake-audio-detection-V2 (Wav2Vec2, 99.7% accuracy)
+# Speech models: Gustking XLS-R + DavidCombei WavLM + garystafford Wav2Vec2-XLS-R
+# Music model: AI-Music-Detection/ai_music_detection_large_10.24s (AST)
 
 # Video Detection Dependencies
 # opencv-python already listed above
